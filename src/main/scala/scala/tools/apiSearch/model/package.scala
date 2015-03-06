@@ -31,10 +31,8 @@ package object model {
     val bottomTypeName = "scala.Nothing"
   }
 
-  case class TypeParameterEntity(id: Int, lowerBound: String = TypeEntity.bottomTypeName, upperBound: String = TypeEntity.topTypeName) {
+  case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomTypeName, upperBound: String = TypeEntity.topTypeName) {
     import TypeEntity._
-
-    val name = "$" + id
 
     override def toString() = {
       val lbound =

@@ -27,7 +27,9 @@ trait EntityFactory {
   }
 
   private def createTypeEntity(tpe: Type, variance: Variance): TypeEntity = {
-    val name = tpe.typeSymbol.fullName
+    val name =
+      if (tpe.typeSymbol.isTypeParameter) tpe.typeSymbol.name
+      else tpe.typeSymbol.fullName
 
     def getVariance(idx: Int) = {
       val nscVariance = tpe.typeSymbol.typeParams(idx).variance
@@ -46,8 +48,8 @@ trait EntityFactory {
   }
 
   private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
-    val typeParams = sym.tpe.typeParams.zipWithIndex.map {
-      case (param, idx) => TypeParameterEntity(idx, "scala.Nothing", "scala.Any")
+    val typeParams = sym.tpe.typeParams.map { p =>
+      TypeParameterEntity(p.name.toString(), p.tpe.bounds.lo.typeSymbol.fullName.toString, p.tpe.bounds.hi.typeSymbol.fullName.toString)
     }
 
     def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeEntity = paramss match {

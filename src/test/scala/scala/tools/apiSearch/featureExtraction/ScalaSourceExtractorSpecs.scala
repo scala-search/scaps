@@ -172,15 +172,34 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
     m.tpe should be(f.tpe)
   }
 
-  it should "extract type parameter" in {
+  it should "extract type parameters" in {
     extract("""
       package q
       
-      trait T {
-        def m[T](x: T): T
+      object O {
+        def m[T](x: T): T = x
       }
       """)(
-      ("q.T.m", ???))
+      ("q.O.m", m => {
+        m.typeParameters should be(List(TypeParameterEntity("T")))
+        m.tpe.toString should be ("+scala.Function1[-T, +T]")
+      }))
+  }
+
+  it should "extract type parameters with bounds" in {
+    extract("""
+      package q
+      
+      trait Up
+      
+      object O {
+        def m[T <: Up](x: T): T = x
+      }
+      """)(
+      ("q.O.m", m => {
+        m.typeParameters should be(List(TypeParameterEntity("T", lowerBound = "scala.Nothing", upperBound = "q.Up")))
+        m.tpe.toString should be ("+scala.Function1[-T, +T]")
+      }))
   }
 
   def extractAll(source: String): List[TermEntity] = {
