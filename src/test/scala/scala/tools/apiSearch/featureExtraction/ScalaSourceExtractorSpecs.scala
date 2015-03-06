@@ -40,12 +40,18 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       """)("p.O")
   }
 
-  it should "extract inherited members" in {
-    shouldExtract("""
+  it should "not extract inherited members" in {
+    val entities = extractAll("""
       package p
         
       class C
-      """)("java.lang.Object.toString")
+      """)
+
+    val toString = entities.find(e =>
+      e.name == "java.lang.Object.toString" ||
+        e.name == "p.C.toString")
+
+    toString should not be ('defined)
   }
 
   it should "extract doc comments" in {
@@ -118,7 +124,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       ("p.T.m2", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Function1[-scala.Int, +scala.Int]]")))
   }
 
-  it should "treat nested member access like multiple function application" in {
+  ignore should "treat nested member access like multiple function application" in {
     extract("""
       package p
       
@@ -182,7 +188,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       """)(
       ("q.O.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("T")))
-        m.tpe.toString should be ("+scala.Function1[-T, +T]")
+        m.tpe.toString should be("+scala.Function1[-T, +T]")
       }))
   }
 
@@ -198,7 +204,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       """)(
       ("q.O.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("T", lowerBound = "scala.Nothing", upperBound = "q.Up")))
-        m.tpe.toString should be ("+scala.Function1[-T, +T]")
+        m.tpe.toString should be("+scala.Function1[-T, +T]")
       }))
   }
 
