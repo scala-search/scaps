@@ -20,21 +20,14 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
 
       val fragments = for { m <- ms } yield (m, sourceFile)
 
-      ms.map { member =>
+      ms.flatMap { member =>
         val cr = new Response[(String, String, Position)]
         compiler.askDocComment(member, sourceFile, member.enclosingPackage, fragments.toList, cr)
         val comment = cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
 
-        createTermEntity(member, comment)
+        scala.util.Try(createTermEntity(member, comment)).toOption
       }
     }
-  }
-
-  private def findMembers(tree: Tree): List[MemberDef] = tree match {
-    case PackageDef(pid, stmts) => stmts.flatMap(findMembers)
-    case impl: ImplDef          => impl :: impl.impl.body.flatMap(findMembers)
-    case m: MemberDef           => List(m)
-    case _                      => Nil
   }
 
   private def members(tree: Tree): List[Symbol] = {
@@ -42,19 +35,23 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
 
     val traverser = new Traverser {
       override def traverse(t: Tree) = {
+        var descend = true
         t match {
           case impl: ImplDef =>
             val sym = impl.symbol
             members += sym
-            members ++= sym.tpe.members
+            members ++= sym.tpe.decls
+          case _: ValOrDefDef =>
+            descend = false
           case _ => ()
         }
-        super.traverse(t)
+        if(descend)
+          super.traverse(t)
       }
     }
     
     traverser(tree)
 
-    members.filter(_.isPublic).toList
+    members.filter(m => m.isTerm && m.isPublic && !m.isConstructor).toList
   }
 }
