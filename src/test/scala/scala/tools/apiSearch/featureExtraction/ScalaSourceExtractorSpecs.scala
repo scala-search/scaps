@@ -27,7 +27,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       class C {
         val a = 1
       }
-      """)("p.C.a")
+      """)("p.C#a")
   }
 
   it should "extract top level entities" in {
@@ -47,9 +47,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       class C
       """)
 
-    val toString = entities.find(e =>
-      e.name == "java.lang.Object.toString" ||
-        e.name == "p.C.toString")
+    val toString = entities.find(_.name.endsWith("toString"))
 
     toString should not be ('defined)
   }
@@ -120,8 +118,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
         def m2(i: Int) = 1
       }
       """)(
-      ("p.T.m1", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Int]")),
-      ("p.T.m2", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Function1[-scala.Int, +scala.Int]]")))
+      ("p.T#m1", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Int]")),
+      ("p.T#m2", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Function1[-scala.Int, +scala.Int]]")))
   }
 
   ignore should "treat nested member access like multiple function application" in {
@@ -134,7 +132,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
         }
       }
       """)(
-      ("p.Outer.Inner.m", _.tpe.toString should be("+scala.Function1[-p.Outer, +scala.Function1[-p.Outer.Inner, +scala.Int]]")))
+      ("p.Outer#Inner#m", _.tpe.toString should be("+scala.Function1[-p.Outer, +scala.Function1[-p.Outer#Inner, +scala.Int]]")))
   }
 
   it should "add correct variance annotations" in {

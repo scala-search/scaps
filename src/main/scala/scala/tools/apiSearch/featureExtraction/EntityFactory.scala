@@ -10,7 +10,7 @@ trait EntityFactory {
 
   def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
     val (typeParams, tpe) = createTypeEntity(sym)
-    TermEntity(sym.fullName, typeParams, tpe, rawComment)
+    TermEntity(qualifiedName(sym), typeParams, tpe, rawComment)
   }
 
   def createTypeEntity(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
@@ -21,16 +21,25 @@ trait EntityFactory {
         (Nil, createTypeEntity(sym.tpe, Covariant))
 
     if (sym.owner.isClass && !sym.owner.isModuleClass)
-      (params, TypeEntity("scala.Function1", Covariant, List(TypeEntity(sym.owner.fullName, Contravariant, Nil), memberType)))
+      (params, TypeEntity("scala.Function1", Covariant, List(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil), memberType)))
     else
       (params, memberType)
   }
 
-  private def createTypeEntity(tpe: Type, variance: Variance): TypeEntity = {
-    val name =
-      if (tpe.typeSymbol.isTypeParameter) tpe.typeSymbol.name
-      else tpe.typeSymbol.fullName
+  def qualifiedName(sym: Symbol): String = {
+    def name(sym: Symbol) = sym.name.toString
+    def rec(sym: Symbol): String =
+      if (sym.isRootSymbol || sym == sym.owner) ""
+      else if (sym.hasPackageFlag || sym.hasModuleFlag) rec(sym.owner) + name(sym) + "."
+      else rec(sym.owner) + name(sym) + "#"
 
+    if (sym.isTypeParameter)
+      name(sym)
+    else
+      rec(sym.owner) + name(sym)
+  }
+
+  private def createTypeEntity(tpe: Type, variance: Variance): TypeEntity = {
     def getVariance(idx: Int) = {
       val nscVariance = tpe.typeSymbol.typeParams(idx).variance
       if (nscVariance.isPositive)
@@ -44,12 +53,12 @@ trait EntityFactory {
     val args = tpe.typeArgs.zipWithIndex.map {
       case (arg, idx) => createTypeEntity(arg, getVariance(idx))
     }
-    TypeEntity(name.toString(), variance, args)
+    TypeEntity(qualifiedName(tpe.typeSymbol), variance, args)
   }
 
   private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
     val typeParams = sym.tpe.typeParams.map { p =>
-      TypeParameterEntity(p.name.toString(), p.tpe.bounds.lo.typeSymbol.fullName.toString, p.tpe.bounds.hi.typeSymbol.fullName.toString)
+      TypeParameterEntity(qualifiedName(p), qualifiedName(p.tpe.bounds.lo.typeSymbol), qualifiedName(p.tpe.bounds.hi.typeSymbol))
     }
 
     def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeEntity = paramss match {
