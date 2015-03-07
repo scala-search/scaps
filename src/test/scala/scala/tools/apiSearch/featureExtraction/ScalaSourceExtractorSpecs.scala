@@ -122,7 +122,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       ("p.T#m2", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Function1[-scala.Int, +scala.Int]]")))
   }
 
-  ignore should "treat nested member access like multiple function application" in {
+  it should "treat nested member access like function application" in {
     extract("""
       package p
       
@@ -132,7 +132,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
         }
       }
       """)(
-      ("p.Outer#Inner#m", _.tpe.toString should be("+scala.Function1[-p.Outer, +scala.Function1[-p.Outer#Inner, +scala.Int]]")))
+      ("p.Outer#Inner#m", _.tpe.toString should be("+scala.Function1[-p.Outer#Inner, +scala.Int]")))
   }
 
   it should "add correct variance annotations" in {
