@@ -206,6 +206,34 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       }))
   }
 
+  it should "extract type parameters from classes" in {
+    extract("""
+      package p
+      
+      class C[T] {
+        def m1 = 1
+        def m2(x: T): T
+        def m3[A](y: A): T
+      }
+      """)(
+      ("p.C#m1", _.typeParameters should be(List(TypeParameterEntity("T")))),
+      ("p.C#m2", _.typeParameters should be(List(TypeParameterEntity("T")))),
+      ("p.C#m3", _.typeParameters should be(List(TypeParameterEntity("T"), TypeParameterEntity("A")))))
+  }
+
+  it should "extract type parameters from nested classes" in {
+    extract("""
+      package p
+      
+      class Outer[A] {
+        class Inner[B] {
+          def m = 1
+        }
+      }
+      """)(
+      ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A"), TypeParameterEntity("B")))))
+  }
+
   def extractAll(source: String): List[TermEntity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
     extractor(new BatchSourceFile(randomFileName, source))

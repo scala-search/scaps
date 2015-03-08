@@ -20,10 +20,18 @@ trait EntityFactory {
       else
         (Nil, createTypeEntity(sym.tpe, Covariant))
 
-    if (sym.owner.isClass && !sym.owner.isModuleClass)
-      (params, TypeEntity("scala.Function1", Covariant, List(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil), memberType)))
-    else
+    if (sym.owner.isClass && !sym.owner.isModuleClass) {
+      (typeParamsFromOwningTemplates(sym) ++ params,
+        TypeEntity("scala.Function1", Covariant, List(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil), memberType)))
+    } else {
       (params, memberType)
+    }
+  }
+  
+  private def typeParamsFromOwningTemplates(sym: Symbol): List[TypeParameterEntity] = {
+    sym.ownerChain.reverse.flatMap { owner =>
+      owner.tpe.typeArgs.map(arg => createTypeParamEntity(arg.typeSymbol))
+    }
   }
 
   def qualifiedName(sym: Symbol): String = {
@@ -57,9 +65,7 @@ trait EntityFactory {
   }
 
   private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
-    val typeParams = sym.tpe.typeParams.map { p =>
-      TypeParameterEntity(qualifiedName(p), qualifiedName(p.tpe.bounds.lo.typeSymbol), qualifiedName(p.tpe.bounds.hi.typeSymbol))
-    }
+    val typeParams = sym.tpe.typeParams.map(createTypeParamEntity)
 
     def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeEntity = paramss match {
       case Nil => createTypeEntity(resultTpe, Covariant)
@@ -72,4 +78,10 @@ trait EntityFactory {
 
     (typeParams, rec(sym.paramss, sym.tpe.resultType))
   }
+
+  private def createTypeParamEntity(typeSym: Symbol) =
+    TypeParameterEntity(
+      qualifiedName(typeSym),
+      qualifiedName(typeSym.tpe.bounds.lo.typeSymbol),
+      qualifiedName(typeSym.tpe.bounds.hi.typeSymbol))
 }
