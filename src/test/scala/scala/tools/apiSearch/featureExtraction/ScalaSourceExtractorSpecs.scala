@@ -275,9 +275,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       ("p.D", _.baseTypes.mkString(", ") should include("p.T[B]")))
   }
 
-  def extractAllTerms(source: String): List[TermEntity] = {
+  def extractAllTerms(source: String): Stream[TermEntity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source)).collect { case t: TermEntity => t }.toBlocking.toList
+    extractor(new BatchSourceFile(randomFileName, source)).collect { case t: TermEntity => t }
   }
 
   def extractTerms(source: String)(entityHandlers: (String, TermEntity => Unit)*): Unit = {
@@ -296,9 +296,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   def shouldExtractTerms(source: String)(entityNames: String*): Unit =
     extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
 
-  def extractAllClasses(source: String): List[ClassEntity] = {
+  def extractAllClasses(source: String): Stream[ClassEntity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source)).collect { case c: ClassEntity => c }.toBlocking.toList
+    extractor(new BatchSourceFile(randomFileName, source)).collect { case c: ClassEntity => c }
   }
 
   def extractClasses(source: String)(entityHandlers: (String, ClassEntity => Unit)*): Unit = {

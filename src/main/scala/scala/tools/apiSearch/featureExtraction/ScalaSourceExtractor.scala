@@ -4,12 +4,11 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile
 import scala.tools.apiSearch.model._
 import scala.tools.nsc.interactive.Global
-import rx.lang.scala.Observable
 
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
   import compiler._
 
-  def apply(sourceFile: SourceFile): Observable[Entity] = {
+  def apply(sourceFile: SourceFile): Stream[Entity] = {
     val r = new Response[Tree]
 
     compiler.askLoadedTyped(sourceFile, r)
@@ -21,7 +20,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
 
       val fragments = for { m <- syms } yield (m, sourceFile)
 
-      Observable.from(syms).flatMapIterable { sym =>
+      syms.toStream.flatMap { sym =>
         compiler.ask { () =>
           if (sym.isClass) {
             scala.util.Try(createClassEntity(sym)).toOption
