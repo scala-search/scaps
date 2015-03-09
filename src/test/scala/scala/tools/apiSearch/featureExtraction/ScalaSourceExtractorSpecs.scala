@@ -271,7 +271,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       class C extends T[Int]
       class D[B] extends T[B]
       """)(
-      ("p.C", _.baseTypes.mkString(", ") should include("p.T[Int]")),
+      ("p.C", _.baseTypes.mkString(", ") should include("p.T[scala.Int]")),
       ("p.D", _.baseTypes.mkString(", ") should include("p.T[B]")))
   }
 
