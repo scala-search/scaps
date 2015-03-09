@@ -11,9 +11,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   val extractor = new ScalaSourceExtractor(compiler)
 
   "the scala source feature extractor" should "extract an entity in an object" in {
-    shouldExtract("""
+    shouldExtractTerms("""
       package p
-        
+
       object O {
         val a = 1
       }
@@ -21,29 +21,19 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract an entity in a class" in {
-    shouldExtract("""
+    shouldExtractTerms("""
       package p
-        
+
       class C {
         val a = 1
       }
       """)("p.C#a")
   }
 
-  it should "extract top level entities" in {
-    shouldExtract("""
-      package p
-        
-      object O {
-        def apply() = 1
-      }
-      """)("p.O")
-  }
-
   it should "not extract inherited members" in {
-    val entities = extractAll("""
+    val entities = extractAllTerms("""
       package p
-        
+
       class C
       """)
 
@@ -53,21 +43,21 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract doc comments" in {
-    val entities = extractAll("""
+    val entities = extractAllTerms("""
       package p
-        
+
       object O {
         /**
          * A doc comment
          */
         def a = 1
-        
+
         // A single line comment
         def b = 2
-        
+
         /* A multi line comment */
         def c = 3
-        
+
         /** A minimal doc comment */
         def d = 4
       }
@@ -82,9 +72,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract simple types from values" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       object O {
         val a = 1
       }
@@ -93,9 +83,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract method types" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       object O {
         def m1: Int = 1
         def m2(): Int = 1
@@ -110,9 +100,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "treat member access like function application" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       trait T {
         def m1 = 1
         def m2(i: Int) = 1
@@ -123,9 +113,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "treat nested member access like function application" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       trait Outer {
         trait Inner {
           def m = 1
@@ -136,13 +126,13 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "add correct variance annotations" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       class Co[+T]
       class Contra[-T]
       class In[T]
-      
+
       object O {
         val a: Contra[Int] = ???
         val b: Co[Int] = ???
@@ -161,9 +151,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "handle method types like function types" in {
-    val entities = extractAll("""
+    val entities = extractAllTerms("""
       package p
-      
+
       object O {
         def m(i: Int): Int = ???
         val f = m _
@@ -177,9 +167,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract type parameters" in {
-    extract("""
+    extractTerms("""
       package q
-      
+
       object O {
         def m[T](x: T): T = x
       }
@@ -191,11 +181,11 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract type parameters with bounds" in {
-    extract("""
+    extractTerms("""
       package q
-      
+
       trait Up
-      
+
       object O {
         def m[T <: Up](x: T): T = x
       }
@@ -207,9 +197,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract type parameters from classes" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       class C[T] {
         def m1 = 1
         def m2(x: T): T
@@ -222,9 +212,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
   }
 
   it should "extract type parameters from nested classes" in {
-    extract("""
+    extractTerms("""
       package p
-      
+
       class Outer[A] {
         class Inner[B] {
           def m = 1
@@ -234,13 +224,13 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A"), TypeParameterEntity("B")))))
   }
 
-  def extractAll(source: String): List[TermEntity] = {
+  def extractAllTerms(source: String): List[TermEntity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source))
+    extractor(new BatchSourceFile(randomFileName, source))._2.toBlocking.toList
   }
 
-  def extract(source: String)(entityHandlers: (String, TermEntity => Unit)*): Unit = {
-    val entities = extractAll(source)
+  def extractTerms(source: String)(entityHandlers: (String, TermEntity => Unit)*): Unit = {
+    val entities = extractAllTerms(source)
     val names = entities.map(_.name)
 
     entityHandlers.foreach { handler =>
@@ -252,6 +242,6 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
     }
   }
 
-  def shouldExtract(source: String)(entityNames: String*): Unit =
-    extract(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
+  def shouldExtractTerms(source: String)(entityNames: String*): Unit =
+    extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
 }

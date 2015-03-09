@@ -6,6 +6,8 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.5"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
+libraryDependencies += "io.reactivex" %% "rxscala" % "0.24.0"
+
 resourceGenerators in Test <+=
   (resourceManaged in Test, resourceDirectory in Test, streams) map { (dir, resourcesDir, streams) =>
   	val packageName = "jarExtractorTests"

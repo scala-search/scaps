@@ -2,6 +2,18 @@ package scala.tools.apiSearch
 
 package object model {
 
+  case class TemplateEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity]) {
+    override def toString() = {
+      val params = typeParameters match {
+        case Nil => ""
+        case ps  => ps.mkString("[", ", ", "]")
+      }
+      val bases = baseTypes.mkString("extends ", " with ", "")
+
+      s"$name$params $bases"
+    }
+  }
+
   case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String) {
     override def toString() = {
       val c = comment match {
