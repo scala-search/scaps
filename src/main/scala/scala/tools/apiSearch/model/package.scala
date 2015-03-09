@@ -2,7 +2,13 @@ package scala.tools.apiSearch
 
 package object model {
 
-  case class TemplateEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity]) {
+  sealed trait Entity {
+    def name: String
+  }
+
+  case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity])
+    extends Entity {
+
     override def toString() = {
       val params = typeParameters match {
         case Nil => ""
@@ -14,7 +20,9 @@ package object model {
     }
   }
 
-  case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String) {
+  case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String)
+    extends Entity {
+
     override def toString() = {
       val c = comment match {
         case "" => ""
@@ -28,7 +36,7 @@ package object model {
     }
   }
 
-  case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity] = Nil) {
+  case class TypeEntity(name: String, variance: Variance = Covariant, args: List[TypeEntity] = Nil) {
     override def toString() = {
       val argStr = args match {
         case Nil => ""

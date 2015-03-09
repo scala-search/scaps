@@ -9,10 +9,12 @@ class JarExtractorSpecs extends FlatSpec with Matchers with CompilerAccess {
 
   "the jar extractor" should "extract entities from source files in jars" in {
     val path = getClass.getResource("/jarExtractorTests.jar").toURI().getPath
-    val (_, entities) = extractor(path)
+    val entities = extractor(path)
 
-    val m = entities.filter(e => e.name == "jarExtractorTests.O.m").toBlocking.headOption
+    val c = entities.filter(_.name == "jarExtractorTests.C").toBlocking.headOption
+    val m = entities.filter(_.name == "jarExtractorTests.O.m").toBlocking.headOption
 
+    c should be('defined)
     m should be('defined)
   }
 }

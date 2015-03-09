@@ -1,0 +1,3 @@
+package jarExtractorTests
+
+class C

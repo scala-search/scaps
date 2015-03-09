@@ -224,9 +224,60 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
       ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A"), TypeParameterEntity("B")))))
   }
 
+  it should "extract class entities" in {
+    extractClasses("""
+      package p
+
+      class C
+      """)(
+      ("p.C", _ => ()))
+  }
+
+  it should "extract traits to class entities" in {
+    extractClasses("""
+      package p
+
+      trait T
+      """)(
+      ("p.T", _ => ()))
+  }
+
+  it should "extract class entities with base classes" in {
+    extractClasses("""
+      package p
+
+      trait T
+
+      class C extends T
+      """)(
+      ("p.C", _.baseTypes should contain(TypeEntity("p.T"))))
+  }
+
+  it should "extract class entities with type parameters" in {
+    extractClasses("""
+      package p
+
+      class C[T]
+      """)(
+      ("p.C", _.typeParameters should contain(TypeParameterEntity("T"))))
+  }
+
+  it should "use the concrete type arguments in base types" in {
+    extractClasses("""
+      package p
+
+      trait T[A]
+
+      class C extends T[Int]
+      class D[B] extends T[B]
+      """)(
+      ("p.C", _.baseTypes.mkString(", ") should include("p.T[Int]")),
+      ("p.D", _.baseTypes.mkString(", ") should include("p.T[B]")))
+  }
+
   def extractAllTerms(source: String): List[TermEntity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source))._2.toBlocking.toList
+    extractor(new BatchSourceFile(randomFileName, source)).collect { case t: TermEntity => t }.toBlocking.toList
   }
 
   def extractTerms(source: String)(entityHandlers: (String, TermEntity => Unit)*): Unit = {
@@ -244,4 +295,22 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with CompilerAcce
 
   def shouldExtractTerms(source: String)(entityNames: String*): Unit =
     extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
+
+  def extractAllClasses(source: String): List[ClassEntity] = {
+    val randomFileName = s"${Random.nextInt()}.scala"
+    extractor(new BatchSourceFile(randomFileName, source)).collect { case c: ClassEntity => c }.toBlocking.toList
+  }
+
+  def extractClasses(source: String)(entityHandlers: (String, ClassEntity => Unit)*): Unit = {
+    val entities = extractAllClasses(source)
+    val names = entities.map(_.name)
+
+    entityHandlers.foreach { handler =>
+      names should contain(handler._1)
+      withClue(s"number of entities with name ${handler._1}") {
+        names.count(_ == handler._1) should be(1)
+      }
+      entities.find(_.name == handler._1).fold(throw new Exception)(handler._2)
+    }
+  }
 }

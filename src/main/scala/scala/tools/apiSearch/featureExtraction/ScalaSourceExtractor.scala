@@ -9,7 +9,7 @@ import rx.lang.scala.Observable
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
   import compiler._
 
-  def apply(sourceFile: SourceFile): (Observable[TemplateEntity], Observable[TermEntity]) = {
+  def apply(sourceFile: SourceFile): Observable[Entity] = {
     val r = new Response[Tree]
 
     compiler.askLoadedTyped(sourceFile, r)
@@ -17,23 +17,23 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
     val root = r.get.left.get
 
     compiler.ask { () =>
-      val ms = rawEntities(root)
+      val syms = rawEntities(root)
 
-      val fragments = for { m <- ms } yield (m, sourceFile)
+      val fragments = for { m <- syms } yield (m, sourceFile)
 
-      val (templates, members) = ms.partition(_.isClass)
-
-      val memberEntities = Observable.from(members).flatMapIterable { member =>
+      Observable.from(syms).flatMapIterable { sym =>
         compiler.ask { () =>
-          val cr = new Response[(String, String, Position)]
-          compiler.askDocComment(member, sourceFile, member.enclosingPackage, fragments.toList, cr)
-          val comment = cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
+          if (sym.isClass) {
+            scala.util.Try(createClassEntity(sym)).toOption
+          } else {
+            val cr = new Response[(String, String, Position)]
+            compiler.askDocComment(sym, sourceFile, sym.enclosingPackage, fragments.toList, cr)
+            val comment = cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
 
-          scala.util.Try(createTermEntity(member, comment)).toOption
+            scala.util.Try(createTermEntity(sym, comment)).toOption
+          }
         }
       }
-
-      (Observable.empty, memberEntities)
     }
   }
 
@@ -45,10 +45,15 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
         val descend = t match {
           case impl: ImplDef =>
             val sym = impl.symbol
-            if (sym.isClass)
-              members += sym
-            members ++= sym.tpe.decls.filter(m => m.isTerm && m.isPublic && !m.isConstructor)
-            true
+            if (sym.isPublic) {
+              if (sym.isClass)
+                members += sym
+
+              members ++= sym.tpe.decls.filter(m => m.isTerm && m.isPublic && !m.isConstructor)
+              true
+            } else {
+              false
+            }
           case _: ValOrDefDef =>
             false
           case _ =>

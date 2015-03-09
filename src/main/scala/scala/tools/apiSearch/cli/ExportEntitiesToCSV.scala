@@ -1,5 +1,6 @@
 package scala.tools.apiSearch.cli
 
+import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.utils.CompilerAccess
 import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.io.Source
@@ -7,24 +8,38 @@ import java.io.FileOutputStream
 import java.io.StringWriter
 import java.io.FileWriter
 import rx.lang.scala.Observable
+import rx.lang.scala.Scheduler
+import rx.lang.scala.schedulers.NewThreadScheduler
 
 object ExportEntitiesToCSV extends App with CompilerAccess {
   val extractor = new JarExtractor(compiler)
   val path = args(0)
   val target = args(1)
 
-  val (templateEntities, termEntities) = extractor(path)
+  val termsPath = target + ".terms.csv"
+  val classesPath = target + ".classes.csv"
 
-  val writer = new FileWriter(target)
+  val entities = extractor(path)
 
-  writer.write("Idx; Name; Type Parameters; Type;")
+  val classesWriter = new FileWriter(classesPath)
+  val termsWriter = new FileWriter(termsPath)
 
-  termEntities.zipWithIndex.subscribe({
-    case (entity, idx) =>
-      val entry = s"$idx; ${entity.name}; ${entity.typeParameters.mkString(", ")}; ${entity.tpe};\n"
-      println(entry)
-      writer.write(entry)
-  }, println)
+  classesWriter.write("Idx; Name; Type Parameters; Base Types;")
+  termsWriter.write("Idx; Name; Type Parameters; Type;")
 
-  writer.close()
+  val o1 = entities
+    .zipWithIndex
+    .subscribe({
+      case (entity: ClassEntity, idx) =>
+        val entry = s"$idx; ${entity.name}; ${entity.typeParameters.mkString(", ")}; ${entity.baseTypes.mkString(", ")};\n"
+        println(entry)
+        classesWriter.write(entry)
+      case (entity: TermEntity, idx) =>
+        val entry = s"$idx; ${entity.name}; ${entity.typeParameters.mkString(", ")}; ${entity.tpe};\n"
+        println(entry)
+        termsWriter.write(entry)
+    }, println)
+
+  classesWriter.close()
+  termsWriter.close()
 }

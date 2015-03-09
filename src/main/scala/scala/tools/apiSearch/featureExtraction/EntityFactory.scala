@@ -8,6 +8,10 @@ trait EntityFactory {
 
   import compiler._
 
+  def createClassEntity(sym: Symbol): ClassEntity = {
+    ClassEntity(qualifiedName(sym), typeParamsFromOwningTemplates(sym), sym.baseClasses.tail.map(base => createTypeEntity(base.tpe, Covariant)))
+  }
+
   def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
     val (typeParams, tpe) = createTypeEntity(sym)
     TermEntity(qualifiedName(sym), typeParams, tpe, rawComment)
@@ -27,7 +31,7 @@ trait EntityFactory {
       (params, memberType)
     }
   }
-  
+
   private def typeParamsFromOwningTemplates(sym: Symbol): List[TypeParameterEntity] = {
     sym.ownerChain.reverse.flatMap { owner =>
       owner.tpe.typeArgs.map(arg => createTypeParamEntity(arg.typeSymbol))
