@@ -26,7 +26,7 @@ trait EntityFactory {
 
     if (sym.owner.isClass && !sym.owner.isModuleClass) {
       (typeParamsFromOwningTemplates(sym) ++ params,
-        TypeEntity("scala.Function1", Covariant, List(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil), memberType)))
+        TypeEntity.function(Covariant, List(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil)), memberType))
     } else {
       (params, memberType)
     }
@@ -74,10 +74,9 @@ trait EntityFactory {
     def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeEntity = paramss match {
       case Nil => createTypeEntity(resultTpe, Covariant)
       case params :: rest =>
-        val name = s"scala.Function${params.length}"
-        val paramTypeArgs = params.map(p => createTypeEntity(p.tpe, Contravariant))
-        val resultTypeArg = rec(rest, resultTpe.resultType)
-        TypeEntity(name, Covariant, paramTypeArgs :+ resultTypeArg)
+        val paramTypes = params.map(p => createTypeEntity(p.tpe, Contravariant))
+        val resultType = rec(rest, resultTpe.resultType)
+        TypeEntity.function(Covariant, paramTypes, resultType)
     }
 
     (typeParams, rec(sym.paramss, sym.tpe.resultType))

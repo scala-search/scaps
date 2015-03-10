@@ -249,7 +249,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
       class C extends T
       """)(
-      ("p.C", _.baseTypes should contain(TypeEntity("p.T"))))
+      ("p.C", _.baseTypes should contain(TypeEntity("p.T", Covariant))))
   }
 
   it should "extract class entities with type parameters" in {

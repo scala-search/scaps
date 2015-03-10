@@ -41,17 +41,33 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }))
   }
 
-  it should "use lower type parameter bounds at contravariant positions" in {
+  it should "use upper type parameter bounds at contravariant positions" in {
     extractTerms("""
       package p
 
       trait T {
-        def m[A >: Null](x: A): Any
+        def m[A <: scala.AnyVal](x: A): Any
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should include("-scala.Null")
+        m.fingerprint should include("-scala.AnyVal")
+        m.fingerprint should not include ("-A")
+      }))
+  }
+
+  it should "ignore unbound type parameters" in {
+    extractTerms("""
+      package p
+
+      trait T {
+        def m[A](x: A): A
+      }
+      """)(
+      ("p.T#m", m => {
+        m.fingerprint should not include ("+scala.Any")
+        m.fingerprint should not include ("-scala.Any")
         m.fingerprint should not include ("+A")
+        m.fingerprint should not include ("-A")
       }))
   }
 }

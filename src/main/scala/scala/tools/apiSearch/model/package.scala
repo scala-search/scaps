@@ -36,12 +36,25 @@ package object model {
     }
 
     def fingerprint =
-      tpe.fingerprintTypes(typeParameters)
+      fingerprintTypes(tpe)
         .map(tpe => s"${tpe.variance.prefix}${tpe.name}")
         .mkString(" ")
+
+    private def fingerprintTypes(tpe: TypeEntity): List[TypeEntity] = {
+      val args = tpe.args.flatMap(fingerprintTypes)
+      val paramOpt = typeParameters.find(_.name == tpe.name)
+      paramOpt.fold {
+        tpe :: args
+      } { param =>
+        if (param.upperBound != TypeEntity.topType)
+          tpe.copy(name = param.upperBound) :: args
+        else
+          args
+      }
+    }
   }
 
-  case class TypeEntity(name: String, variance: Variance = Covariant, args: List[TypeEntity] = Nil) {
+  case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity] = Nil) {
     override def toString() = {
       val argStr = args match {
         case Nil => ""
@@ -49,24 +62,16 @@ package object model {
       }
       s"${variance.prefix}$name$argStr"
     }
-
-    def fingerprintTypes(params: List[TypeParameterEntity]): List[TypeEntity] = {
-      val paramOpt = params.find(_.name == name)
-      val thisName = paramOpt.fold {
-        name
-      } { param =>
-        if (variance == Contravariant)
-          param.lowerBound
-        else
-          param.upperBound
-      }
-      copy(name = thisName) :: args.flatMap(_.fingerprintTypes(params))
-    }
   }
 
   object TypeEntity {
     val topType = "scala.Any"
     val bottomType = "scala.Nothing"
+    def functionType(n: Int) = s"scala.Function$n"
+    def function(variance: Variance, paramTypes: List[TypeEntity], resultType: TypeEntity) = {
+      val typeParams = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
+      TypeEntity(functionType(paramTypes.length), variance, typeParams)
+    }
   }
 
   case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {
@@ -90,17 +95,21 @@ package object model {
   sealed trait Variance {
     def prefix: String
     def flip: Variance
+    def *(other: Variance): Variance
   }
   case object Invariant extends Variance {
     val prefix = ""
     val flip = Invariant
+    def *(other: Variance) = Invariant
   }
   case object Covariant extends Variance {
     val prefix = "+"
     val flip = Contravariant
+    def *(other: Variance) = other
   }
   case object Contravariant extends Variance {
     val prefix = "-"
     val flip = Covariant
+    def *(other: Variance) = other.flip
   }
 }
