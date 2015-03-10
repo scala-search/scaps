@@ -93,9 +93,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("p.O.m1", _.tpe.toString should be("+scala.Int")),
-      ("p.O.m2", _.tpe.toString should be("+scala.Function0[+scala.Int]")),
-      ("p.O.m3", _.tpe.toString should be("+scala.Function1[-scala.Int, +java.lang.String]")),
-      ("p.O.m4", _.tpe.toString should be("+scala.Function1[-scala.Int, +scala.Function1[-scala.Double, +java.lang.String]]")))
+      ("p.O.m2", _.tpe.toString should be("+<methodInvocation0>[+scala.Int]")),
+      ("p.O.m3", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +java.lang.String]")),
+      ("p.O.m4", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +<methodInvocation1>[-scala.Double, +java.lang.String]]")))
   }
 
   it should "treat member access like function application" in {
@@ -107,8 +107,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m2(i: Int) = 1
       }
       """)(
-      ("p.T#m1", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Int]")),
-      ("p.T#m2", _.tpe.toString should be("+scala.Function1[-p.T, +scala.Function1[-scala.Int, +scala.Int]]")))
+      ("p.T#m1", _.tpe.toString should be("+<memberAccess>[-p.T, +scala.Int]")),
+      ("p.T#m2", _.tpe.toString should be("+<memberAccess>[-p.T, +<methodInvocation1>[-scala.Int, +scala.Int]]")))
   }
 
   it should "treat nested member access like function application" in {
@@ -121,7 +121,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         }
       }
       """)(
-      ("p.Outer#Inner#m", _.tpe.toString should be("+scala.Function1[-p.Outer#Inner, +scala.Int]")))
+      ("p.Outer#Inner#m", _.tpe.toString should be("+<memberAccess>[-p.Outer#Inner, +scala.Int]")))
   }
 
   it should "add correct variance annotations" in {
@@ -149,22 +149,6 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.f", _.tpe.toString should be("+p.In[p.In[scala.Int]]")))
   }
 
-  it should "handle method types like function types" in {
-    val entities = extractAllTerms("""
-      package p
-
-      object O {
-        def m(i: Int): Int = ???
-        val f = m _
-      }
-      """)
-
-    val m = entities.find(_.name == "p.O.m").get
-    val f = entities.find(_.name == "p.O.f").get
-
-    m.tpe should be(f.tpe)
-  }
-
   it should "extract type parameters" in {
     extractTerms("""
       package q
@@ -175,7 +159,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)(
       ("q.O.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("T")))
-        m.tpe.toString should be("+scala.Function1[-T, +T]")
+        m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
       }))
   }
 
@@ -191,7 +175,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)(
       ("q.O.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("T", lowerBound = "scala.Nothing", upperBound = "q.Up")))
-        m.tpe.toString should be("+scala.Function1[-T, +T]")
+        m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
       }))
   }
 
@@ -232,7 +216,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.C", _ => ()))
   }
 
-  it should "extract traits to class entities" in {
+  it should "extract traits into class entities" in {
     extractClasses("""
       package p
 

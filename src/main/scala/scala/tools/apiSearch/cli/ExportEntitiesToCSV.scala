@@ -39,4 +39,16 @@ object ExportEntitiesToCSV extends App with CompilerAccess {
 
   classesWriter.close()
   termsWriter.close()
+
+  print("""
+    Summary
+    =========
+""")
+
+  val termEntities = entities.collect { case e: TermEntity => e }
+  val byType = termEntities.groupBy(_.tpe)
+  val byFingerprint = termEntities.groupBy(_.fingerprint)
+
+  println(s"No. Types: ${byType.size}")
+  println(s"No. Fingerprints: ${byFingerprint.size}")
 }

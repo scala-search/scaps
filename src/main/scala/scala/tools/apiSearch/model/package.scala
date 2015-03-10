@@ -42,14 +42,21 @@ package object model {
 
     private def fingerprintTypes(tpe: TypeEntity): List[TypeEntity] = {
       val args = tpe.args.flatMap(fingerprintTypes)
-      val paramOpt = typeParameters.find(_.name == tpe.name)
-      paramOpt.fold {
-        tpe :: args
-      } { param =>
-        if (param.upperBound != TypeEntity.topType)
-          tpe.copy(name = param.upperBound) :: args
-        else
-          args
+
+      // don't include member access, it is too common
+      if (tpe.isMemberAccess || tpe.isMethodInvocation)
+        args
+      else {
+        val paramOpt = typeParameters.find(_.name == tpe.name)
+        paramOpt.fold {
+          tpe :: args
+        } { param =>
+          // also type params with no upper bound provide too little information
+          if (param.upperBound != TypeEntity.topType)
+            tpe.copy(name = param.upperBound) :: args
+          else
+            args
+        }
       }
     }
   }
@@ -62,6 +69,10 @@ package object model {
       }
       s"${variance.prefix}$name$argStr"
     }
+
+    def isMemberAccess = name == TypeEntity.memberAccessType
+    def isFunction = args.length > 0 && name == TypeEntity.functionType(args.length - 1)
+    def isMethodInvocation = args.length > 0 && name == TypeEntity.methodInvocationType(args.length - 1)
   }
 
   object TypeEntity {
@@ -69,8 +80,16 @@ package object model {
     val bottomType = "scala.Nothing"
     def functionType(n: Int) = s"scala.Function$n"
     def function(variance: Variance, paramTypes: List[TypeEntity], resultType: TypeEntity) = {
-      val typeParams = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
-      TypeEntity(functionType(paramTypes.length), variance, typeParams)
+      val typeArgs = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
+      TypeEntity(functionType(paramTypes.length), variance, typeArgs)
+    }
+    val memberAccessType = "<memberAccess>"
+    def memberAccess(owner: TypeEntity, member: TypeEntity): TypeEntity =
+      TypeEntity(memberAccessType, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
+    def methodInvocationType(n: Int) = s"<methodInvocation$n>"
+    def methodInvocation(paramTypes: List[TypeEntity], resultType: TypeEntity) = {
+      val typeArgs = paramTypes.map(_.copy(variance = Contravariant)) :+ resultType.copy(variance = Covariant)
+      TypeEntity(methodInvocationType(paramTypes.length), Covariant, typeArgs)
     }
   }
 

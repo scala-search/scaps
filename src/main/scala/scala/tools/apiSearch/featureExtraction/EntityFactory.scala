@@ -26,7 +26,7 @@ trait EntityFactory {
 
     if (sym.owner.isClass && !sym.owner.isModuleClass) {
       (typeParamsFromOwningTemplates(sym) ++ params,
-        TypeEntity.function(Covariant, List(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil)), memberType))
+        TypeEntity.memberAccess(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil), memberType))
     } else {
       (params, memberType)
     }
@@ -76,7 +76,7 @@ trait EntityFactory {
       case params :: rest =>
         val paramTypes = params.map(p => createTypeEntity(p.tpe, Contravariant))
         val resultType = rec(rest, resultTpe.resultType)
-        TypeEntity.function(Covariant, paramTypes, resultType)
+        TypeEntity.methodInvocation(paramTypes, resultType)
     }
 
     (typeParams, rec(sym.paramss, sym.tpe.resultType))
