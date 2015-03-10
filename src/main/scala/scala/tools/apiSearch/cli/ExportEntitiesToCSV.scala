@@ -21,8 +21,8 @@ object ExportEntitiesToCSV extends App with CompilerAccess {
   val classesWriter = new FileWriter(classesPath)
   val termsWriter = new FileWriter(termsPath)
 
-  classesWriter.write("Idx; Name; Type Parameters; Base Types;")
-  termsWriter.write("Idx; Name; Type Parameters; Type;")
+  classesWriter.write("Idx; Name; Type Parameters; Base Types;\n")
+  termsWriter.write("Idx; Name; Fingerprint; Type Parameters; Type;\n")
 
   val o1 = entities
     .zipWithIndex
@@ -32,7 +32,7 @@ object ExportEntitiesToCSV extends App with CompilerAccess {
         println(entry)
         classesWriter.write(entry)
       case (entity: TermEntity, idx) =>
-        val entry = s"$idx; ${entity.name}; ${entity.typeParameters.mkString(", ")}; ${entity.tpe};\n"
+        val entry = s"$idx; ${entity.name}; ${entity.fingerprint}; ${entity.typeParameters.mkString(", ")}; ${entity.tpe};\n"
         println(entry)
         termsWriter.write(entry)
     }

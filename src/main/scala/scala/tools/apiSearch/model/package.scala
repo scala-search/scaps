@@ -34,6 +34,11 @@ package object model {
       }
       s"$c$name$params: $tpe"
     }
+
+    def fingerprint =
+      tpe.fingerprintTypes(typeParameters)
+        .map(tpe => s"${tpe.variance.prefix}${tpe.name}")
+        .mkString(" ")
   }
 
   case class TypeEntity(name: String, variance: Variance = Covariant, args: List[TypeEntity] = Nil) {
@@ -44,23 +49,36 @@ package object model {
       }
       s"${variance.prefix}$name$argStr"
     }
+
+    def fingerprintTypes(params: List[TypeParameterEntity]): List[TypeEntity] = {
+      val paramOpt = params.find(_.name == name)
+      val thisName = paramOpt.fold {
+        name
+      } { param =>
+        if (variance == Contravariant)
+          param.lowerBound
+        else
+          param.upperBound
+      }
+      copy(name = thisName) :: args.flatMap(_.fingerprintTypes(params))
+    }
   }
 
   object TypeEntity {
-    val topTypeName = "scala.Any"
-    val bottomTypeName = "scala.Nothing"
+    val topType = "scala.Any"
+    val bottomType = "scala.Nothing"
   }
 
-  case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomTypeName, upperBound: String = TypeEntity.topTypeName) {
+  case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {
     import TypeEntity._
 
     override def toString() = {
       val lbound =
-        if (lowerBound == bottomTypeName) ""
+        if (lowerBound == bottomType) ""
         else s" >: $lowerBound"
 
       val ubound =
-        if (upperBound == topTypeName) ""
+        if (upperBound == topType) ""
         else s" <: $upperBound"
 
       s"$name$lbound$ubound"
