@@ -2,7 +2,7 @@ name := "scala-api-search"
 
 scalaVersion := "2.11.5"
 
-libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.0"
+libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.9.1"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.5"
 

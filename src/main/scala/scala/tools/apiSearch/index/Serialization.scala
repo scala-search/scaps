@@ -3,7 +3,7 @@ package scala.tools.apiSearch.index
 import scala.tools.apiSearch.model.TermEntity
 
 object Serialization {
-  import scala.pickling.Defaults._
+  import scala.pickling._
   import scala.pickling.binary._
 
   def pickle(term: TermEntity): Array[Byte] = {
