@@ -10,25 +10,25 @@ import scala.tools.apiSearch.model._
 
 class TermsIndexSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "the index" should "persist entities and retrieve them by name" in {
-    withIndex("""
+    withTermIndex("""
       package p
 
-      class C{
-        def m: Int
+      object O{
+        val v = 1
       }
       """) { index =>
-      index.findTermsByName("p.C#m").get.head.name should be("p.C#m")
+      index.findTermsByName("p.O.v").get should contain(TermEntity("p.O.v", Nil, TypeEntity("scala.Int", Covariant, Nil), ""))
     }
   }
 
-  def withIndex(f: TermsIndex => Unit): Unit = {
+  def withTermIndex(f: TermsIndex => Unit): Unit = {
     using(new RAMDirectory) { termsDir =>
       val index = new TermsIndex(termsDir)
       f(index)
     }
   }
 
-  def withIndex(sources: String*)(f: TermsIndex => Unit): Unit = withIndex { index =>
+  def withTermIndex(sources: String*)(f: TermsIndex => Unit): Unit = withTermIndex { index =>
     val entities = sources.toStream.flatMap(extractAll).collect { case t: TermEntity => t }
     index.addEntities(entities)
     f(index)

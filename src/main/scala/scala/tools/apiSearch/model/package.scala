@@ -97,6 +97,9 @@ package object model {
 
     val unknownType = "<unknown>"
     val unknown = TypeEntity(unknownType, Covariant, Nil)
+
+    val any = TypeEntity("scala.Any", Covariant, Nil)
+    val anyRef = TypeEntity("java.lang.Object", Covariant, Nil)
   }
 
   case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {
