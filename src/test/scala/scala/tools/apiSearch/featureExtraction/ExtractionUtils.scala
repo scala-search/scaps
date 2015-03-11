@@ -1,4 +1,4 @@
-package scala.tools.apiSearch.testUtils
+package scala.tools.apiSearch.featureExtraction
 
 import scala.tools.apiSearch.utils.CompilerAccess
 import scala.tools.apiSearch.featureExtraction.ScalaSourceExtractor

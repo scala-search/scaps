@@ -2,7 +2,7 @@ package scala.tools.apiSearch.model
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
-import scala.tools.apiSearch.testUtils.ExtractionUtils
+import scala.tools.apiSearch.featureExtraction.ExtractionUtils
 
 class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "a type fingerprint" should "contain a term's type and variance" in {
