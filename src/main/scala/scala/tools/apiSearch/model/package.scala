@@ -61,7 +61,7 @@ package object model {
     }
   }
 
-  case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity] = Nil) {
+  case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) {
     override def toString() = {
       val argStr = args match {
         case Nil => ""
@@ -78,19 +78,25 @@ package object model {
   object TypeEntity {
     val topType = "scala.Any"
     val bottomType = "scala.Nothing"
+
     def functionType(n: Int) = s"scala.Function$n"
     def function(variance: Variance, paramTypes: List[TypeEntity], resultType: TypeEntity) = {
       val typeArgs = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
       TypeEntity(functionType(paramTypes.length), variance, typeArgs)
     }
+
     val memberAccessType = "<memberAccess>"
     def memberAccess(owner: TypeEntity, member: TypeEntity): TypeEntity =
       TypeEntity(memberAccessType, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
+
     def methodInvocationType(n: Int) = s"<methodInvocation$n>"
     def methodInvocation(paramTypes: List[TypeEntity], resultType: TypeEntity) = {
       val typeArgs = paramTypes.map(_.copy(variance = Contravariant)) :+ resultType.copy(variance = Covariant)
       TypeEntity(methodInvocationType(paramTypes.length), Covariant, typeArgs)
     }
+
+    val unknownType = "<unknown>"
+    val unknown = TypeEntity(unknownType, Covariant, Nil)
   }
 
   case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {

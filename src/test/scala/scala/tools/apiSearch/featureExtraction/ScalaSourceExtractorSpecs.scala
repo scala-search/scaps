@@ -78,7 +78,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         val a = 1
       }
       """)(
-      ("p.O.a", a => a.tpe should be(TypeEntity("scala.Int", Covariant))))
+      ("p.O.a", a => a.tpe should be(TypeEntity("scala.Int", Covariant, Nil))))
   }
 
   it should "extract method types" in {
@@ -233,7 +233,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
       class C extends T
       """)(
-      ("p.C", _.baseTypes should contain(TypeEntity("p.T", Covariant))))
+      ("p.C", _.baseTypes should contain(TypeEntity("p.T", Covariant, Nil))))
   }
 
   it should "extract class entities with type parameters" in {

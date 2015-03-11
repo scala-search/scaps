@@ -1,0 +1,101 @@
+package scala.tools.apiSearch.index
+
+import scala.collection.JavaConversions.mapAsJavaMap
+import scala.collection.JavaConversions.seqAsJavaList
+import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.model.TypeEntity
+import scala.tools.apiSearch.utils.using
+import scala.util.Try
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
+import org.apache.lucene.analysis.standard.StandardAnalyzer
+import org.apache.lucene.document.Document
+import org.apache.lucene.document.Field.Store
+import org.apache.lucene.document.TextField
+import org.apache.lucene.index.DirectoryReader
+import org.apache.lucene.index.IndexWriter
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.index.Term
+import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.store.Directory
+import org.apache.lucene.document.Field
+import org.apache.lucene.document.StoredField
+
+class TermsIndex(dir: Directory) {
+  import TermsIndex._
+
+  /**
+   * Adds all entities to the index.
+   */
+  def addEntities(entities: Seq[TermEntity]): Try[Unit] = {
+    withWriter { writer =>
+      val docs = entities.map(toDocument)
+      Try(writer.addDocuments(docs))
+    }
+  }
+
+  /**
+   * Searches for term entities matching `keywords` and `tpe` if defined.
+   */
+  def findTerms(keywords: Seq[String], tpe: Option[TypeEntity]): Seq[TermEntity] = ???
+
+  def findTermsByName(name: String): Try[Seq[TermEntity]] = {
+    withSearcher { searcher =>
+      val query = new TermQuery(new Term(fields.name, name))
+
+      val docs = searcher.search(query, 10)
+
+      docs.scoreDocs.map(scoreDoc =>
+        toTermEntity(searcher.doc(scoreDoc.doc)))
+    }
+  }
+
+  private def toDocument(entity: TermEntity): Document = {
+    val doc = new Document
+
+    def add(field: String, value: String) =
+      doc.add(new TextField(field, value, Store.YES))
+
+    add(fields.name, entity.name)
+    add(fields.fingerprint, entity.fingerprint)
+    doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
+
+    doc
+  }
+
+  def toTermEntity(doc: Document): TermEntity = {
+    val bytes = doc.getBinaryValues(fields.entity).flatMap(_.bytes)
+
+    Serialization.unpickleTerm(bytes)
+  }
+
+  private def withWriter[A](f: IndexWriter => A): Try[A] = {
+    val writerConf = new IndexWriterConfig(analyzer)
+
+    using(new IndexWriter(dir, writerConf)) { w =>
+      Try(f(w))
+    }
+  }
+
+  private def withSearcher[A](f: IndexSearcher => A): Try[A] = {
+    using(DirectoryReader.open(dir)) { reader =>
+      Try(f(new IndexSearcher(reader)))
+    }
+  }
+
+  private val analyzer =
+    new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
+      fields.fingerprint -> new WhitespaceAnalyzer,
+      fields.name -> new WhitespaceAnalyzer))
+}
+
+object TermsIndex {
+  object fields {
+    val name = "name"
+    val fingerprint = "fingerprint"
+    val entity = "entity"
+  }
+}

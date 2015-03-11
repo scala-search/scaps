@@ -12,9 +12,13 @@ trait ExtractionUtils extends CompilerAccess {
 
   val extractor = new ScalaSourceExtractor(compiler)
 
-  def extractAllTerms(source: String): Stream[TermEntity] = {
+  def extractAll(source: String): Stream[Entity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source)).collect { case t: TermEntity => t }
+    extractor(new BatchSourceFile(randomFileName, source))
+  }
+
+  def extractAllTerms(source: String): Stream[TermEntity] = {
+    extractAll(source).collect { case t: TermEntity => t }
   }
 
   def extractTerms(source: String)(entityHandlers: (String, TermEntity => Unit)*): Unit = {
@@ -34,8 +38,7 @@ trait ExtractionUtils extends CompilerAccess {
     extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
 
   def extractAllClasses(source: String): Stream[ClassEntity] = {
-    val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source)).collect { case c: ClassEntity => c }
+    extractAll(source).collect { case c: ClassEntity => c }
   }
 
   def extractClasses(source: String)(entityHandlers: (String, ClassEntity => Unit)*): Unit = {

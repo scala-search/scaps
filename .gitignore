@@ -1,6 +1,7 @@
 .cache
 .classpath
 .project
+.settings
 target/
 project/target/
 bin/

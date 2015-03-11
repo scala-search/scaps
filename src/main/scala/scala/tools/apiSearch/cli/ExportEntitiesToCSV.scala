@@ -51,4 +51,10 @@ object ExportEntitiesToCSV extends App with CompilerAccess {
 
   println(s"No. Types: ${byType.size}")
   println(s"No. Fingerprints: ${byFingerprint.size}")
+
+  val classEntities = entities.collect { case e: ClassEntity => e }
+  val maxBaseClasses = classEntities.maxBy(_.baseTypes.length)
+
+  println(s"No. Classes: ${classEntities.size}")
+  println(s"Max. Base Classes: ${maxBaseClasses.baseTypes.length}")
 }
