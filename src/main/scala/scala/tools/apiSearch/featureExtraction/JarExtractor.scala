@@ -7,12 +7,13 @@ import java.util.jar.JarFile
 import java.io.InputStreamReader
 import scala.collection.mutable.ArrayBuilder
 import scala.reflect.internal.util.BatchSourceFile
+import java.io.File
 
 class JarExtractor(val compiler: Global) {
   val scalaExtractor = new ScalaSourceExtractor(compiler)
 
-  def apply(path: String): Stream[Entity] = {
-    val jar = new JarFile(path)
+  def apply(file: File): Stream[Entity] = {
+    val jar = new JarFile(file)
 
     jar.entries().toStream.flatMap { entry =>
       if (!entry.isDirectory && entry.getName.endsWith(".scala")) {

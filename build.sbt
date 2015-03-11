@@ -8,6 +8,8 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
 libraryDependencies += "org.apache.lucene" % "lucene-core" % "5.0.0"
 
+libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0"
+
 resourceGenerators in Test <+=
   (resourceManaged in Test, resourceDirectory in Test, streams) map { (dir, resourcesDir, streams) =>
   	val packageName = "jarExtractorTests"
@@ -19,3 +21,7 @@ resourceGenerators in Test <+=
     IO.zip(entries(packageDir).map(d => (d, d.getAbsolutePath.substring(packageDir.getParent.length +1))), jar)
     Seq(jar)
   }
+  
+EclipseKeys.withSource := true
+
+scalacOptions ++= Seq("-feature")
