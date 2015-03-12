@@ -43,9 +43,9 @@ class TermsIndex(val dir: Directory) extends Index {
   }
 
   /**
-   * Searches for term entities matching `keywords` and `tpe` if defined.
+   * Searches for term entities matching `keywords` and `typeQuery` if defined.
    */
-  def findTerms(keywords: Seq[String], tpe: Option[TypeEntity]): Try[Seq[TermEntity]] = ???
+  def findTerms(keywords: Seq[String], typeQuery: Option[String]): Try[Seq[TermEntity]] = ???
 
   /**
    * Searches for term entities whose name matches `name`.

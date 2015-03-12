@@ -4,24 +4,20 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile
 import scala.tools.apiSearch.model._
 import scala.tools.nsc.interactive.Global
+import scala.util.Success
+import scala.util.Failure
 
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
   import compiler._
 
-  def apply(sourceFile: SourceFile): Stream[Entity] = {
-    val r = new Response[Tree]
+  def apply(sourceFile: SourceFile): Seq[Entity] =
+    withTypedTree(sourceFile) { root =>
+      compiler.ask { () =>
+        val syms = rawEntities(root)
 
-    compiler.askLoadedTyped(sourceFile, r)
+        val fragments = for { m <- syms } yield (m, sourceFile)
 
-    val root = r.get.left.get
-
-    compiler.ask { () =>
-      val syms = rawEntities(root)
-
-      val fragments = for { m <- syms } yield (m, sourceFile)
-
-      syms.toStream.flatMap { sym =>
-        compiler.ask { () =>
+        syms.flatMap { sym =>
           if (sym.isClass) {
             scala.util.Try(createClassEntity(sym)).toOption
           } else {
@@ -33,8 +29,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
           }
         }
       }
-    }
-  }
+    }.getOrElse(Nil)
 
   private def rawEntities(tree: Tree): List[Symbol] = {
     val members = new ListBuffer[Symbol]
@@ -67,5 +62,18 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
     traverser(tree)
 
     members.toList
+  }
+
+  private def withTypedTree[T](sourceFile: SourceFile)(f: Tree => T): util.Try[T] = {
+    val r = new Response[Tree]
+    compiler.askLoadedTyped(sourceFile, r)
+
+    r.get.fold(Success(_), Failure(_)).map { root =>
+      val result = f(root)
+
+      compiler.removeUnitOf(sourceFile)
+
+      result
+    }
   }
 }

@@ -9,12 +9,12 @@ import org.scalatest.Matchers
 trait ExtractionUtils extends CompilerAccess with Matchers {
   val extractor = new ScalaSourceExtractor(compiler)
 
-  def extractAll(source: String): Stream[Entity] = {
+  def extractAll(source: String): Seq[Entity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
     extractor(new BatchSourceFile(randomFileName, source))
   }
 
-  def extractAllTerms(source: String): Stream[TermEntity] = {
+  def extractAllTerms(source: String): Seq[TermEntity] = {
     extractAll(source).collect { case t: TermEntity => t }
   }
 
@@ -34,7 +34,7 @@ trait ExtractionUtils extends CompilerAccess with Matchers {
   def shouldExtractTerms(source: String)(entityNames: String*): Unit =
     extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
 
-  def extractAllClasses(source: String): Stream[ClassEntity] = {
+  def extractAllClasses(source: String): Seq[ClassEntity] = {
     extractAll(source).collect { case c: ClassEntity => c }
   }
 
