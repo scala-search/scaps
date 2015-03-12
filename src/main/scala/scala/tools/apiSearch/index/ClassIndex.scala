@@ -20,8 +20,15 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
 
-class ClassIndex(dir: Directory) {
+/**
+ * Persists class entities and provides lookup for classes by name.
+ *
+ * This index is mainly used for fast access to class hierarchies for query building.
+ */
+class ClassIndex(val dir: Directory) extends Index {
   import ClassIndex._
+
+  val analyzer = new WhitespaceAnalyzer
 
   /**
    * Adds all entities to the index.
@@ -61,24 +68,6 @@ class ClassIndex(dir: Directory) {
 
     Serialization.unpickleClass(bytes)
   }
-
-  private def withWriter[A](f: IndexWriter => A): Try[A] = {
-    val writerConf = new IndexWriterConfig(analyzer)
-
-    using(new IndexWriter(dir, writerConf)) { w =>
-      Try(f(w))
-    }
-  }
-
-  private def withSearcher[A](f: IndexSearcher => A): Try[A] = {
-    using(DirectoryReader.open(dir)) { reader =>
-      Try(f(new IndexSearcher(reader)))
-    }
-  }
-
-  private val analyzer =
-    new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
-      fields.name -> new WhitespaceAnalyzer))
 }
 
 object ClassIndex {

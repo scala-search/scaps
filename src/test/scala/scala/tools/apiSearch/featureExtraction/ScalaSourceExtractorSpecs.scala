@@ -6,7 +6,6 @@ import scala.tools.apiSearch.utils.CompilerAccess
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.apiSearch.model._
 import scala.util.Random
-import scala.tools.apiSearch.testUtils.ExtractionUtils
 
 class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "the scala source feature extractor" should "extract an entity in an object" in {

@@ -2,13 +2,12 @@ package scala.tools.apiSearch.index
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scala.tools.apiSearch.featureExtraction.ExtractionUtils
 import org.apache.lucene.store.RAMDirectory
 import scala.tools.apiSearch.utils.using
 import scala.tools.apiSearch.featureExtraction.ScalaSourceExtractor
 import scala.tools.apiSearch.model._
 
-class TermsIndexSpecs extends FlatSpec with Matchers with ExtractionUtils {
+class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {
     withTermIndex("""
       package p
@@ -17,20 +16,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val v = 1
       }
       """) { index =>
-      index.findTermsByName("p.O.v").get should contain(TermEntity("p.O.v", Nil, TypeEntity("scala.Int", Covariant, Nil), ""))
+      index.findTermsByName("p.O.v").get should contain(TermEntity("p.O.v", Nil, TypeEntity.int, ""))
     }
-  }
-
-  def withTermIndex(f: TermsIndex => Unit): Unit = {
-    using(new RAMDirectory) { termsDir =>
-      val index = new TermsIndex(termsDir)
-      f(index)
-    }
-  }
-
-  def withTermIndex(sources: String*)(f: TermsIndex => Unit): Unit = withTermIndex { index =>
-    val entities = sources.toStream.flatMap(extractAll).collect { case t: TermEntity => t }
-    index.addEntities(entities)
-    f(index)
   }
 }

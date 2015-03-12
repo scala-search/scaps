@@ -12,13 +12,14 @@ import java.io.File
 
 object ExportEntitiesToCSV extends App with CompilerAccess {
   val extractor = new JarExtractor(compiler)
-  val path = args(0)
+
+  val libraryPath = args(0)
   val target = args(1)
 
   val termsPath = target + ".terms.csv"
   val classesPath = target + ".classes.csv"
 
-  val entities = extractor(new File(path))
+  val entities = extractor(new File(libraryPath))
 
   using(new FileWriter(classesPath)) { classesWriter =>
     using(new FileWriter(termsPath)) { termsWriter =>

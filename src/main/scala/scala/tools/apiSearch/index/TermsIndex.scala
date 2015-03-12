@@ -24,8 +24,13 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.StoredField
 
-class TermsIndex(dir: Directory) {
+class TermsIndex(val dir: Directory) extends Index {
   import TermsIndex._
+
+  val analyzer =
+    new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
+      fields.fingerprint -> new WhitespaceAnalyzer,
+      fields.name -> new WhitespaceAnalyzer))
 
   /**
    * Adds all entities to the index.
@@ -76,25 +81,6 @@ class TermsIndex(dir: Directory) {
 
     Serialization.unpickleTerm(bytes)
   }
-
-  private def withWriter[A](f: IndexWriter => A): Try[A] = {
-    val writerConf = new IndexWriterConfig(analyzer)
-
-    using(new IndexWriter(dir, writerConf)) { w =>
-      Try(f(w))
-    }
-  }
-
-  private def withSearcher[A](f: IndexSearcher => A): Try[A] = {
-    using(DirectoryReader.open(dir)) { reader =>
-      Try(f(new IndexSearcher(reader)))
-    }
-  }
-
-  private val analyzer =
-    new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
-      fields.fingerprint -> new WhitespaceAnalyzer,
-      fields.name -> new WhitespaceAnalyzer))
 }
 
 object TermsIndex {
