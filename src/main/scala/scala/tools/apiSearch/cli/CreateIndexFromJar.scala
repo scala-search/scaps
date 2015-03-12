@@ -8,7 +8,8 @@ import java.nio.file.Path
 import java.io.File
 import java.nio.file.Paths
 import scala.tools.apiSearch.index.TermsIndex
-import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.index.ClassIndex
+import scala.tools.apiSearch.model._
 
 object CreateIndexFromJar extends App with CompilerAccess {
   val libraryPath = args(0)
@@ -16,11 +17,16 @@ object CreateIndexFromJar extends App with CompilerAccess {
 
   val extractor = new JarExtractor(compiler)
 
-  val dir = FSDirectory.open(Paths.get(indexDir, "terms").toFile())
-  val index = new TermsIndex(dir)
+  val termsDir = FSDirectory.open(Paths.get(indexDir, "terms").toFile())
+  val termsIndex = new TermsIndex(termsDir)
 
-  index.delete()
+  val classesDir = FSDirectory.open(Paths.get(indexDir, "classes").toFile())
+  val classesIndex = new ClassIndex(classesDir)
+
+  termsIndex.delete()
+  classesIndex.delete()
 
   val entities = extractor(new File(libraryPath))
-  index.addEntities(entities.collect { case t: TermEntity => t })
+  termsIndex.addEntities(entities.collect { case t: TermEntity => t })
+  classesIndex.addEntities(entities.collect { case c: ClassEntity => c })
 }

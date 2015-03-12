@@ -14,7 +14,7 @@ trait Index {
   def dir: Directory
   def analyzer: Analyzer
 
-  def delete() = {
+  def delete(): Try[Unit] = Try {
     dir.listAll().foreach(dir.deleteFile(_))
   }
 
