@@ -8,9 +8,9 @@ libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.5"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
-libraryDependencies += "org.apache.lucene" % "lucene-core" % "5.0.0"
+libraryDependencies += "org.apache.lucene" % "lucene-core" % "4.10.4"
 
-libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "5.0.0"
+libraryDependencies += "org.apache.lucene" % "lucene-analyzers-common" % "4.10.4"
 
 resourceGenerators in Test <+=
   (resourceManaged in Test, resourceDirectory in Test, streams) map { (dir, resourcesDir, streams) =>

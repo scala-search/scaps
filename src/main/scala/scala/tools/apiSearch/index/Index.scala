@@ -8,13 +8,18 @@ import org.apache.lucene.index.IndexWriterConfig
 import scala.tools.apiSearch.utils.using
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.index.DirectoryReader
+import org.apache.lucene.util.Version
 
 trait Index {
   def dir: Directory
   def analyzer: Analyzer
 
+  def delete() = {
+    dir.listAll().foreach(dir.deleteFile(_))
+  }
+
   def withWriter[A](f: IndexWriter => A): Try[A] = {
-    val writerConf = new IndexWriterConfig(analyzer)
+    val writerConf = new IndexWriterConfig(Version.LUCENE_4_10_4, analyzer)
 
     using(new IndexWriter(dir, writerConf)) { w =>
       Try(f(w))
