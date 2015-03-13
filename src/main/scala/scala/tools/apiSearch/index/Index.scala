@@ -14,6 +14,8 @@ trait Index {
   def dir: Directory
   def analyzer: Analyzer
 
+  val maxResults = 1000
+
   def delete(): Try[Unit] = Try {
     dir.listAll().foreach(dir.deleteFile(_))
   }

@@ -61,8 +61,6 @@ class TermsIndex(val dir: Directory) extends Index {
     }
   }
 
-  val maxResults = 1000
-
   private def toDocument(entity: TermEntity): Document = {
     val doc = new Document
 

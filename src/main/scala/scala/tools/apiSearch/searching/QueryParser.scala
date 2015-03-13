@@ -1,8 +1,9 @@
 package scala.tools.apiSearch.searching
 
 import scala.util.parsing.combinator.RegexParsers
+import scala.tools.apiSearch.model.ClassEntity
 
-case class RawQuery(tpe: String, args: List[RawQuery] = Nil)
+case class RawQuery(tpe: String, args: List[RawQuery] = Nil, cls: Option[ClassEntity] = None)
 
 /**
  * Parses a String into a structured query.
@@ -22,7 +23,7 @@ object QueryParser extends RegexParsers {
   /**
    * A Scala identifier.
    *
-   * This does not really implement Scala's identifier but suffices to distinguish them from brackets and
+   * This does not really implement Scala's identifier but suffices to distinguish them from whitespaces, brackets and
    * namespace delimiters.
    */
   def identifier: Parser[String] = """[^\.\#\,\[\]\s]+""".r

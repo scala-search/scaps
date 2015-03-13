@@ -1,7 +1,6 @@
 package scala.tools.apiSearch
 
 package object model {
-
   sealed trait Entity {
     def name: String
   }
