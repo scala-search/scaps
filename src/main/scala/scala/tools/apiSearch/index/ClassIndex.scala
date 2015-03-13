@@ -52,7 +52,7 @@ class ClassIndex(val dir: Directory) extends Index {
       val docs = searcher.search(query, 1)
 
       docs.scoreDocs.headOption.map(scoreDoc =>
-        toTermEntity(searcher.doc(scoreDoc.doc)))
+        toClassEntity(searcher.doc(scoreDoc.doc)))
     }
   }
 
@@ -69,7 +69,18 @@ class ClassIndex(val dir: Directory) extends Index {
       val docs = searcher.search(query, maxResults)
 
       docs.scoreDocs.map(scoreDoc =>
-        toTermEntity(searcher.doc(scoreDoc.doc)))
+        toClassEntity(searcher.doc(scoreDoc.doc)))
+    }
+  }
+
+  def findSubClasses(clsName: String): Try[Seq[ClassEntity]] = {
+    withSearcher { searcher =>
+      val query = new TermQuery(new Term(fields.baseClass, clsName))
+
+      val docs = searcher.search(query, maxResults)
+
+      docs.scoreDocs.map(scoreDoc =>
+        toClassEntity(searcher.doc(scoreDoc.doc)))
     }
   }
 
@@ -81,6 +92,9 @@ class ClassIndex(val dir: Directory) extends Index {
       doc.add(new TextField(fields.suffix, suffix, Field.Store.NO))
     }
     doc.add(new TextField(fields.noParams, entity.typeParameters.length.toString, Field.Store.YES))
+    for (baseClass <- entity.baseTypes) {
+      doc.add(new TextField(fields.baseClass, baseClass.name, Field.Store.NO))
+    }
     doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
 
     doc
@@ -95,7 +109,7 @@ class ClassIndex(val dir: Directory) extends Index {
       }
   }
 
-  private def toTermEntity(doc: Document): ClassEntity = {
+  private def toClassEntity(doc: Document): ClassEntity = {
     val bytes = doc.getBinaryValues(fields.entity).flatMap(_.bytes)
 
     Serialization.unpickleClass(bytes)
@@ -107,6 +121,7 @@ object ClassIndex {
     val name = "name"
     val suffix = "suffix"
     val noParams = "noParams"
+    val baseClass = "baseClass"
     val entity = "entity"
   }
 }

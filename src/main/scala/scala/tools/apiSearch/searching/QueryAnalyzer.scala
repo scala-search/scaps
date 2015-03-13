@@ -4,7 +4,10 @@ import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.index.ClassIndex
 import scala.util.Try
 
-case class Query(types: List[(Variance, ClassEntity)])
+sealed trait Query
+case class Parts(queries: List[Query]) extends Query
+case class Alternatives(queries: List[Query]) extends Query
+case class TypeQuery(variance: Variance, name: String) extends Query
 
 case class Suggestion(tpe: String, candidates: List[ClassEntity])
 

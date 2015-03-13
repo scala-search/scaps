@@ -14,7 +14,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       class C
       """) { index =>
-      val C = cls("p.C")()
+      val C = cls("p.C")()()
 
       index.findClassByName("p.C").get should be(Option(C))
     }
@@ -26,7 +26,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       class C
       """) { index =>
-      val C = cls("p.q.C")()
+      val C = cls("p.q.C")()()
 
       index.findClass("C", 0).get should contain(C)
       index.findClass("q.C", 0).get should contain(C)
@@ -42,7 +42,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         trait T
       }
       """) { index =>
-      val T = cls("p.q.C#T")()
+      val T = cls("p.q.C#T")()()
 
       index.findClass("T", 0).get should contain(T)
       index.findClass("C#T", 0).get should contain(T)
@@ -63,8 +63,8 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         trait T
       }
       """) { index =>
-      val CT = cls("p.C#T")()
-      val DT = cls("p.D#T")()
+      val CT = cls("p.C#T")()()
+      val DT = cls("p.D#T")()()
 
       val result = index.findClass("T", 0).get
 
@@ -85,8 +85,8 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         class C[A, B]
       }
       """) { index =>
-      val C1 = cls("p.O1.C")("A")
-      val C2 = cls("p.O2.C")("A", "B")
+      val C1 = cls("p.O1.C")("A")()
+      val C2 = cls("p.O2.C")("A", "B")()
 
       val result = index.findClass("C", 1).get
 
@@ -95,6 +95,29 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
     }
   }
 
-  def cls(name: String)(args: String*) =
-    ClassEntity(name, args.map(TypeParameterEntity(_)).toList, List(TypeEntity.anyRef, TypeEntity.any))
+  it should "retrieve subclasses" in {
+    withClassIndex("""
+      package p
+
+      trait A
+
+      trait B extends A
+      """) { index =>
+      val A = cls("p.A")()()
+      val B = cls("p.B")()(TypeEntity(A.name))
+
+      val result = index.findSubClasses(A.name).get
+
+      result should contain(B)
+      result should not contain (A)
+
+      val anySubClasses = index.findSubClasses(TypeEntity.any.name).get
+
+      anySubClasses should contain(A)
+      anySubClasses should contain(B)
+    }
+  }
+
+  def cls(name: String)(args: String*)(baseTypes: TypeEntity*) =
+    ClassEntity(name, args.map(TypeParameterEntity(_)).toList, baseTypes.toList ++ List(TypeEntity.anyRef, TypeEntity.any))
 }
