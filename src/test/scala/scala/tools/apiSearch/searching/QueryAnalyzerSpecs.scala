@@ -12,21 +12,32 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
     val A = ClassEntity("p.A", Nil, Nil)
     val env = Map(
       ("A", 0) -> Try(List(A)))
-    val analyzer = new QueryAnalyzer(Function.untupled(env))
+    val analyzer = new QueryAnalyzer(Function.untupled(env), _ => Try(Nil))
 
     analyzer(RawQuery("A")).get should be(Right(
       APIQuery(
         Part(Covariant, "p.A" :: Nil) :: Nil)))
   }
 
-  it should "return a left when class cannot be found" in {
-    val analyzer = new QueryAnalyzer((_, _) => Try(Nil))
+  it should "treat unknown names as type parameters" in {
+    val analyzer = new QueryAnalyzer((_, _) => Try(Nil), _ => Try(Nil))
+
+    analyzer(RawQuery("A")).get should be(Right(
+      APIQuery(Nil)))
+  }
+
+  it should "return suggestions on ambiguous names" in {
+    val pA = ClassEntity("p.A", Nil, Nil)
+    val qA = ClassEntity("q.A", Nil, Nil)
+    val env = Map(
+      ("A", 0) -> Try(List(pA, qA)))
+    val analyzer = new QueryAnalyzer(Function.untupled(env), _ => Try(Nil))
 
     analyzer(RawQuery("A")).get should be('left)
   }
 
   it should "fail when class finder fails" in {
-    val analyzer = new QueryAnalyzer((_, _) => Failure(new Exception))
+    val analyzer = new QueryAnalyzer((_, _) => Failure(new Exception), _ => Try(Nil))
 
     analyzer(RawQuery("A")) should be('failure)
   }

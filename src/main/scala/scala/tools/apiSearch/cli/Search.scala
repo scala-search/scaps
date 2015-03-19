@@ -19,7 +19,7 @@ object Search extends App {
   val classesDir = FSDirectory.open(Paths.get(indexDir, "classes").toFile())
   val classesIndex = new ClassIndex(classesDir)
 
-  val analyzer = new QueryAnalyzer(classesIndex.findClass _)
+  val analyzer = new QueryAnalyzer(classesIndex.findClass _, classesIndex.findSubClasses _)
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { in =>
     QueryParser(in).right.foreach { raw =>
@@ -27,7 +27,10 @@ object Search extends App {
       val res = analyzer(raw).get
       println(res)
       res.right.foreach { query =>
-        println(termsIndex.find(query).get.take(10))
+        termsIndex.find(query).get.take(10).foreach { t =>
+          println(t)
+          println(t.fingerprint)
+        }
       }
     }
   }

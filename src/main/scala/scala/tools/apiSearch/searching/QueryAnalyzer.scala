@@ -6,7 +6,9 @@ import scala.util.Try
 
 case class Suggestion(part: RawQuery, candidates: Seq[ClassEntity])
 
-case class ResolvedQuery(cls: ClassEntity, args: List[ResolvedQuery])
+sealed trait ResolvedQuery
+case class ResolvedClass(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
+case class ResolvedTypeParam(name: String) extends ResolvedQuery
 
 case class APIQuery(parts: List[Part])
 case class Part(variance: Variance, alternatives: List[String])
@@ -14,7 +16,10 @@ case class Part(variance: Variance, alternatives: List[String])
 /**
  *
  */
-class QueryAnalyzer(findClass: (String, Int) => Try[Seq[ClassEntity]]) {
+class QueryAnalyzer(
+  findClass: (String, Int) => Try[Seq[ClassEntity]],
+  findSubClasses: (String) => Try[Seq[ClassEntity]]) {
+
   def apply(raw: RawQuery): Try[Either[Suggestion, APIQuery]] =
     Try {
       val resolved = resolveNames(raw).get
@@ -24,14 +29,25 @@ class QueryAnalyzer(findClass: (String, Int) => Try[Seq[ClassEntity]]) {
 
   private def createParts(variance: Variance, query: ResolvedQuery): Try[List[Part]] =
     Try {
+      def toPart(cls: ClassEntity) = {
+        val alternatives = variance match {
+          case Contravariant => cls.baseTypes.map(_.name)
+          case Covariant     => findSubClasses(cls.name).get.map(_.name)
+          case _             => Nil
+        }
+        Part(variance, cls.name :: alternatives.toList)
+      }
+
       query match {
-        case ResolvedQuery(cls, Nil) => Part(variance, cls.name :: Nil) :: Nil
-        case ResolvedQuery(cls, args) =>
+        case ResolvedClass(cls, Nil) =>
+          toPart(cls) :: Nil
+        case ResolvedClass(cls, args) =>
           val argParts = cls.typeParameters.zip(args).flatMap {
             case (param, arg) => createParts(param.variance * variance, arg).get
           }
-
-          Part(variance, cls.name :: Nil) :: argParts
+          toPart(cls) :: argParts
+        case ResolvedTypeParam(_) =>
+          Nil
       }
     }
 
@@ -47,25 +63,13 @@ class QueryAnalyzer(findClass: (String, Int) => Try[Seq[ClassEntity]]) {
 
       suggestionOrResolvedArgs.right.flatMap { resolvedArgs =>
         findClass(raw.tpe, raw.args.length).get match {
+          case Seq() =>
+            Right(ResolvedTypeParam(raw.tpe))
           case Seq(cls) =>
-            Right(ResolvedQuery(cls, resolvedArgs))
+            Right(ResolvedClass(cls, resolvedArgs))
           case candidates =>
             Left(Suggestion(raw, candidates))
         }
       }
     }
-
-  private def substitute(cls: ClassEntity, param: TypeParameterEntity, replacement: TypeEntity): ClassEntity = {
-    val params = cls.typeParameters.filterNot(_ == param)
-    val baseTypes = cls.baseTypes.map(substitute(_, param, replacement))
-
-    cls.copy(typeParameters = params, baseTypes = baseTypes)
-  }
-
-  private def substitute(tpe: TypeEntity, param: TypeParameterEntity, replacement: TypeEntity): TypeEntity = {
-    if (tpe.name == param.name)
-      replacement
-    else
-      tpe.copy(args = tpe.args.map(substitute(_, param, replacement)))
-  }
 }

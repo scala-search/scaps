@@ -64,6 +64,7 @@ class TermsIndex(val dir: Directory) extends Index {
       }
       q.add(inner, Occur.SHOULD)
     }
+    println(q)
     q
   }
 
