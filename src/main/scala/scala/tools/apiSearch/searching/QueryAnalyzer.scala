@@ -17,7 +17,7 @@ case class Part(variance: Variance, alternatives: List[String])
  *
  */
 class QueryAnalyzer(
-  findClass: (String, Int) => Try[Seq[ClassEntity]],
+  findClass: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (String) => Try[Seq[ClassEntity]]) {
 
   def apply(raw: RawQuery): Try[Either[Suggestion, APIQuery]] =
@@ -62,10 +62,10 @@ class QueryAnalyzer(
       }
 
       suggestionOrResolvedArgs.right.flatMap { resolvedArgs =>
-        findClass(raw.tpe, raw.args.length).get match {
+        findClass(raw.tpe).get match {
           case Seq() =>
             Right(ResolvedTypeParam(raw.tpe))
-          case Seq(cls) =>
+          case Seq(cls) if raw.args.length == cls.typeParameters.length || raw.args.length == 0 =>
             Right(ResolvedClass(cls, resolvedArgs))
           case candidates =>
             Left(Suggestion(raw, candidates))

@@ -11,8 +11,8 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
   "the query analyzer" should "resolve type names" in {
     val A = ClassEntity("p.A", Nil, Nil)
     val env = Map(
-      ("A", 0) -> Try(List(A)))
-    val analyzer = new QueryAnalyzer(Function.untupled(env), _ => Try(Nil))
+      "A" -> Try(List(A)))
+    val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
     analyzer(RawQuery("A")).get should be(Right(
       APIQuery(
@@ -20,7 +20,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
   }
 
   it should "treat unknown names as type parameters" in {
-    val analyzer = new QueryAnalyzer((_, _) => Try(Nil), _ => Try(Nil))
+    val analyzer = new QueryAnalyzer(_ => Try(Nil), _ => Try(Nil))
 
     analyzer(RawQuery("A")).get should be(Right(
       APIQuery(Nil)))
@@ -30,14 +30,14 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
     val pA = ClassEntity("p.A", Nil, Nil)
     val qA = ClassEntity("q.A", Nil, Nil)
     val env = Map(
-      ("A", 0) -> Try(List(pA, qA)))
-    val analyzer = new QueryAnalyzer(Function.untupled(env), _ => Try(Nil))
+      "A" -> Try(List(pA, qA)))
+    val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
     analyzer(RawQuery("A")).get should be('left)
   }
 
   it should "fail when class finder fails" in {
-    val analyzer = new QueryAnalyzer((_, _) => Failure(new Exception), _ => Try(Nil))
+    val analyzer = new QueryAnalyzer(_ => Failure(new Exception), _ => Try(Nil))
 
     analyzer(RawQuery("A")) should be('failure)
   }

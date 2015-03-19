@@ -30,7 +30,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       index.addEntities(C :: Nil)
 
-      index.findClass("C", 0).get.size should be(1)
+      index.findClass("C").get.size should be(1)
     }
   }
 
@@ -42,9 +42,9 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val C = cls("p.q.C")()()
 
-      index.findClass("C", 0).get should contain(C)
-      index.findClass("q.C", 0).get should contain(C)
-      index.findClass("p.q.C", 0).get should contain(C)
+      index.findClass("C").get should contain(C)
+      index.findClass("q.C").get should contain(C)
+      index.findClass("p.q.C").get should contain(C)
     }
   }
 
@@ -58,14 +58,14 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val T = cls("p.q.C#T")()()
 
-      index.findClass("T", 0).get should contain(T)
-      index.findClass("C#T", 0).get should contain(T)
-      index.findClass("q.C#T", 0).get should contain(T)
-      index.findClass("p.q.C#T", 0).get should contain(T)
+      index.findClass("T").get should contain(T)
+      index.findClass("C#T").get should contain(T)
+      index.findClass("q.C#T").get should contain(T)
+      index.findClass("p.q.C#T").get should contain(T)
     }
   }
 
-  it should "retrieve multiple classes with same suffix and arity" in {
+  it should "retrieve multiple classes with same suffix" in {
     withClassIndex("""
       package p
 
@@ -80,32 +80,10 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       val CT = cls("p.C#T")()()
       val DT = cls("p.D#T")()()
 
-      val result = index.findClass("T", 0).get
+      val result = index.findClass("T").get
 
       result should contain(CT)
       result should contain(DT)
-    }
-  }
-
-  it should "retrieve only classes with given arity" in {
-    withClassIndex("""
-      package p
-
-      object O1 {
-        class C[A]
-      }
-
-      object O2 {
-        class C[A, B]
-      }
-      """) { index =>
-      val C1 = cls("p.O1.C")("A")()
-      val C2 = cls("p.O2.C")("A", "B")()
-
-      val result = index.findClass("C", 1).get
-
-      result should contain(C1)
-      result should not contain (C2)
     }
   }
 

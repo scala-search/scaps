@@ -69,11 +69,10 @@ class ClassIndex(val dir: Directory) extends Index {
    * Searches for class entities whose last parts of the full qualified name are `suffix`
    * and accept `noArgs` type parameters.
    */
-  def findClass(suffix: String, noArgs: Int): Try[Seq[ClassEntity]] = {
+  def findClass(suffix: String): Try[Seq[ClassEntity]] = {
     withSearcher { searcher =>
       val query = new BooleanQuery()
       query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
-      query.add(new TermQuery(new Term(fields.noParams, noArgs.toString)), Occur.MUST)
 
       val docs = searcher.search(query, maxResults)
 
@@ -100,9 +99,8 @@ class ClassIndex(val dir: Directory) extends Index {
     for (suffix <- suffixes(entity.name)) {
       doc.add(new TextField(fields.suffix, suffix, Field.Store.NO))
     }
-    doc.add(new TextField(fields.noParams, entity.typeParameters.length.toString, Field.Store.YES))
     for (baseClass <- entity.baseTypes) {
-      doc.add(new TextField(fields.baseClass, baseClass.name, Field.Store.YES))
+      doc.add(new TextField(fields.baseClass, baseClass.name, Field.Store.NO))
     }
     doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
 
@@ -129,7 +127,6 @@ object ClassIndex {
   object fields {
     val name = "name"
     val suffix = "suffix"
-    val noParams = "noParams"
     val baseClass = "baseClass"
     val entity = "entity"
   }
