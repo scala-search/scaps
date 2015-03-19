@@ -106,7 +106,7 @@ package object model {
     val int = TypeEntity("scala.Int")
   }
 
-  case class TypeParameterEntity(name: String, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {
+  case class TypeParameterEntity(name: String, variance: Variance, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {
     import TypeEntity._
 
     override def toString() = {

@@ -3,7 +3,7 @@ package scala.tools.apiSearch.searching
 import scala.util.parsing.combinator.RegexParsers
 import scala.tools.apiSearch.model.ClassEntity
 
-case class RawQuery(tpe: String, args: List[RawQuery] = Nil, cls: Option[ClassEntity] = None)
+case class RawQuery(tpe: String, args: List[RawQuery] = Nil)
 
 /**
  * Parses a String into a structured query.

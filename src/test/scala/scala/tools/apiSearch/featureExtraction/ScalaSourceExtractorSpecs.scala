@@ -157,7 +157,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("q.O.m", m => {
-        m.typeParameters should be(List(TypeParameterEntity("T")))
+        m.typeParameters should be(List(TypeParameterEntity("T", Invariant)))
         m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
       }))
   }
@@ -173,7 +173,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("q.O.m", m => {
-        m.typeParameters should be(List(TypeParameterEntity("T", lowerBound = "scala.Nothing", upperBound = "q.Up")))
+        m.typeParameters should be(List(TypeParameterEntity("T", Invariant, lowerBound = "scala.Nothing", upperBound = "q.Up")))
         m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
       }))
   }
@@ -188,9 +188,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m3[A](y: A): T
       }
       """)(
-      ("p.C#m1", _.typeParameters should be(List(TypeParameterEntity("T")))),
-      ("p.C#m2", _.typeParameters should be(List(TypeParameterEntity("T")))),
-      ("p.C#m3", _.typeParameters should be(List(TypeParameterEntity("T"), TypeParameterEntity("A")))))
+      ("p.C#m1", _.typeParameters should be(List(TypeParameterEntity("T", Invariant)))),
+      ("p.C#m2", _.typeParameters should be(List(TypeParameterEntity("T", Invariant)))),
+      ("p.C#m3", _.typeParameters should be(List(TypeParameterEntity("T", Invariant), TypeParameterEntity("A", Invariant)))))
   }
 
   it should "extract type parameters from nested classes" in {
@@ -203,7 +203,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         }
       }
       """)(
-      ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A"), TypeParameterEntity("B")))))
+      ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A", Invariant), TypeParameterEntity("B", Invariant)))))
   }
 
   it should "extract class entities" in {
@@ -241,7 +241,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
       class C[T]
       """)(
-      ("p.C", _.typeParameters should contain(TypeParameterEntity("T"))))
+      ("p.C", _.typeParameters should contain(TypeParameterEntity("T", Invariant))))
   }
 
   it should "use the concrete type arguments in base types" in {

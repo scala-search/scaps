@@ -119,5 +119,5 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   }
 
   def cls(name: String)(args: String*)(baseTypes: TypeEntity*) =
-    ClassEntity(name, args.map(TypeParameterEntity(_)).toList, baseTypes.toList ++ List(TypeEntity.anyRef, TypeEntity.any))
+    ClassEntity(name, args.map(TypeParameterEntity(_, Invariant)).toList, baseTypes.toList ++ List(TypeEntity.anyRef, TypeEntity.any))
 }

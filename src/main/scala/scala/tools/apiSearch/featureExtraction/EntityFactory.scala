@@ -85,6 +85,11 @@ trait EntityFactory {
   private def createTypeParamEntity(typeSym: Symbol) =
     TypeParameterEntity(
       qualifiedName(typeSym),
+      if (typeSym.variance.isCovariant)
+        Covariant
+      else if (typeSym.variance.isContravariant)
+        Contravariant
+      else Invariant,
       qualifiedName(typeSym.tpe.bounds.lo.typeSymbol),
       qualifiedName(typeSym.tpe.bounds.hi.typeSymbol))
 }
