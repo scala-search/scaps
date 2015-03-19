@@ -256,4 +256,15 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.C", _.baseTypes.mkString(", ") should include("p.T[scala.Int]")),
       ("p.D", _.baseTypes.mkString(", ") should include("p.T[B]")))
   }
+
+  it should "yield referenced types as class entities" in {
+    extractClasses("""
+      package p
+
+      object O{
+        def x = "hi"
+      }
+      """)(
+      ("java.lang.String", _ => ()))
+  }
 }

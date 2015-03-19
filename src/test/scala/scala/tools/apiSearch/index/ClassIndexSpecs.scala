@@ -20,6 +20,20 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
     }
   }
 
+  it should "persist class entities only once" in {
+    withClassIndex("""
+      package p
+
+      class C
+      """) { index =>
+      val C = cls("p.C")()()
+
+      index.addEntities(C :: Nil)
+
+      index.findClass("C", 0).get.size should be(1)
+    }
+  }
+
   it should "retrieve class entities by suffix" in {
     withClassIndex("""
       package p.q

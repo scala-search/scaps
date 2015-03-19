@@ -24,13 +24,13 @@ trait Index {
     val writerConf = new IndexWriterConfig(Version.LUCENE_4_10_4, analyzer)
 
     using(new IndexWriter(dir, writerConf)) { w =>
-      Try(f(w))
+      f(w)
     }
   }
 
   def withSearcher[A](f: IndexSearcher => A): Try[A] = {
     using(DirectoryReader.open(dir)) { reader =>
-      Try(f(new IndexSearcher(reader)))
+      f(new IndexSearcher(reader))
     }
   }
 }

@@ -11,7 +11,7 @@ trait ExtractionUtils extends CompilerAccess with Matchers {
 
   def extractAll(source: String): Seq[Entity] = {
     val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source))
+    extractor(new BatchSourceFile(randomFileName, source)).distinct
   }
 
   def extractAllTerms(source: String): Seq[TermEntity] = {

@@ -12,10 +12,22 @@ trait EntityFactory {
     ClassEntity(qualifiedName(sym), typeParamsFromOwningTemplates(sym), sym.tpe.baseTypeSeq.toList.tail.map(tpe => createTypeEntity(tpe, Covariant)))
   }
 
+  def isClassOfInterest(sym: Symbol): Boolean =
+    sym.isClass &&
+      !sym.isAnonOrRefinementClass &&
+      !sym.isLocalClass &&
+      !sym.isPackageClass &&
+      !sym.isModuleClass
+
   def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
     val (typeParams, tpe) = createTypeEntity(sym)
     TermEntity(qualifiedName(sym), typeParams, tpe, rawComment)
   }
+
+  def isTermOfInterest(sym: Symbol): Boolean =
+    sym.isTerm &&
+      sym.isPublic &&
+      !sym.isConstructor
 
   def createTypeEntity(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
     val (params, memberType) =

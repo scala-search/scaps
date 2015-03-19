@@ -29,7 +29,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
           }
         }
       }
-    }.getOrElse(Nil)
+    }.getOrElse(Nil).distinct
 
   private def rawEntities(tree: Tree): List[Symbol] = {
     val members = new ListBuffer[Symbol]
@@ -40,15 +40,19 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
           case impl: ImplDef =>
             val sym = impl.symbol
             if (sym.isPublic) {
-              if (sym.isClass)
+              if (isClassOfInterest(sym))
                 members += sym
 
-              members ++= sym.tpe.decls.filter(m => m.isTerm && m.isPublic && !m.isConstructor)
+              members ++= sym.tpe.decls.filter(isTermOfInterest)
               true
             } else {
               false
             }
-          case _: ValOrDefDef =>
+          case v: ValOrDefDef =>
+            v.symbol.tpe.collect {
+              case t if isClassOfInterest(t.typeSymbol) =>
+                members += t.typeSymbol
+            }
             false
           case _ =>
             true

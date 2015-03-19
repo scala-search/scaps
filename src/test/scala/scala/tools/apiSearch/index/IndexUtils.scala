@@ -20,7 +20,7 @@ trait IndexUtils extends ExtractionUtils {
   def withTermIndex(sources: String*)(f: TermsIndex => Unit): Unit =
     withTermIndex { index =>
       val entities = sources.toStream.flatMap(extractAll).collect { case t: TermEntity => t }
-      index.addEntities(entities)
+      index.addEntities(entities).get
       f(index)
     }
 
@@ -33,7 +33,7 @@ trait IndexUtils extends ExtractionUtils {
   def withClassIndex(sources: String*)(f: ClassIndex => Unit): Unit =
     withClassIndex { index =>
       val entities = sources.flatMap(extractAll).collect { case t: ClassEntity => t }
-      index.addEntities(entities)
+      index.addEntities(entities).get
       f(index)
     }
 }

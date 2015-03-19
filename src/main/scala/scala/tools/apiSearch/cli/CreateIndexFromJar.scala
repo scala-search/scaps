@@ -10,6 +10,9 @@ import java.nio.file.Paths
 import scala.tools.apiSearch.index.TermsIndex
 import scala.tools.apiSearch.index.ClassIndex
 import scala.tools.apiSearch.model._
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 object CreateIndexFromJar extends App with CompilerAccess {
   val libraryPath = args(0)
@@ -27,6 +30,7 @@ object CreateIndexFromJar extends App with CompilerAccess {
   classesIndex.delete()
 
   val entities = extractor(new File(libraryPath))
-  termsIndex.addEntities(entities.collect { case t: TermEntity => t })
+  val f = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t }) }
   classesIndex.addEntities(entities.collect { case c: ClassEntity => c })
+  Await.result(f, 1.hour)
 }
