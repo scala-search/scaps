@@ -4,25 +4,25 @@ import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.index.ClassIndex
 import scala.util.Try
 
-case class Suggestion(part: RawQuery, candidates: List[ClassEntity])
+case class Suggestion(part: RawQuery, candidates: Seq[ClassEntity])
 
 case class ResolvedQuery(cls: ClassEntity, args: List[ResolvedQuery])
 
-case class Query(parts: List[Part])
+case class APIQuery(parts: List[Part])
 case class Part(variance: Variance, alternatives: List[String])
 
 /**
  *
  */
-class QueryAnalyzer(findClass: (String, Int) => Try[List[ClassEntity]]) {
-  def apply(raw: RawQuery): Try[Either[Suggestion, Query]] =
+class QueryAnalyzer(findClass: (String, Int) => Try[Seq[ClassEntity]]) {
+  def apply(raw: RawQuery): Try[Either[Suggestion, APIQuery]] =
     Try {
       val resolved = resolveNames(raw).get
 
-      resolved.right.map(rq => Query(createParts(Covariant, rq).get))
+      resolved.right.map(rq => APIQuery(createParts(Covariant, rq).get))
     }
 
-  def createParts(variance: Variance, query: ResolvedQuery): Try[List[Part]] =
+  private def createParts(variance: Variance, query: ResolvedQuery): Try[List[Part]] =
     Try {
       query match {
         case ResolvedQuery(cls, Nil) => Part(variance, cls.name :: Nil) :: Nil
@@ -31,7 +31,7 @@ class QueryAnalyzer(findClass: (String, Int) => Try[List[ClassEntity]]) {
             case (param, arg) => createParts(param.variance * variance, arg).get
           }
 
-          Part(variance, Nil) :: argParts
+          Part(variance, cls.name :: Nil) :: argParts
       }
     }
 
@@ -47,7 +47,7 @@ class QueryAnalyzer(findClass: (String, Int) => Try[List[ClassEntity]]) {
 
       suggestionOrResolvedArgs.right.flatMap { resolvedArgs =>
         findClass(raw.tpe, raw.args.length).get match {
-          case cls :: Nil =>
+          case Seq(cls) =>
             Right(ResolvedQuery(cls, resolvedArgs))
           case candidates =>
             Left(Suggestion(raw, candidates))

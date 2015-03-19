@@ -15,7 +15,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
     val analyzer = new QueryAnalyzer(Function.untupled(env))
 
     analyzer(RawQuery("A")).get should be(Right(
-      Query(
+      APIQuery(
         Part(Covariant, "p.A" :: Nil) :: Nil)))
   }
 

@@ -23,6 +23,10 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.StoredField
+import scala.tools.apiSearch.searching.APIQuery
+import org.apache.lucene.search.Query
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.BooleanClause.Occur
 
 class TermsIndex(val dir: Directory) extends Index {
   import TermsIndex._
@@ -42,10 +46,26 @@ class TermsIndex(val dir: Directory) extends Index {
     }
   }
 
-  /**
-   * Searches for term entities matching `keywords` and `typeQuery` if defined.
-   */
-  def findTerms(keywords: Seq[String], typeQuery: Option[String]): Try[Seq[TermEntity]] = ???
+  def find(query: APIQuery): Try[Seq[TermEntity]] =
+    withSearcher { searcher =>
+      val docs = searcher.search(toLuceneQuery(query), maxResults)
+
+      docs.scoreDocs.map(scoreDoc =>
+        toTermEntity(searcher.doc(scoreDoc.doc)))
+    }
+
+  private def toLuceneQuery(query: APIQuery): Query = {
+    val q = new BooleanQuery
+    query.parts.foreach { part =>
+      val inner = new BooleanQuery
+      part.alternatives.foreach { alt =>
+        val tq = new TermQuery(new Term(fields.fingerprint, s"${part.variance.prefix}${alt}"))
+        inner.add(tq, Occur.SHOULD)
+      }
+      q.add(inner, Occur.SHOULD)
+    }
+    q
+  }
 
   /**
    * Searches for term entities whose name matches `name`.
