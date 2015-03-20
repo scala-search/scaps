@@ -9,7 +9,10 @@ trait EntityFactory {
   import compiler._
 
   def createClassEntity(sym: Symbol): ClassEntity = {
-    ClassEntity(qualifiedName(sym), typeParamsFromOwningTemplates(sym), sym.tpe.baseTypeSeq.toList.tail.map(tpe => createTypeEntity(tpe, Covariant)))
+    val baseTypes = sym.tpe.baseTypeSeq.toList.tail
+      .filter(tpe => isClassOfInterest(tpe.typeSymbol))
+      .map(tpe => createTypeEntity(tpe, Covariant))
+    ClassEntity(qualifiedName(sym), typeParamsFromOwningTemplates(sym), baseTypes)
   }
 
   def isClassOfInterest(sym: Symbol): Boolean =

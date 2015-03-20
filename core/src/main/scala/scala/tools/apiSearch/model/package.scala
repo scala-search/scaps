@@ -58,6 +58,8 @@ package object model {
         }
       }
     }
+
+    def withoutComment = copy(comment = "")
   }
 
   case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) {
