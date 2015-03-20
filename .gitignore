@@ -2,6 +2,5 @@
 .classpath
 .project
 .settings
-target/
-project/target/
-bin/
+target
+bin
