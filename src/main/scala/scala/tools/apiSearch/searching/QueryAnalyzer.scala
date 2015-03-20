@@ -63,7 +63,7 @@ class QueryAnalyzer(
 
       suggestionOrResolvedArgs.right.flatMap { resolvedArgs =>
         findClass(raw.tpe).get match {
-          case Seq() =>
+          case Seq() if isTypeParam(raw.tpe) =>
             Right(ResolvedTypeParam(raw.tpe))
           case Seq(cls) if raw.args.length == cls.typeParameters.length || raw.args.length == 0 =>
             Right(ResolvedClass(cls, resolvedArgs))
@@ -75,6 +75,9 @@ class QueryAnalyzer(
         }
       }
     }
+
+  private def isTypeParam(name: String): Boolean =
+    name.length() == 1
 
   private def favoredCandidate(candidates: Seq[ClassEntity]): Option[ClassEntity] =
     candidates.filter(c => c.name.startsWith("scala.")) match {
