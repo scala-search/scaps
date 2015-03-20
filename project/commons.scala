@@ -1,5 +1,6 @@
 import sbt._
 import Keys._
+import com.typesafe.sbteclipse.plugin.EclipsePlugin.EclipseKeys
 
 object Commons {
   val appVersion = "1.0"
@@ -9,6 +10,7 @@ object Commons {
   	scalaVersion := targetedScalaVersion,
     version := appVersion,
     resolvers += Opts.resolver.mavenLocalFile,
-    scalacOptions ++= Seq("-feature")
+    scalacOptions ++= Seq("-feature"),
+	EclipseKeys.withSource := true
   )
 }
