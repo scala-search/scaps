@@ -68,8 +68,17 @@ class QueryAnalyzer(
           case Seq(cls) if raw.args.length == cls.typeParameters.length || raw.args.length == 0 =>
             Right(ResolvedClass(cls, resolvedArgs))
           case candidates =>
-            Left(Suggestion(raw, candidates))
+            favoredCandidate(candidates)
+              .fold[Either[Suggestion, ResolvedQuery]](Left(Suggestion(raw, candidates))) {
+                cls => Right(ResolvedClass(cls, resolvedArgs))
+              }
         }
       }
+    }
+
+  private def favoredCandidate(candidates: Seq[ClassEntity]): Option[ClassEntity] =
+    candidates.filter(c => c.name.startsWith("scala.")) match {
+      case Seq(fav) => Some(fav)
+      case _        => None
     }
 }
