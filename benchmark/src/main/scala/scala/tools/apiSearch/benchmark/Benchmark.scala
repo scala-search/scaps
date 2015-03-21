@@ -9,6 +9,7 @@ import java.io.File
 import java.nio.file.Paths
 import scala.tools.apiSearch.index.TermsIndex
 import scala.tools.apiSearch.index.ClassIndex
+import scala.tools.apiSearch.index.Indexer
 import scala.tools.apiSearch.model._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -55,30 +56,18 @@ object Benchmark extends App with CompilerAccess {
     // Future.sequence (highly generic with higher kinded type param)
     "Function1[collection.Seq[Future[A], Future[collection.Seq[A]]]]")
 
-  val termsIndex = {
-    val termsDir = FSDirectory.open(Paths.get(indexDir, "terms").toFile())
-    new TermsIndex(termsDir)
-  }
-
-  val classesIndex = {
-    val classesDir = FSDirectory.open(Paths.get(indexDir, "classes").toFile())
-    new ClassIndex(classesDir)
-  }
+  val indexer = new Indexer(indexDir)
 
   if (rebuildIndex) {
-    termsIndex.delete()
-    classesIndex.delete()
+    indexer.reset().get
 
-    {
-      val extractor = new JarExtractor(compiler)
-      val entities = extractor(new File(libraryPath))
-      val f = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t }) }
-      classesIndex.addEntities(entities.collect { case c: ClassEntity => c })
-      Await.result(f, 1.hour)
-    }
+    val extractor = new JarExtractor(compiler)
+    val entities = extractor(new File(libraryPath))
+
+    Await.result(indexer.index(entities), 1.hour)
   }
 
-  val analyzer = new QueryAnalyzer(classesIndex.findClass _, classesIndex.findSubClasses _)
+  val analyzer = QueryAnalyzer(indexer.classesIndex)
 
   using(new FileWriter(outputPath)) { writer =>
     writer.write("Query; Index; Result;\n")
@@ -88,7 +77,7 @@ object Benchmark extends App with CompilerAccess {
 
       val analyzed = analyzer(raw).get.right.get
 
-      termsIndex.find(analyzed).get.take(20).zipWithIndex.foreach {
+      indexer.termsIndex.find(analyzed).get.take(20).zipWithIndex.foreach {
         case (t, idx) =>
           val term = t.withoutComment
           val entry = s"${query}; $idx; $term;\n"

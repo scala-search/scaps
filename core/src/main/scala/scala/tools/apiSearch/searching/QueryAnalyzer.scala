@@ -85,3 +85,8 @@ class QueryAnalyzer(
       case _        => None
     }
 }
+
+object QueryAnalyzer {
+  def apply(classes: ClassIndex) =
+    new QueryAnalyzer(classes.findClass _, classes.findSubClasses _)
+}

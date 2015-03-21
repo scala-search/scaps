@@ -13,6 +13,7 @@ import scala.tools.apiSearch.model._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.tools.apiSearch.index.Indexer
 
 object CreateIndexFromJar extends App with CompilerAccess {
   val libraryPath = args(0)
@@ -20,17 +21,11 @@ object CreateIndexFromJar extends App with CompilerAccess {
 
   val extractor = new JarExtractor(compiler)
 
-  val termsDir = FSDirectory.open(Paths.get(indexDir, "terms").toFile())
-  val termsIndex = new TermsIndex(termsDir)
+  val indexer = new Indexer(indexDir)
 
-  val classesDir = FSDirectory.open(Paths.get(indexDir, "classes").toFile())
-  val classesIndex = new ClassIndex(classesDir)
-
-  termsIndex.delete()
-  classesIndex.delete()
+  indexer.reset().get
 
   val entities = extractor(new File(libraryPath))
-  val f = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t }) }
-  classesIndex.addEntities(entities.collect { case c: ClassEntity => c })
-  Await.result(f, 1.hour)
+
+  Await.result(indexer.index(entities), 1.hour)
 }

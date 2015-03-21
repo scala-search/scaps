@@ -9,17 +9,14 @@ import scala.io.StdIn
 import scala.tools.apiSearch.searching.QueryAnalyzer
 import scala.tools.apiSearch.searching.Suggestion
 import scala.io.Source
+import scala.tools.apiSearch.index.Indexer
 
 object Search extends App {
   val indexDir = args(0)
 
-  val termsDir = FSDirectory.open(Paths.get(indexDir, "terms").toFile())
-  val termsIndex = new TermsIndex(termsDir)
+  val indexer = new Indexer(indexDir)
 
-  val classesDir = FSDirectory.open(Paths.get(indexDir, "classes").toFile())
-  val classesIndex = new ClassIndex(classesDir)
-
-  val analyzer = new QueryAnalyzer(classesIndex.findClass _, classesIndex.findSubClasses _)
+  val analyzer = QueryAnalyzer(indexer.classesIndex)
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { in =>
     QueryParser(in).right.foreach { raw =>
@@ -31,7 +28,7 @@ object Search extends App {
           candidates.foreach(c => println(s"    ${c.name}"))
       }, {
         query =>
-          termsIndex.find(query).get.take(10).foreach { t =>
+          indexer.termsIndex.find(query).get.take(10).foreach { t =>
             println(t)
           }
       })
