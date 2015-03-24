@@ -70,7 +70,7 @@ object Benchmark extends App with CompilerAccess {
   val analyzer = QueryAnalyzer(indexer.classesIndex)
 
   using(new FileWriter(outputPath)) { writer =>
-    writer.write("Query; Index; Result;\n")
+    writer.write("Query; Index; Result; Fingerprint;\n")
 
     queries.foreach { query =>
       val raw = QueryParser(query).right.get
@@ -80,7 +80,7 @@ object Benchmark extends App with CompilerAccess {
       indexer.termsIndex.find(analyzed).get.take(20).zipWithIndex.foreach {
         case (t, idx) =>
           val term = t.withoutComment
-          val entry = s"${query}; $idx; $term;\n"
+          val entry = s"${query}; $idx; $term; ${term.fingerprint}\n"
           println(entry)
           writer.write(entry)
       }

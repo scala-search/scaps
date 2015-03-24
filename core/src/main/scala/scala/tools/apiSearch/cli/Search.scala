@@ -28,6 +28,7 @@ object Search extends App {
           candidates.foreach(c => println(s"    ${c.name}"))
       }, {
         query =>
+          println(query)
           indexer.termsIndex.find(query).get.take(10).foreach { t =>
             println(t)
           }

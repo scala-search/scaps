@@ -24,7 +24,7 @@ case class QueryType(variance: Variance, typeNames: List[String], occurrence: In
  */
 class QueryAnalyzer(
   findClass: (String) => Try[Seq[ClassEntity]],
-  findSubClasses: (String) => Try[Seq[ClassEntity]]) {
+  findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
 
   def apply(raw: RawQuery): Try[Either[Suggestion, APIQuery]] =
     Try {
@@ -46,7 +46,7 @@ class QueryAnalyzer(
       def toPart(cls: ClassEntity) = {
         val alternatives = variance match {
           case Contravariant => cls.baseTypes.map(_.name)
-          case Covariant     => findSubClasses(cls.name).get.map(_.name)
+          case Covariant     => findSubClasses(cls).get.map(_.name)
           case _             => Nil
         }
         QueryType(variance, cls.name :: alternatives.toList, 0)

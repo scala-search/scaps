@@ -81,9 +81,9 @@ class ClassIndex(val dir: Directory) extends Index {
     }
   }
 
-  def findSubClasses(clsName: String): Try[Seq[ClassEntity]] = {
+  def findSubClasses(cls: ClassEntity): Try[Seq[ClassEntity]] = {
     withSearcher { searcher =>
-      val query = new TermQuery(new Term(fields.baseClass, clsName))
+      val query = new TermQuery(new Term(fields.baseClass, cls.name))
 
       val docs = searcher.search(query, maxResults)
 
