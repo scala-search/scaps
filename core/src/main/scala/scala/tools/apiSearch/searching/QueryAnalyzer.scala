@@ -10,8 +10,14 @@ sealed trait ResolvedQuery
 case class ResolvedClass(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
 case class ResolvedTypeParam(name: String) extends ResolvedQuery
 
-case class APIQuery(parts: List[Part])
-case class Part(variance: Variance, alternatives: List[String])
+case class APIQuery(types: List[QueryType]) {
+  def fingerprint: List[String] =
+    for {
+      tpe <- types
+      alternative <- tpe.typeNames
+    } yield s"${tpe.variance.prefix}${alternative}_${tpe.occurrence}"
+}
+case class QueryType(variance: Variance, typeNames: List[String], occurrence: Int)
 
 /**
  *
@@ -24,10 +30,18 @@ class QueryAnalyzer(
     Try {
       val resolved = resolveNames(raw).get
 
-      resolved.right.map(rq => APIQuery(createParts(Covariant, rq).get))
+      resolved.right.map(rq => createQuery(rq).get)
     }
 
-  private def createParts(variance: Variance, query: ResolvedQuery): Try[List[Part]] =
+  private def createQuery(resolvedQuery: ResolvedQuery): Try[APIQuery] =
+    createTypes(Covariant, resolvedQuery).map { types =>
+      val typesWithOcc = types.groupBy(identity)
+        .flatMap { case (tpe, values) => values.zipWithIndex.map { case (_, idx) => tpe.copy(occurrence = idx + 1) } }
+
+      APIQuery(typesWithOcc.toList)
+    }
+
+  private def createTypes(variance: Variance, query: ResolvedQuery): Try[List[QueryType]] =
     Try {
       def toPart(cls: ClassEntity) = {
         val alternatives = variance match {
@@ -35,7 +49,7 @@ class QueryAnalyzer(
           case Covariant     => findSubClasses(cls.name).get.map(_.name)
           case _             => Nil
         }
-        Part(variance, cls.name :: alternatives.toList)
+        QueryType(variance, cls.name :: alternatives.toList, 0)
       }
 
       query match {
@@ -43,7 +57,7 @@ class QueryAnalyzer(
           toPart(cls) :: Nil
         case ResolvedClass(cls, args) =>
           val argParts = cls.typeParameters.zip(args).flatMap {
-            case (param, arg) => createParts(param.variance * variance, arg).get
+            case (param, arg) => createTypes(param.variance * variance, arg).get
           }
           toPart(cls) :: argParts
         case ResolvedTypeParam(_) =>

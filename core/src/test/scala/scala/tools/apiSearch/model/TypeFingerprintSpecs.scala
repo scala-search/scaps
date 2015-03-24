@@ -5,7 +5,7 @@ import org.scalatest.FlatSpec
 import scala.tools.apiSearch.featureExtraction.ExtractionUtils
 
 class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
-  "a type fingerprint" should "contain a term's type and variance" in {
+  "a type fingerprint" should "contain a term's type, variance and occurrence number" in {
     extractTerms("""
       package p
 
@@ -13,7 +13,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = 1
       }
       """)(
-      ("p.O.i", _.fingerprint should be("+scala.Int")))
+      ("p.O.i", _.fingerprint should be("+scala.Int_1")))
   }
 
   it should "include type arguments" in {
@@ -24,7 +24,10 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val is = List(1)
       }
       """)(
-      ("p.O.is", _.fingerprint should be("+scala.collection.immutable.List +scala.Int")))
+      ("p.O.is", is => {
+        is.fingerprint should include("+scala.collection.immutable.List_1")
+        is.fingerprint should include("+scala.Int_1")
+      }))
   }
 
   it should "use upper type parameter bounds at covariant positions" in {
@@ -36,8 +39,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should include("+scala.AnyVal")
-        m.fingerprint should not include ("+A")
+        m.fingerprint should include("+scala.AnyVal_1")
+        m.fingerprint should not include ("+A_1")
       }))
   }
 
@@ -50,8 +53,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should include("-scala.AnyVal")
-        m.fingerprint should not include ("-A")
+        m.fingerprint should include("-scala.AnyVal_1")
+        m.fingerprint should not include ("-A_1")
       }))
   }
 
@@ -64,10 +67,10 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should not include ("+scala.Any")
-        m.fingerprint should not include ("-scala.Any")
-        m.fingerprint should not include ("+A")
-        m.fingerprint should not include ("-A")
+        m.fingerprint should not include ("+scala.Any_1")
+        m.fingerprint should not include ("-scala.Any_1")
+        m.fingerprint should not include ("+A_1")
+        m.fingerprint should not include ("-A_1")
       }))
   }
 }

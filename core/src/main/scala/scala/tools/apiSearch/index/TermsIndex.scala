@@ -56,15 +56,10 @@ class TermsIndex(val dir: Directory) extends Index {
 
   private def toLuceneQuery(query: APIQuery): Query = {
     val q = new BooleanQuery
-    query.parts.foreach { part =>
-      val inner = new BooleanQuery
-      part.alternatives.foreach { alt =>
-        val tq = new TermQuery(new Term(fields.fingerprint, s"${part.variance.prefix}${alt}"))
-        inner.add(tq, Occur.SHOULD)
-      }
-      q.add(inner, Occur.SHOULD)
+    query.fingerprint.foreach { part =>
+      val tq = new TermQuery(new Term(fields.fingerprint, part))
+      q.add(tq, Occur.SHOULD)
     }
-    println(q)
     q
   }
 

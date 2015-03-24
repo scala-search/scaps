@@ -37,6 +37,8 @@ package object model {
     def fingerprint =
       fingerprintTypes(tpe)
         .map(tpe => s"${tpe.variance.prefix}${tpe.name}")
+        .groupBy(identity)
+        .flatMap { case (typeName, values) => values.zipWithIndex.map { case (_, idx) => s"${typeName}_${idx + 1}" } }
         .mkString(" ")
 
     private def fingerprintTypes(tpe: TypeEntity): List[TypeEntity] = {

@@ -6,31 +6,33 @@ import scala.language.postfixOps
 
 class QueryParserSpecs extends FlatSpec with Matchers {
   "the query parser" should "parse simple types" in {
-    QueryParser("Int") shouldBe RawQuery("Int")
+    "Int" shouldBeParsedAs RawQuery("Int")
   }
 
   it should "parse types with arguments" in {
-    QueryParser("List[Int]") shouldBe RawQuery("List", List(RawQuery("Int")))
-    QueryParser("Map[Int, String]") shouldBe RawQuery("Map", List(RawQuery("Int"), RawQuery("String")))
-    QueryParser("List[Option[String]]") shouldBe RawQuery("List", List(RawQuery("Option", List(RawQuery("String")))))
+    "List[Int]" shouldBeParsedAs RawQuery("List", List(RawQuery("Int")))
+    "Map[Int, String]" shouldBeParsedAs RawQuery("Map", List(RawQuery("Int"), RawQuery("String")))
+    "List[Option[String]]" shouldBeParsedAs RawQuery("List", List(RawQuery("Option", List(RawQuery("String")))))
   }
 
   it should "fail on empty argument lists" in {
-    QueryParser("List[]") shouldFail
+    "List[]" shouldFail
   }
 
   it should "parse namespaces" in {
-    QueryParser("p.q.C") shouldBe RawQuery("p.q.C")
-    QueryParser("p.q.C[argument.Name]") shouldBe RawQuery("p.q.C", List(RawQuery("argument.Name")))
+    "p.q.C" shouldBeParsedAs RawQuery("p.q.C")
+    "p.q.C[argument.Name]" shouldBeParsedAs RawQuery("p.q.C", List(RawQuery("argument.Name")))
   }
 
   it should "parse type projections" in {
-    QueryParser("Outer#Inner") shouldBe RawQuery("Outer#Inner")
-    QueryParser("Outer#Inner[A#B]") shouldBe RawQuery("Outer#Inner", List(RawQuery("A#B")))
+    "Outer#Inner" shouldBeParsedAs RawQuery("Outer#Inner")
+    "Outer#Inner[A#B]" shouldBeParsedAs RawQuery("Outer#Inner", List(RawQuery("A#B")))
   }
 
-  implicit class ParserResultExtensions(res: Either[String, RawQuery]) {
-    def shouldBe(expected: RawQuery) = {
+  implicit class ParserResultExtensions(query: String) {
+    lazy val res = QueryParser(query)
+
+    def shouldBeParsedAs(expected: RawQuery) = {
       res should be('right)
       res.right.get should be(expected)
     }
