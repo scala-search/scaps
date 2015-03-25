@@ -27,14 +27,35 @@ import scala.tools.apiSearch.searching.APIQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
+import org.apache.lucene.search.similarities.DefaultSimilarity
+import org.apache.lucene.index.FieldInvertState
 
 class TermsIndex(val dir: Directory) extends Index {
   import TermsIndex._
 
-  val analyzer =
+  override val analyzer =
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
       fields.fingerprint -> new WhitespaceAnalyzer,
       fields.name -> new WhitespaceAnalyzer))
+
+  override val similarity = new PerFieldSimilarityWrapper {
+    val default = new DefaultSimilarity
+
+    override def get(field: String) = field match {
+      case fields.fingerprint => new DefaultSimilarity {
+        // Reduce influence of IDF in order to cope with missing reflection
+        // of type hierarchies in doc frequencies
+        //        override def idf(a: Long, b: Long) = super.idf(a, b) / 2f
+
+        // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
+        // because fingerprints are relatively short documents
+        //        override def lengthNorm(state: FieldInvertState): Float =
+        //          state.getBoost * (1f / Math.sqrt(2 * state.getLength))
+      }
+      case _ => default
+    }
+  }
 
   /**
    * Adds all entities to the index.
@@ -56,12 +77,17 @@ class TermsIndex(val dir: Directory) extends Index {
 
   private def toLuceneQuery(query: APIQuery): Query = {
     val q = new BooleanQuery
-    query.fingerprint.foreach { part =>
-      val tq = new TermQuery(new Term(fields.fingerprint, part))
+    query.types.foreach { tpe =>
+      val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
+      val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
+      tq.setBoost(distanceBoost(tpe.distance))
       q.add(tq, Occur.SHOULD)
     }
+    println(q)
     q
   }
+
+  def distanceBoost(dist: Int): Float = (1f / (dist + 2f) + 0.5f)
 
   /**
    * Searches for term entities whose name matches `name`.

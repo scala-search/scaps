@@ -30,7 +30,9 @@ object Search extends App {
         query =>
           println(query)
           indexer.termsIndex.find(query).get.take(10).foreach { t =>
-            println(t)
+            println(t.copy(comment = ""))
+            println(t.fingerprint)
+            println()
           }
       })
     }
