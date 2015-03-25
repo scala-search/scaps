@@ -11,7 +11,8 @@ object Commons {
     version := appVersion,
     resolvers += Opts.resolver.mavenLocalFile,
     scalacOptions ++= Seq(
-      //"-Xlint",
+      "-encoding", "UTF8",
+      "-Xlint",
       "-feature",
       "-deprecation",
       "-Xfatal-warnings"),

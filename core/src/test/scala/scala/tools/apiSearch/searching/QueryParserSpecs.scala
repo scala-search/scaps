@@ -37,7 +37,7 @@ class QueryParserSpecs extends FlatSpec with Matchers {
       res.right.get should be(expected)
     }
 
-    def shouldFail = {
+    def shouldFail() = {
       res should be('left)
     }
   }
