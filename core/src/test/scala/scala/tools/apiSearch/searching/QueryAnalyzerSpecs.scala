@@ -16,7 +16,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
 
     analyzer(RawQuery("A")).get should be(Right(
       APIQuery(
-        QueryType(Covariant, "p.A" :: Nil, 1) :: Nil)))
+        APIQuery.Type(Covariant, "p.A", 0, 0) :: Nil)))
   }
 
   it should "treat unknown names as type parameters" in {

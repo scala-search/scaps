@@ -32,7 +32,7 @@ object Benchmark extends App with CompilerAccess {
     s"benchmark/target/results/${format.format(now)}.csv"
   }
 
-  val rebuildIndex = false
+  val rebuildIndex = true
 
   val queries = List(
     // magic integer values

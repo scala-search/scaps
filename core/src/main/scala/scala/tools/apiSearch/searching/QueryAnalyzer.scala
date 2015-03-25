@@ -10,14 +10,20 @@ sealed trait ResolvedQuery
 case class ResolvedClass(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
 case class ResolvedTypeParam(name: String) extends ResolvedQuery
 
-case class APIQuery(types: List[QueryType]) {
+case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
+object FlattenedQuery {
+  case class Type(variance: Variance, typeName: String, distance: Int)
+}
+
+case class APIQuery(types: List[APIQuery.Type]) {
   def fingerprint: List[String] =
     for {
       tpe <- types
-      alternative <- tpe.typeNames
-    } yield s"${tpe.variance.prefix}${alternative}_${tpe.occurrence}"
+    } yield s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
 }
-case class QueryType(variance: Variance, typeNames: List[String], occurrence: Int)
+object APIQuery {
+  case class Type(variance: Variance, typeName: String, occurrence: Int, distance: Int)
+}
 
 /**
  *
@@ -30,38 +36,9 @@ class QueryAnalyzer(
     Try {
       val resolved = resolveNames(raw).get
 
-      resolved.right.map(rq => createQuery(rq).get)
-    }
-
-  private def createQuery(resolvedQuery: ResolvedQuery): Try[APIQuery] =
-    createTypes(Covariant, resolvedQuery).map { types =>
-      val typesWithOcc = types.groupBy(identity)
-        .flatMap { case (tpe, values) => values.zipWithIndex.map { case (_, idx) => tpe.copy(occurrence = idx + 1) } }
-
-      APIQuery(typesWithOcc.toList)
-    }
-
-  private def createTypes(variance: Variance, query: ResolvedQuery): Try[List[QueryType]] =
-    Try {
-      def toPart(cls: ClassEntity) = {
-        val alternatives = variance match {
-          case Contravariant => cls.baseTypes.map(_.name)
-          case Covariant     => findSubClasses(cls).get.map(_.name)
-          case _             => Nil
-        }
-        QueryType(variance, cls.name :: alternatives.toList, 0)
-      }
-
-      query match {
-        case ResolvedClass(cls, Nil) =>
-          toPart(cls) :: Nil
-        case ResolvedClass(cls, args) =>
-          val argParts = cls.typeParameters.zip(args).flatMap {
-            case (param, arg) => createTypes(param.variance * variance, arg).get
-          }
-          toPart(cls) :: argParts
-        case ResolvedTypeParam(_) =>
-          Nil
+      resolveNames(raw).get.right.map { resolved =>
+        // TODO: normalize distances?
+        toApiQuery(flattenQuery(resolved).get)
       }
     }
 
@@ -98,6 +75,55 @@ class QueryAnalyzer(
       case Seq(fav) => Some(fav)
       case _        => None
     }
+
+  def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
+    Try {
+      def flattenWithVariance(variance: Variance, rq: ResolvedQuery): List[(Variance, ClassEntity)] = rq match {
+        case ResolvedClass(cls, args) =>
+          val argParts = cls.typeParameters.zip(args).flatMap {
+            case (param, arg) => flattenWithVariance(param.variance * variance, arg)
+          }
+          (variance, cls) :: argParts
+        case ResolvedTypeParam(_) => Nil
+      }
+
+      def withAlternatives(variance: Variance, cls: ClassEntity): List[FlattenedQuery.Type] = {
+        val alternativesWithDistance: List[(String, Int)] = variance match {
+          case Covariant     => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
+          case Contravariant => findSubClasses(cls).get.map(subCls => (subCls.name, 1)).toList
+          case Invariant     => Nil
+        }
+
+        ((cls.name, 0) :: alternativesWithDistance).map {
+          case (alt, distance) => FlattenedQuery.Type(variance, alt, distance)
+        }
+      }
+
+      val types = flattenWithVariance(Covariant, resolved)
+        .map((withAlternatives _).tupled)
+
+      FlattenedQuery(types)
+    }
+
+  def toApiQuery(flattened: FlattenedQuery): APIQuery = {
+    val distancesPerType: Map[(Variance, String), List[Int]] =
+      flattened.types.flatten.foldLeft(Map[(Variance, String), List[Int]]()) {
+        (distancesPerType, tpe) =>
+          val key = (tpe.variance, tpe.typeName)
+          val distances = distancesPerType.get(key).getOrElse(Nil)
+
+          distancesPerType + (key -> (tpe.distance :: distances))
+      }
+
+    val orderedDistancesPerType = distancesPerType.mapValues(_.sorted(Ordering[Int].reverse))
+
+    val types = for {
+      ((variance, tpe), distances) <- orderedDistancesPerType
+      (distance, idx) <- distances.zipWithIndex
+    } yield APIQuery.Type(variance, tpe, idx, distance)
+
+    APIQuery(types.toList.sortBy(_.distance))
+  }
 }
 
 object QueryAnalyzer {

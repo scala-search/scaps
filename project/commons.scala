@@ -10,7 +10,11 @@ object Commons {
   	scalaVersion := targetedScalaVersion,
     version := appVersion,
     resolvers += Opts.resolver.mavenLocalFile,
-    scalacOptions ++= Seq("-feature"),
+    scalacOptions ++= Seq(
+      //"-Xlint",
+      "-feature",
+      "-deprecation",
+      "-Xfatal-warnings"),
 	EclipseKeys.withSource := true
   )
 }

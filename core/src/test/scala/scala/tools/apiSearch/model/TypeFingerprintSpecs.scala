@@ -13,7 +13,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = 1
       }
       """)(
-      ("p.O.i", _.fingerprint should be("+scala.Int_1")))
+      ("p.O.i", _.fingerprint should be("+scala.Int_0")))
   }
 
   it should "include type arguments" in {
@@ -25,8 +25,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.O.is", is => {
-        is.fingerprint should include("+scala.collection.immutable.List_1")
-        is.fingerprint should include("+scala.Int_1")
+        is.fingerprint should include("+scala.collection.immutable.List_0")
+        is.fingerprint should include("+scala.Int_0")
       }))
   }
 
@@ -39,8 +39,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should include("+scala.AnyVal_1")
-        m.fingerprint should not include ("+A_1")
+        m.fingerprint should include("+scala.AnyVal_0")
+        m.fingerprint should not include ("+A_0")
       }))
   }
 
@@ -53,8 +53,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should include("-scala.AnyVal_1")
-        m.fingerprint should not include ("-A_1")
+        m.fingerprint should include("-scala.AnyVal_0")
+        m.fingerprint should not include ("-A_0")
       }))
   }
 
@@ -67,10 +67,10 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.T#m", m => {
-        m.fingerprint should not include ("+scala.Any_1")
-        m.fingerprint should not include ("-scala.Any_1")
-        m.fingerprint should not include ("+A_1")
-        m.fingerprint should not include ("-A_1")
+        m.fingerprint should not include ("+scala.Any_0")
+        m.fingerprint should not include ("-scala.Any_0")
+        m.fingerprint should not include ("+A_0")
+        m.fingerprint should not include ("-A_0")
       }))
   }
 }
