@@ -10,14 +10,13 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class Indexer(indexDir: Path) {
-  val (termsIndex, classesIndex) = {
-    val termsDir = FSDirectory.open((indexDir / "terms").jfile)
-    val terms = new TermsIndex(termsDir)
+  lazy val (termsIndex, classesIndex) = {
+    def createDir(path: Path) = {
+      path.jfile.mkdirs()
+      FSDirectory.open(path.jfile)
+    }
 
-    val classesDir = FSDirectory.open((indexDir / "classes").jfile)
-    val classes = new ClassIndex(classesDir)
-
-    (terms, classes)
+    (new TermsIndex(createDir(indexDir / "terms")), new ClassIndex(createDir(indexDir / "classes")))
   }
 
   def reset() = for {
