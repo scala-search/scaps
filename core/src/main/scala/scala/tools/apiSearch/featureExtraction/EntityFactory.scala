@@ -53,7 +53,7 @@ trait EntityFactory {
   }
 
   def isTermOfInterest(sym: Symbol): Boolean =
-    (sym.isTerm || sym.isConstructor) &&
+    (sym.isTerm || (sym.isConstructor && !sym.owner.isAbstractClass)) &&
       sym.isPublic
 
   def createTypeEntity(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {

@@ -231,6 +231,16 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.A#<init>", _ => ()))
   }
 
+  it should "not extract constructors of abstract classes" in {
+    val terms = extractAllTerms("""
+      package p
+
+      trait T
+      """)
+
+    terms.find(_.name == "p.T#<init>") should not be ('defined)
+  }
+
   it should "extract objects as terms and classes" in {
     val src = """
       package p
