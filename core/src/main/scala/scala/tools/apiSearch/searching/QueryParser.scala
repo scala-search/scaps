@@ -2,18 +2,44 @@ package scala.tools.apiSearch.searching
 
 import scala.util.parsing.combinator.RegexParsers
 import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.model.TypeEntity
 
-case class RawQuery(tpe: String, args: List[RawQuery] = Nil)
+case class RawQuery(tpe: RawQuery.Type)
+
+object RawQuery {
+  case class Type(name: String, args: List[Type] = Nil)
+
+  def function(args: List[Type], res: Type) =
+    Type(TypeEntity.functionType(args.length), args :+ res)
+
+  def tuple(tpes: Type*) =
+    Type(TypeEntity.tupleType(tpes.length), tpes.toList)
+}
 
 /**
  * Parses a String into a structured query.
  */
 object QueryParser extends RegexParsers {
-  def query: Parser[RawQuery] = tpe
+  import RawQuery._
 
-  def tpe: Parser[RawQuery] = name ~ opt("[" ~> rep1sep(tpe, ",") <~ "]") ^^ {
-    case tpeName ~ Some(args) => RawQuery(tpeName, args)
-    case tpeName ~ None       => RawQuery(tpeName)
+  def query: Parser[RawQuery] = tpe ^^ { tpe => RawQuery(tpe) }
+
+  def tpe: Parser[Type] = functionTpe | tupleTpe | simpleTpe
+
+  def simpleTpe: Parser[Type] = name ~ opt("[" ~> rep1sep(tpe, ",") <~ "]") ^^ {
+    case tpeName ~ Some(args) => Type(tpeName, args)
+    case tpeName ~ None       => Type(tpeName)
+  }
+
+  def functionTpe: Parser[Type] = (functionArgs <~ "=>") ~ tpe ^^ {
+    case args ~ returnTpe => function(args, returnTpe)
+  }
+
+  def functionArgs: Parser[List[Type]] = simpleTpe ^^ { tpe => List(tpe) } |
+    "(" ~> repsep(tpe, ",") <~ ")"
+
+  def tupleTpe: Parser[Type] = "(" ~> rep1sep(tpe, ",") <~ ")" ^^ {
+    case tpes => tuple(tpes: _*)
   }
 
   def name: Parser[String] = identifier ~ rep("""[\.#]""".r ~ identifier) ^^ {
@@ -26,7 +52,7 @@ object QueryParser extends RegexParsers {
    * This does not really implement Scala's identifier but suffices to distinguish them from whitespaces, brackets and
    * namespace delimiters.
    */
-  def identifier: Parser[String] = """[^\.\#\,\[\]\s]+""".r
+  def identifier: Parser[String] = """[^\.\#\,\[\]\s\(\)]+""".r
 
   def apply(input: String): Either[String, RawQuery] =
     parseAll(query, input) match {

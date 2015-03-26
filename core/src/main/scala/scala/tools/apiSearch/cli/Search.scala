@@ -22,9 +22,9 @@ object Search extends App {
     QueryParser(in).right.foreach { raw =>
       analyzer(raw).get.fold({
         case Suggestion(raw, Seq()) =>
-          println(s"Type ${raw.tpe} not found")
+          println(s"Type ${raw.name} not found")
         case Suggestion(raw, candidates) =>
-          println(s"Type ${raw.tpe} is ambiguous")
+          println(s"Type ${raw.name} is ambiguous")
           candidates.foreach(c => println(s"    ${c.name}"))
       }, {
         query =>

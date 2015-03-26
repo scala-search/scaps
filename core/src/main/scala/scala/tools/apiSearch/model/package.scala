@@ -89,6 +89,8 @@ object TypeEntity {
     TypeEntity(functionType(paramTypes.length), variance, typeArgs)
   }
 
+  def tupleType(n: Int) = s"scala.Tuple$n"
+
   val memberAccessType = "<memberAccess>"
   def memberAccess(owner: TypeEntity, member: TypeEntity): TypeEntity =
     TypeEntity(memberAccessType, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)

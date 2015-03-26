@@ -8,13 +8,16 @@ import scala.collection.immutable.Map
 import scala.util.Failure
 
 class QueryAnalyzerSpecs extends FlatSpec with Matchers {
+
+  val queryA = RawQuery(RawQuery.Type("A"))
+
   "the query analyzer" should "resolve type names" in {
     val A = ClassEntity("p.A", Nil, Nil)
     val env = Map(
       "A" -> Try(List(A)))
     val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
-    analyzer(RawQuery("A")).get should be(Right(
+    analyzer(queryA).get should be(Right(
       APIQuery(
         APIQuery.Type(Covariant, "p.A", 0, 0) :: Nil)))
   }
@@ -22,7 +25,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
   it should "treat unknown names as type parameters" in {
     val analyzer = new QueryAnalyzer(_ => Try(Nil), _ => Try(Nil))
 
-    analyzer(RawQuery("A")).get should be(Right(
+    analyzer(queryA).get should be(Right(
       APIQuery(Nil)))
   }
 
@@ -33,12 +36,12 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
       "A" -> Try(List(pA, qA)))
     val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
-    analyzer(RawQuery("A")).get should be('left)
+    analyzer(queryA).get should be('left)
   }
 
   it should "fail when class finder fails" in {
     val analyzer = new QueryAnalyzer(_ => Failure(new Exception), _ => Try(Nil))
 
-    analyzer(RawQuery("A")) should be('failure)
+    analyzer(queryA) should be('failure)
   }
 }

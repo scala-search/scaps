@@ -4,7 +4,7 @@ import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.index.ClassIndex
 import scala.util.Try
 
-case class Suggestion(part: RawQuery, candidates: Seq[ClassEntity])
+case class Suggestion(part: RawQuery.Type, candidates: Seq[ClassEntity])
 
 sealed trait ResolvedQuery
 case class ResolvedClass(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
@@ -34,15 +34,13 @@ class QueryAnalyzer(
 
   def apply(raw: RawQuery): Try[Either[Suggestion, APIQuery]] =
     Try {
-      val resolved = resolveNames(raw).get
-
-      resolveNames(raw).get.right.map { resolved =>
+      resolveNames(raw.tpe).get.right.map { resolved =>
         // TODO: normalize distances?
         toApiQuery(flattenQuery(resolved).get)
       }
     }
 
-  def resolveNames(raw: RawQuery): Try[Either[Suggestion, ResolvedQuery]] =
+  def resolveNames(raw: RawQuery.Type): Try[Either[Suggestion, ResolvedQuery]] =
     Try {
       val suggestionOrResolvedArgs = raw.args.foldLeft[Either[Suggestion, List[ResolvedQuery]]](Right(Nil)) { (acc, arg) =>
         (acc, resolveNames(arg).get) match {
@@ -53,9 +51,9 @@ class QueryAnalyzer(
       }
 
       suggestionOrResolvedArgs.right.flatMap { resolvedArgs =>
-        findClass(raw.tpe).get match {
-          case Seq() if isTypeParam(raw.tpe) =>
-            Right(ResolvedTypeParam(raw.tpe))
+        findClass(raw.name).get match {
+          case Seq() if isTypeParam(raw.name) =>
+            Right(ResolvedTypeParam(raw.name))
           case Seq(cls) if raw.args.length == cls.typeParameters.length || raw.args.length == 0 =>
             Right(ResolvedClass(cls, resolvedArgs))
           case candidates =>
