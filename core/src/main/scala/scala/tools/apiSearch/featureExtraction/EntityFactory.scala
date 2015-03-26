@@ -11,17 +11,25 @@ trait EntityFactory {
   def extractEntities(classSym: Symbol, getDocComment: Symbol => String): List[Entity] = {
     if (isClassOfInterest(classSym)) {
       val cls = createClassEntity(classSym)
+
+      val objTerm =
+        if (isTermOfInterest(classSym)) createTermEntity(classSym, getDocComment(classSym)) :: Nil
+        else Nil
+
       val memberSyms = classSym.tpe.decls
         .filter(isTermOfInterest)
+
       val referencedClasses = memberSyms.flatMap { sym =>
         sym.tpe.collect { case t => t.typeSymbol }
           .filter(isClassOfInterest _)
           .map(createClassEntity _)
       }.toList
+
       val members = memberSyms
         .map(sym => createTermEntity(sym, getDocComment(sym)))
         .toList
-      cls :: members ::: referencedClasses
+
+      cls :: objTerm ::: members ::: referencedClasses
     } else {
       Nil
     }

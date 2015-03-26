@@ -69,6 +69,22 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
     comments should include("A minimal doc comment")
   }
 
+  ignore should "expand variables in doc comments (only locally)" in {
+    extractTerms("""
+      package p
+
+      /** An object
+       *
+       *  @define info Hello, world!
+       */
+      object O {
+        /** #info */
+        def m = 1
+      }
+      """.replace('#', '$'))( // workaround to mute "possible missing interpolator" warning
+      ("p.O.m", _.comment should include("Hello, world!")))
+  }
+
   it should "extract simple types from values" in {
     extractTerms("""
       package p
@@ -215,12 +231,15 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.A#<init>", _ => ()))
   }
 
-  it should "extract objects as terms" in {
-    extractTerms("""
+  it should "extract objects as terms and classes" in {
+    val src = """
       package p
 
       object O
-      """)(
+      """
+    extractClasses(src)(
+      ("p.O", _ => ()))
+    extractTerms(src)(
       ("p.O", _ => ()))
   }
 
