@@ -13,25 +13,50 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
   def apply(sourceFile: SourceFile): Seq[Entity] =
     withTypedTree(sourceFile) { root =>
       compiler.ask { () =>
-        val syms = rawEntities(root)
+        val classes = findClasses(root)
 
-        val fragments = for { m <- syms } yield (m, sourceFile)
+        val fragments = for {
+          sym <- symsMayContributingComments(root)
+        } yield (sym, sourceFile)
 
-        syms.flatMap { sym =>
-          if (sym.isClass) {
-            scala.util.Try(createClassEntity(sym)).toOption
-          } else {
-            val cr = new Response[(String, String, Position)]
-            compiler.askDocComment(sym, sourceFile, sym.enclosingPackage, fragments.toList, cr)
-            val comment = cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
+        def getDocComment(sym: Symbol): String = {
+          val cr = new Response[(String, String, Position)]
+          compiler.askDocComment(sym, sourceFile, sym.enclosingPackage, fragments.toList, cr)
+          cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
+        }
 
-            scala.util.Try(createTermEntity(sym, comment)).toOption
-          }
+        classes.flatMap { cls =>
+          scala.util.Try(extractEntities(cls, getDocComment _)).getOrElse(Nil)
         }
       }
     }.getOrElse(Nil).distinct
 
-  private def rawEntities(tree: Tree): List[Symbol] = {
+  private def findClasses(tree: Tree): List[Symbol] = {
+    val classes = new ListBuffer[Symbol]
+
+    val traverser = new Traverser {
+      override def traverse(t: Tree) = {
+        val descend = t match {
+          case impl: ImplDef =>
+            classes += impl.symbol
+            true
+          case _: ValOrDefDef =>
+            false
+          case _ =>
+            true
+        }
+        if (descend) {
+          super.traverse(t)
+        }
+      }
+    }
+
+    traverser(tree)
+
+    classes.toList
+  }
+
+  private def symsMayContributingComments(tree: Tree): List[Symbol] = {
     val members = new ListBuffer[Symbol]
 
     val traverser = new Traverser {
@@ -40,8 +65,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
           case impl: ImplDef =>
             val sym = impl.symbol
             if (sym.isPublic) {
-              if (isClassOfInterest(sym))
-                members += sym
+              members += sym
 
               members ++= sym.tpe.decls.filter(isTermOfInterest)
               true
@@ -49,10 +73,6 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
               false
             }
           case v: ValOrDefDef =>
-            v.symbol.tpe.collect {
-              case t if isClassOfInterest(t.typeSymbol) =>
-                members += t.typeSymbol
-            }
             false
           case _ =>
             true

@@ -206,6 +206,24 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A", Invariant), TypeParameterEntity("B", Invariant)))))
   }
 
+  it should "extract constructors" in {
+    extractTerms("""
+      package p
+
+      class A(x: Int)
+      """)(
+      ("p.A#<init>", _ => ()))
+  }
+
+  it should "extract objects as terms" in {
+    extractTerms("""
+      package p
+
+      object O
+      """)(
+      ("p.O", _ => ()))
+  }
+
   it should "extract class entities" in {
     extractClasses("""
       package p

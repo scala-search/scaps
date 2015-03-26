@@ -25,11 +25,14 @@ import scala.tools.apiSearch.utils.using
 object Benchmark extends App with CompilerAccess {
   val libraryPath = "/Applications/eclipseScala/plugins/org.scala-lang.scala-library.source_2.11.5.v20150101-184742-3fafbc204f.jar"
   val indexDir = "benchmark/target/index"
+  val outputDir = "benchmark/target/results"
 
   val outputPath = {
+    val output = new File(outputDir)
+    output.mkdirs()
     val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
     val now = Calendar.getInstance.getTime
-    s"benchmark/target/results/${format.format(now)}.csv"
+    s"$outputDir/${format.format(now)}.csv"
   }
 
   val rebuildIndex = true
@@ -40,21 +43,21 @@ object Benchmark extends App with CompilerAccess {
     // instance of Ordering
     "Ordering[Char]",
     // how to create a range?
-    "Function2[Int, Int, Range]",
+    "(Int, Int) => Range",
     // can we create a range from chars? (implicit conversions)
-    "Function2[Char, Char, Range]",
+    "(Char, Char) => Range",
     // mkString (concrete query, simple generic result)
-    "Function4[List[String], String, String, String, String]",
+    "(List[String], String, String, String) => String",
     // filter (concrete query, generic result)
-    "Function2[List[Int], Function1[Int, Boolean], List[Int]]",
+    "(List[Int], Function1[Int, Boolean]) => List[Int]",
     // reduce left (concrete query, highly generic result)
-    "Function2[List[Char], Function2[Double, Char, Double], Double]",
+    "(List[Char], (Double, Char) => Double) => Double",
     // functions that split a list into two (generic query)
-    "Function2[List[A], Tuple2[List[A], List[A]]]",
+    "List[A] => Tuple2(List[A], List[A])",
     // min/max (generic query with context bound)
-    "Function1[List[A], Ordering[A], A]",
+    "(List[A], Ordering[A]) => A",
     // Future.sequence (highly generic with higher kinded type param)
-    "Function1[collection.Seq[Future[A], Future[collection.Seq[A]]]]")
+    "(collection.Seq[Future[A]]) => Future[collection.Seq[A]]")
 
   val indexer = new Indexer(indexDir)
 

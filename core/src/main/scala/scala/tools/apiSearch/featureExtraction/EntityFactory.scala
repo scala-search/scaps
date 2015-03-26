@@ -8,6 +8,25 @@ trait EntityFactory {
 
   import compiler._
 
+  def extractEntities(classSym: Symbol, getDocComment: Symbol => String): List[Entity] = {
+    if (isClassOfInterest(classSym)) {
+      val cls = createClassEntity(classSym)
+      val memberSyms = classSym.tpe.decls
+        .filter(isTermOfInterest)
+      val referencedClasses = memberSyms.flatMap { sym =>
+        sym.tpe.collect { case t => t.typeSymbol }
+          .filter(isClassOfInterest _)
+          .map(createClassEntity _)
+      }.toList
+      val members = memberSyms
+        .map(sym => createTermEntity(sym, getDocComment(sym)))
+        .toList
+      cls :: members ::: referencedClasses
+    } else {
+      Nil
+    }
+  }
+
   def createClassEntity(sym: Symbol): ClassEntity = {
     val baseTypes = sym.tpe.baseTypeSeq.toList.tail
       .filter(tpe => isClassOfInterest(tpe.typeSymbol))
@@ -16,11 +35,9 @@ trait EntityFactory {
   }
 
   def isClassOfInterest(sym: Symbol): Boolean =
-    sym.isClass &&
+    (sym.isClass || sym.isModuleOrModuleClass) &&
       !sym.isAnonOrRefinementClass &&
-      !sym.isLocalClass &&
-      !sym.isPackageClass &&
-      !sym.isModuleClass
+      !sym.isLocalClass
 
   def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
     val (typeParams, tpe) = createTypeEntity(sym)
@@ -28,9 +45,8 @@ trait EntityFactory {
   }
 
   def isTermOfInterest(sym: Symbol): Boolean =
-    sym.isTerm &&
-      sym.isPublic &&
-      !sym.isConstructor
+    (sym.isTerm || sym.isConstructor) &&
+      sym.isPublic
 
   def createTypeEntity(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
     val (params, memberType) =
