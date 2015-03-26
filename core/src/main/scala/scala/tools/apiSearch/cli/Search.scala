@@ -19,7 +19,7 @@ object Search extends App {
   val analyzer = QueryAnalyzer(indexer.classesIndex)
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { in =>
-    QueryParser(in).right.foreach { raw =>
+    QueryParser(in).fold(println, { raw =>
       analyzer(raw).get.fold({
         case Suggestion(raw, Seq()) =>
           println(s"Type ${raw.name} not found")
@@ -35,6 +35,6 @@ object Search extends App {
             println()
           }
       })
-    }
+    })
   }
 }

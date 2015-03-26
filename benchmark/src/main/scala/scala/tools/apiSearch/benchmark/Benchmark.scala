@@ -35,7 +35,7 @@ object Benchmark extends App with CompilerAccess {
     s"$outputDir/${format.format(now)}.csv"
   }
 
-  val rebuildIndex = true
+  val rebuildIndex = false
 
   val queries = List(
     // magic integer values
@@ -53,11 +53,11 @@ object Benchmark extends App with CompilerAccess {
     // reduce left (concrete query, highly generic result)
     "(List[Char], (Double, Char) => Double) => Double",
     // functions that split a list into two (generic query)
-    "List[A] => Tuple2(List[A], List[A])",
+    "List[A] => (List[A], List[A])",
     // min/max (generic query with context bound)
     "(List[A], Ordering[A]) => A",
     // Future.sequence (highly generic with higher kinded type param)
-    "(collection.Seq[Future[A]]) => Future[collection.Seq[A]]")
+    "(collection.Seq[concurrent.Future[A]]) => concurrent.Future[collection.Seq[A]]")
 
   val indexer = new Indexer(indexDir)
 
@@ -76,6 +76,8 @@ object Benchmark extends App with CompilerAccess {
     writer.write("Query; Index; Result; Fingerprint;\n")
 
     queries.foreach { query =>
+      println(query)
+
       val raw = QueryParser(query).right.get
 
       val analyzed = analyzer(raw).get.right.get

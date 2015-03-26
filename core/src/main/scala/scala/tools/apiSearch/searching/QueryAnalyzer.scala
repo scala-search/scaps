@@ -68,11 +68,19 @@ class QueryAnalyzer(
   private def isTypeParam(name: String): Boolean =
     name.length() == 1
 
-  private def favoredCandidate(candidates: Seq[ClassEntity]): Option[ClassEntity] =
-    candidates.filter(c => c.name.startsWith("scala.")) match {
-      case Seq(fav) => Some(fav)
-      case _        => None
+  private def favoredCandidate(candidates: Seq[ClassEntity]): Option[ClassEntity] = {
+    // classes in root `scala` namespace and java.lang.String are always favored
+    val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
+    // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
+    val secondPrioPattern = """scala\..*"""
+
+    candidates.find(_.name.matches(firstPrioPattern)).orElse {
+      candidates.filter(_.name.matches(secondPrioPattern)) match {
+        case Seq(fav) => Some(fav)
+        case _        => None
+      }
     }
+  }
 
   def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
