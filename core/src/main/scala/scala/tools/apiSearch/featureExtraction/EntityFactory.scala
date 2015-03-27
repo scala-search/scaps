@@ -45,7 +45,7 @@ trait EntityFactory {
     val baseTypes = sym.tpe.baseTypeSeq.toList.tail
       .filter(tpe => isClassOfInterest(tpe.typeSymbol))
       .map(tpe => createTypeEntity(tpe, Covariant))
-    ClassEntity(qualifiedName(sym), typeParamsFromOwningTemplates(sym), baseTypes)
+    ClassEntity(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
   }
 
   def isClassOfInterest(sym: Symbol): Boolean =
@@ -55,7 +55,7 @@ trait EntityFactory {
 
   def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
     val (typeParams, tpe) = createTypeEntity(sym)
-    TermEntity(qualifiedName(sym), typeParams, tpe, rawComment)
+    TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment)
   }
 
   def isTermOfInterest(sym: Symbol): Boolean =
@@ -71,7 +71,7 @@ trait EntityFactory {
 
     if (sym.owner.isClass && !sym.owner.isModuleClass) {
       (typeParamsFromOwningTemplates(sym) ++ params,
-        TypeEntity.memberAccess(TypeEntity(qualifiedName(sym.owner), Contravariant, Nil), memberType))
+        TypeEntity.memberAccess(TypeEntity(qualifiedName(sym.owner, true), Contravariant, Nil), memberType))
     } else {
       (params, memberType)
     }
@@ -83,17 +83,24 @@ trait EntityFactory {
     }
   }
 
-  def qualifiedName(sym: Symbol): String = {
-    def name(sym: Symbol) = sym.name.toString
+  def qualifiedName(sym: Symbol, isTypeName: Boolean): String = {
+    def toName(sym: Symbol) =
+      sym.name.decode
+
     def rec(sym: Symbol): String =
       if (sym.isRootSymbol || sym == sym.owner) ""
-      else if (sym.hasPackageFlag || sym.hasModuleFlag) rec(sym.owner) + name(sym) + "."
-      else rec(sym.owner) + name(sym) + "#"
+      else if (sym.hasPackageFlag || sym.hasModuleFlag) rec(sym.owner) + toName(sym) + "."
+      else rec(sym.owner) + toName(sym) + "#"
 
-    if (sym.isTypeParameter)
-      name(sym)
+    val name = if (sym.isTypeParameter)
+      toName(sym)
     else
-      rec(sym.owner) + name(sym)
+      rec(sym.owner) + toName(sym)
+
+    if (isTypeName)
+      s"$name${sym.moduleSuffix}"
+    else
+      name
   }
 
   private def createTypeEntity(tpe: Type, variance: Variance): TypeEntity = {
@@ -110,7 +117,7 @@ trait EntityFactory {
     val args = tpe.typeArgs.zipWithIndex.map {
       case (arg, idx) => createTypeEntity(arg, getVariance(idx))
     }
-    TypeEntity(qualifiedName(tpe.typeSymbol), variance, args)
+    TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args)
   }
 
   private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
@@ -129,12 +136,12 @@ trait EntityFactory {
 
   private def createTypeParamEntity(typeSym: Symbol) =
     TypeParameterEntity(
-      qualifiedName(typeSym),
+      qualifiedName(typeSym, true),
       if (typeSym.variance.isCovariant)
         Covariant
       else if (typeSym.variance.isContravariant)
         Contravariant
       else Invariant,
-      qualifiedName(typeSym.tpe.bounds.lo.typeSymbol),
-      qualifiedName(typeSym.tpe.bounds.hi.typeSymbol))
+      qualifiedName(typeSym.tpe.bounds.lo.typeSymbol, true),
+      qualifiedName(typeSym.tpe.bounds.hi.typeSymbol, true))
 }

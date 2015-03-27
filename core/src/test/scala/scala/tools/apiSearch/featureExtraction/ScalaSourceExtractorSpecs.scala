@@ -36,6 +36,16 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)("p.C#toString")
   }
 
+  it should "decode operator names" in {
+    shouldExtractTerms("""
+      package p
+
+      class C {
+        def =:=(x: C): Boolean
+      }
+      """)("p.C#=:=")
+  }
+
   it should "extract doc comments" in {
     val entities = extractAllTerms("""
       package p
@@ -273,7 +283,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       object O
       """
     extractClasses(src)(
-      ("p.O", _ => ()))
+      ("p.O$", _ => ()))
     extractTerms(src)(
       ("p.O", _ => ()))
   }
@@ -285,6 +295,15 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class C
       """)(
       ("p.C", _ => ()))
+  }
+
+  it should "decode class names" in {
+    extractClasses("""
+      package p
+
+      class ::
+      """)(
+      ("p.::", _ => ()))
   }
 
   it should "extract traits into class entities" in {
