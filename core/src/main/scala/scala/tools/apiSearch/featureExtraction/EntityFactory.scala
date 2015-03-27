@@ -16,17 +16,23 @@ trait EntityFactory {
         if (isTermOfInterest(classSym)) createTermEntity(classSym, getDocComment(classSym)) :: Nil
         else Nil
 
-      val memberSyms = classSym.tpe.decls
+      val memberSymsWithComments = classSym.tpe.members
         .filter(isTermOfInterest)
+        .map { m =>
+          val copy = m.cloneSymbol(classSym)
+          copy.info = classSym.tpe.memberInfo(m)
+          (copy, getDocComment(m))
+        }
 
-      val referencedClasses = memberSyms.flatMap { sym =>
-        sym.tpe.collect { case t => t.typeSymbol }
-          .filter(isClassOfInterest _)
-          .map(createClassEntity _)
+      val referencedClasses = memberSymsWithComments.flatMap {
+        case (sym, _) =>
+          sym.tpe.collect { case t => t.typeSymbol }
+            .filter(isClassOfInterest _)
+            .map(createClassEntity _)
       }.toList
 
-      val members = memberSyms
-        .map(sym => createTermEntity(sym, getDocComment(sym)))
+      val members = memberSymsWithComments
+        .map((createTermEntity _).tupled)
         .toList
 
       cls :: objTerm ::: members ::: referencedClasses

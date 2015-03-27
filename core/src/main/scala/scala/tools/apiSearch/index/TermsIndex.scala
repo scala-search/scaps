@@ -46,7 +46,7 @@ class TermsIndex(val dir: Directory) extends Index {
       case fields.fingerprint => new DefaultSimilarity {
         // Reduce influence of IDF in order to cope with missing reflection
         // of type hierarchies in doc frequencies
-        //        override def idf(a: Long, b: Long) = super.idf(a, b) / 2f
+        override def idf(a: Long, b: Long) = 1
 
         // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
         // because fingerprints are relatively short documents

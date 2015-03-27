@@ -28,16 +28,12 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)("p.C#a")
   }
 
-  it should "not extract inherited members" in {
-    val entities = extractAllTerms("""
+  it should "extract inherited members" in {
+    shouldExtractTerms("""
       package p
 
       class C
-      """)
-
-    val toString = entities.find(_.name.endsWith("toString"))
-
-    toString should not be ('defined)
+      """)("p.C#toString")
   }
 
   it should "extract doc comments" in {
@@ -241,6 +237,35 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
     terms.find(_.name == "p.T#<init>") should not be ('defined)
   }
 
+  it should "extract inherited members from super traits" in {
+    extractTerms("""
+      package p
+
+      trait T {
+        def m = 1
+      }
+
+      class C extends T
+      object O extends T
+      """)(
+      ("p.T#m", _ => ()),
+      ("p.C#m", _ => ()),
+      ("p.O.m", _ => ()))
+  }
+
+  it should "extract types of inherited members with substituted type args" in {
+    extractTerms("""
+      package p
+
+      trait T[A] {
+        def m(a: A) = ()
+      }
+
+      object O extends T[Int]
+      """)(
+      ("p.O.m", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +scala.Unit]")))
+  }
+
   it should "extract objects as terms and classes" in {
     val src = """
       package p
@@ -271,7 +296,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.T", _ => ()))
   }
 
-  it should "extract base types of classes with the associated inheritance depth" in {
+  it should "extract base types of classes" in {
     extractClasses("""
       package p
 
