@@ -66,6 +66,8 @@ trait EntityFactory {
     val (params, memberType) =
       if (sym.isMethod)
         methodType(sym)
+      else if (sym.isModule)
+        moduleType(sym)
       else
         (Nil, createTypeEntity(sym.tpe, Covariant))
 
@@ -132,6 +134,14 @@ trait EntityFactory {
     }
 
     (typeParams, rec(sym.paramss, sym.tpe.resultType))
+  }
+
+  private def moduleType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
+    val args = sym.tpe.parents.map { parent =>
+      createTypeEntity(parent, Covariant)
+    }
+
+    (Nil, TypeEntity.refinement(Covariant, args))
   }
 
   private def createTypeParamEntity(typeSym: Symbol) =

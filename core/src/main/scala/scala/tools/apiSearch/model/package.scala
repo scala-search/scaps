@@ -110,6 +110,12 @@ object TypeEntity {
   val unknownType = "<unknown>"
   val unknown = TypeEntity(unknownType, Covariant, Nil)
 
+  def refinementType(n: Int) = s"<refinement$n>"
+  def refinement(variance: Variance, args: List[TypeEntity]) = {
+    val typeArgs = args.map(pt => pt.copy(variance = variance))
+    TypeEntity(refinementType(typeArgs.length), variance, typeArgs)
+  }
+
   def apply(name: String, args: List[TypeEntity] = Nil): TypeEntity =
     TypeEntity(name, Covariant, args)
 

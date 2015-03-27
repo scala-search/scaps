@@ -288,6 +288,21 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O", _ => ()))
   }
 
+  it should "extract objects as values with a refinement type" in {
+    extractTerms("""
+      package p
+
+      trait R
+      trait S extends R
+      trait T[A]
+
+      object O
+      object P extends S with T[Int]
+      """)(
+      ("p.O", _.tpe.toString should be("+<refinement1>[+java.lang.Object]")),
+      ("p.P", _.tpe.toString should be("+<refinement3>[+java.lang.Object, +p.S, +p.T[scala.Int]]")))
+  }
+
   it should "extract class entities" in {
     extractClasses("""
       package p
