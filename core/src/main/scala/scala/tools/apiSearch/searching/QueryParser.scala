@@ -39,7 +39,8 @@ object QueryParser extends RegexParsers {
     "(" ~> repsep(tpe, ",") <~ ")"
 
   def tupleTpe: Parser[Type] = "(" ~> rep1sep(tpe, ",") <~ ")" ^^ {
-    case tpes => tuple(tpes: _*)
+    case tpe :: Nil => tpe
+    case tpes       => tuple(tpes: _*)
   }
 
   def name: Parser[String] = identifier ~ rep("""[\.#]""".r ~ identifier) ^^ {

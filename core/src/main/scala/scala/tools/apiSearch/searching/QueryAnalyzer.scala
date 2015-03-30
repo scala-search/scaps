@@ -102,6 +102,10 @@ class QueryAnalyzer private[searching] (
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
         rq match {
+          case ResolvedQuery.Class(cls, args) if depth == 0 && cls.name.startsWith("scala.Function") =>
+            cls.typeParameters.zip(args).flatMap {
+              case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
+            }
           case ResolvedQuery.Class(cls, args) =>
             val argParts = cls.typeParameters.zip(args).flatMap {
               case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
@@ -112,10 +116,10 @@ class QueryAnalyzer private[searching] (
 
       def withAlternatives(variance: Variance, depth: Int, cls: ClassEntity): List[FlattenedQuery.Type] = {
         val alternativesWithDistance: List[(String, Int)] = variance match {
-          case Covariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
-          case Contravariant => findSubClasses(cls).get
+          case Covariant => findSubClasses(cls).get
             .map(subCls => (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1)).toList
-          case Invariant => Nil
+          case Contravariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
+          case Invariant     => Nil
         }
 
         ((cls.name, 0) :: alternativesWithDistance).map {

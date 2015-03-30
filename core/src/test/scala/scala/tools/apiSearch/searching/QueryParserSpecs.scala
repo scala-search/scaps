@@ -59,6 +59,10 @@ class QueryParserSpecs extends FlatSpec with Matchers {
     "A => (B, C)" shouldBeParsedAs function(A :: Nil, tuple(B, C))
   }
 
+  it should "not parse Tuple1 literals" in {
+    "(A)" shouldBeParsedAs A
+  }
+
   it should "fail on empty tuples" in {
     "()".shouldFail
     "A => ()".shouldFail
