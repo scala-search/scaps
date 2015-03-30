@@ -162,6 +162,14 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     A.boost should be > (B.boost)
   }
 
+  it should "yield a boost of 1 for a single type" in {
+    val res = expectSuccess("A")
+
+    val A = res.types.find(_.typeName == "p.A").get
+
+    A.boost should be(1f)
+  }
+
   it should "omit the outermost function application" in {
     val res = expectSuccess("A => B")
 

@@ -116,7 +116,7 @@ class QueryAnalyzer private[searching] (
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
         rq match {
-          case ResolvedQuery.Class(cls, args) if depth == 0 && cls.isFunction =>
+          case ResolvedQuery.Class(cls, args) if depth == -1 && cls.isFunction =>
             cls.typeParameters.zip(args).flatMap {
               case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
             }
@@ -141,7 +141,7 @@ class QueryAnalyzer private[searching] (
         }
       }
 
-      val types = flattenWithVarianceAndDepth(Covariant, 0, resolved)
+      val types = flattenWithVarianceAndDepth(Covariant, -1, resolved)
         .map((withAlternatives _).tupled)
 
       FlattenedQuery(types)
@@ -171,5 +171,5 @@ class QueryAnalyzer private[searching] (
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
   private def distanceBoost(dist: Int): Float = (1f / (0.1f * dist + 1f))
-  private def depthBoost(depth: Int): Float = (1f / (0.1f * depth))
+  private def depthBoost(depth: Int): Float = (1f / (0.1f * depth + 1f))
 }
