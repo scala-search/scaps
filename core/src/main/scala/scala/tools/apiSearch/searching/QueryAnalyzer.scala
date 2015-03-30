@@ -53,10 +53,8 @@ class QueryAnalyzer private[searching] (
 
   def apply(raw: RawQuery): Try[ErrorsOr[APIQuery]] =
     Try {
-      resolveNames(raw.tpe).get.map { resolved =>
-        // TODO: normalize distances?
-        toApiQuery(flattenQuery(resolved).get)
-      }
+      resolveNames(raw.tpe).get.map(
+        (normalizeFunctions _) andThen (flattenQuery _) andThen (_.get) andThen (toApiQuery _))
     }
 
   private[searching] def resolveNames(raw: RawQuery.Type): Try[ErrorsOr[ResolvedQuery]] =
@@ -98,11 +96,27 @@ class QueryAnalyzer private[searching] (
     }
   }
 
+  private[searching] def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
+    def uncurry(rq: ResolvedQuery, args: List[ResolvedQuery]): ResolvedQuery =
+      rq match {
+        case ResolvedQuery.Class(cls, functionArgs) if cls.isFunction =>
+          uncurry(functionArgs.last, args ::: functionArgs.init)
+        case _ =>
+          val typeParams = args.map(_ => TypeParameterEntity("A", Contravariant)) :+ TypeParameterEntity("R", Covariant)
+          // this is not a complete ClassEntity but it shouldn't matter as it gets elided
+          // in later processing steps
+          val function = ClassEntity(TypeEntity.functionType(args.length), typeParams, Nil)
+          ResolvedQuery.Class(function, args :+ rq)
+      }
+
+    uncurry(resolved, Nil)
+  }
+
   private[searching] def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
         rq match {
-          case ResolvedQuery.Class(cls, args) if depth == 0 && cls.name.startsWith("scala.Function") =>
+          case ResolvedQuery.Class(cls, args) if depth == 0 && cls.isFunction =>
             cls.typeParameters.zip(args).flatMap {
               case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
             }
@@ -157,5 +171,5 @@ class QueryAnalyzer private[searching] (
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
   private def distanceBoost(dist: Int): Float = (1f / (0.1f * dist + 1f))
-  private def depthBoost(depth: Int): Float = (1f / (0.1f * depth + 1f))
+  private def depthBoost(depth: Int): Float = (1f / (0.1f * depth))
 }

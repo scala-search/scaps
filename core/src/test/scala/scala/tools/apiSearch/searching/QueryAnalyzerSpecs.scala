@@ -39,6 +39,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
         val float: Float
         val f1: Any => Any
         val f2: (Any, Any) => Any
+        val f3: (Any, Any, Any) => Any
         val tuple1: Tuple1[Any]
         val tuple2: (Any, Any)
         val tuple3: (Any, Any, Any)
@@ -159,6 +160,30 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     val B = res.types.find(_.typeName == "p.B").get
 
     A.boost should be > (B.boost)
+  }
+
+  it should "omit the outermost function application" in {
+    val res = expectSuccess("A => B")
+
+    res.fingerprint.mkString(" ") should not include ("Function1")
+  }
+
+  it should "normalize curried querries" in {
+    val res1 = expectSuccess("A => B => C")
+    val res2 = expectSuccess("(A, B) => C")
+
+    res1 should be(res2)
+
+    val res3 = expectSuccess("A => (B, C) => D")
+    val res4 = expectSuccess("(A, B, C) => D")
+
+    res3 should be(res4)
+  }
+
+  it should "not omit inner function types" in {
+    val res = expectSuccess("(A => B) => C")
+
+    res.fingerprint should contain("-scala.Function1_0")
   }
 
   def expectSuccess(s: String) = {

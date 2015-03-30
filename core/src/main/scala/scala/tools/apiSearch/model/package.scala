@@ -18,6 +18,8 @@ case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], 
 
     s"$name$params $bases"
   }
+
+  def isFunction = typeParameters.length > 0 && name == TypeEntity.functionType(typeParameters.length - 1)
 }
 
 case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String)
