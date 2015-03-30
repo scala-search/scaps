@@ -7,9 +7,11 @@ import scala.tools.apiSearch.index.ClassIndex
 import scala.tools.apiSearch.searching.QueryParser
 import scala.io.StdIn
 import scala.tools.apiSearch.searching.QueryAnalyzer
-import scala.tools.apiSearch.searching.Suggestion
 import scala.io.Source
 import scala.tools.apiSearch.index.Indexer
+import scala.tools.apiSearch.searching.NameNotFound
+import scala.tools.apiSearch.searching.NameAmbiguous
+import scala.tools.apiSearch.searching.IllegalNumberOfTypeArgs
 
 object Search extends App {
   val indexDir = args(0)
@@ -20,12 +22,14 @@ object Search extends App {
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { in =>
     QueryParser(in).fold(println, { raw =>
-      analyzer(raw).get.fold({
-        case Suggestion(raw, Seq()) =>
+      analyzer(raw).get.fold(errors => errors.foreach {
+        case NameNotFound(raw) =>
           println(s"Type ${raw.name} not found")
-        case Suggestion(raw, candidates) =>
+        case NameAmbiguous(raw, candidates) =>
           println(s"Type ${raw.name} is ambiguous")
           candidates.foreach(c => println(s"    ${c.name}"))
+        case IllegalNumberOfTypeArgs(raw, n) =>
+          println(s"$raw has wrong number of arguments ($n expected)")
       }, {
         query =>
           println(query)

@@ -3,15 +3,25 @@ package scala.tools.apiSearch.searching
 import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.index.ClassIndex
 import scala.util.Try
+import scalaz.ValidationNel
+import scalaz.Validation.FlatMap._
+import scalaz.std.list._
+import scalaz.syntax.traverse._
+import scalaz.syntax.validation._
 
-case class Suggestion(part: RawQuery.Type, candidates: Seq[ClassEntity])
+sealed trait AnalyzerError
+case class NameNotFound(part: RawQuery.Type) extends AnalyzerError
+case class NameAmbiguous(part: RawQuery.Type, candidates: Seq[ClassEntity]) extends AnalyzerError
+case class IllegalNumberOfTypeArgs(part: RawQuery.Type, expectedArgs: Int) extends AnalyzerError
 
-sealed trait ResolvedQuery
-case class ResolvedClass(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
-case class ResolvedTypeParam(name: String) extends ResolvedQuery
+private[searching] sealed trait ResolvedQuery
+private[searching] object ResolvedQuery {
+  case class Class(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
+  case class TypeParam(name: String) extends ResolvedQuery
+}
 
-case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
-object FlattenedQuery {
+private[searching] case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
+private[searching] object FlattenedQuery {
   case class Type(variance: Variance, typeName: String, distance: Int)
 }
 
@@ -25,6 +35,13 @@ object APIQuery {
   case class Type(variance: Variance, typeName: String, occurrence: Int, boost: Float)
 }
 
+object QueryAnalyzer {
+  type ErrorsOr[T] = ValidationNel[AnalyzerError, T]
+
+  def apply(classes: ClassIndex) =
+    new QueryAnalyzer(classes.findClass _, classes.findSubClasses _)
+}
+
 /**
  *
  */
@@ -32,35 +49,33 @@ class QueryAnalyzer(
   findClass: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
 
-  def apply(raw: RawQuery): Try[Either[Suggestion, APIQuery]] =
+  import QueryAnalyzer._
+
+  def apply(raw: RawQuery): Try[ErrorsOr[APIQuery]] =
     Try {
-      resolveNames(raw.tpe).get.right.map { resolved =>
+      resolveNames(raw.tpe).get.map { resolved =>
         // TODO: normalize distances?
         toApiQuery(flattenQuery(resolved).get)
       }
     }
 
-  def resolveNames(raw: RawQuery.Type): Try[Either[Suggestion, ResolvedQuery]] =
+  private[searching] def resolveNames(raw: RawQuery.Type): Try[ErrorsOr[ResolvedQuery]] =
     Try {
-      val suggestionOrResolvedArgs = raw.args.foldLeft[Either[Suggestion, List[ResolvedQuery]]](Right(Nil)) { (acc, arg) =>
-        (acc, resolveNames(arg).get) match {
-          case (Right(qs), Right(q)) => Right(qs :+ q)
-          case (Left(s), _)          => Left(s)
-          case (_, Left(s))          => Left(s)
-        }
-      }
+      val resolvedArgs: ErrorsOr[List[ResolvedQuery]] =
+        raw.args.map(arg => resolveNames(arg).get).sequenceU
 
-      suggestionOrResolvedArgs.right.flatMap { resolvedArgs =>
-        findClass(raw.name).get match {
+      resolvedArgs.flatMap { resolvedArgs =>
+        filterFavored(findClass(raw.name).get) match {
           case Seq() if isTypeParam(raw.name) =>
-            Right(ResolvedTypeParam(raw.name))
+            ResolvedQuery.TypeParam(raw.name).successNel
+          case Seq() =>
+            NameNotFound(raw).failureNel
           case Seq(cls) if raw.args.length == cls.typeParameters.length || raw.args.length == 0 =>
-            Right(ResolvedClass(cls, resolvedArgs))
+            ResolvedQuery.Class(cls, resolvedArgs).successNel
+          case Seq(cls) =>
+            IllegalNumberOfTypeArgs(raw, cls.typeParameters.length).failureNel
           case candidates =>
-            favoredCandidate(candidates)
-              .fold[Either[Suggestion, ResolvedQuery]](Left(Suggestion(raw, candidates))) {
-                cls => Right(ResolvedClass(cls, resolvedArgs))
-              }
+            NameAmbiguous(raw, candidates).failureNel
         }
       }
     }
@@ -68,29 +83,30 @@ class QueryAnalyzer(
   private def isTypeParam(name: String): Boolean =
     name.length() == 1
 
-  private def favoredCandidate(candidates: Seq[ClassEntity]): Option[ClassEntity] = {
+  private def filterFavored(candidates: Seq[ClassEntity]): Seq[ClassEntity] = {
     // classes in root `scala` namespace and java.lang.String are always favored
     val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
     // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
     val secondPrioPattern = """scala\..*"""
 
-    candidates.find(_.name.matches(firstPrioPattern)).orElse {
-      candidates.filter(_.name.matches(secondPrioPattern)) match {
-        case Seq(fav) => Some(fav)
-        case _        => None
+    candidates.filter(_.name.matches(firstPrioPattern)) match {
+      case Seq(fav) => Seq(fav)
+      case _ => candidates.filter(_.name.matches(secondPrioPattern)) match {
+        case Seq(fav) => Seq(fav)
+        case _        => candidates
       }
     }
   }
 
-  def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
+  private[searching] def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
       def flattenWithVariance(variance: Variance, rq: ResolvedQuery): List[(Variance, ClassEntity)] = rq match {
-        case ResolvedClass(cls, args) =>
+        case ResolvedQuery.Class(cls, args) =>
           val argParts = cls.typeParameters.zip(args).flatMap {
             case (param, arg) => flattenWithVariance(param.variance * variance, arg)
           }
           (variance, cls) :: argParts
-        case ResolvedTypeParam(_) => Nil
+        case ResolvedQuery.TypeParam(_) => Nil
       }
 
       def withAlternatives(variance: Variance, cls: ClassEntity): List[FlattenedQuery.Type] = {
@@ -111,7 +127,7 @@ class QueryAnalyzer(
       FlattenedQuery(types)
     }
 
-  def toApiQuery(flattened: FlattenedQuery): APIQuery = {
+  private[searching] def toApiQuery(flattened: FlattenedQuery): APIQuery = {
     val distancesPerType: Map[(Variance, String), List[Int]] =
       flattened.types.flatten.foldLeft(Map[(Variance, String), List[Int]]()) {
         (distancesPerType, tpe) =>
@@ -131,10 +147,5 @@ class QueryAnalyzer(
     APIQuery(types.toList.sortBy(_.boost))
   }
 
-  def distanceBoost(dist: Int): Float = (1f / (dist + 2f) + 0.5f)
-}
-
-object QueryAnalyzer {
-  def apply(classes: ClassIndex) =
-    new QueryAnalyzer(classes.findClass _, classes.findSubClasses _)
+  private def distanceBoost(dist: Int): Float = (1f / (dist + 2f) + 0.5f)
 }

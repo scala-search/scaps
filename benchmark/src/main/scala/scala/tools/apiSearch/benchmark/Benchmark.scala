@@ -16,7 +16,6 @@ import ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.tools.apiSearch.searching.QueryAnalyzer
 import scala.tools.apiSearch.searching.QueryParser
-import scala.tools.apiSearch.searching.Suggestion
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.io.FileWriter
@@ -80,7 +79,7 @@ object Benchmark extends App with CompilerAccess {
 
       val raw = QueryParser(query).right.get
 
-      val analyzed = analyzer(raw).get.right.get
+      val analyzed = analyzer(raw).get.getOrElse(???)
 
       indexer.termsIndex.find(analyzed).get.take(20).zipWithIndex.foreach {
         case (t, idx) =>

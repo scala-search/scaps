@@ -17,14 +17,13 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
       "A" -> Try(List(A)))
     val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
-    analyzer(queryA).get should be('right)
+    analyzer(queryA).get should be('success)
   }
 
   it should "treat unknown names as type parameters" in {
     val analyzer = new QueryAnalyzer(_ => Try(Nil), _ => Try(Nil))
 
-    analyzer(queryA).get should be(Right(
-      APIQuery(Nil)))
+    analyzer(queryA).get should be('success)
   }
 
   it should "return suggestions on ambiguous names" in {
@@ -34,7 +33,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
       "A" -> Try(List(pA, qA)))
     val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
-    analyzer(queryA).get should be('left)
+    analyzer(queryA).get should be('failure)
   }
 
   it should "fail when class finder fails" in {

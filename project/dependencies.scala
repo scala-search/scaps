@@ -7,6 +7,8 @@ object Dependencies {
 
   val scalaTest = "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
+  val scalaz = "org.scalaz" %% "scalaz-core" % "7.1.1"
+
   val luceneVersion = "4.10.4"
   val luceneCore = "org.apache.lucene" % "lucene-core" % luceneVersion
   val luceneAnalyzersCommon = "org.apache.lucene" % "lucene-analyzers-common" % luceneVersion
@@ -15,6 +17,7 @@ object Dependencies {
     scalaCompiler,
     scalaPickling,
     scalaTest,
+    scalaz,
     luceneCore,
     luceneAnalyzersCommon
   )
