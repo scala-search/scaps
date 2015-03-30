@@ -17,7 +17,7 @@ private[searching] object ResolvedQuery {
 
 private[searching] case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
 private[searching] object FlattenedQuery {
-  case class Type(variance: Variance, typeName: String, distance: Int)
+  case class Type(variance: Variance, typeName: String, distance: Int, depth: Int)
 }
 
 case class APIQuery(types: List[APIQuery.Type]) {
@@ -100,53 +100,58 @@ class QueryAnalyzer private[searching] (
 
   private[searching] def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
-      def flattenWithVariance(variance: Variance, rq: ResolvedQuery): List[(Variance, ClassEntity)] = rq match {
-        case ResolvedQuery.Class(cls, args) =>
-          val argParts = cls.typeParameters.zip(args).flatMap {
-            case (param, arg) => flattenWithVariance(param.variance * variance, arg)
-          }
-          (variance, cls) :: argParts
-        case ResolvedQuery.TypeParam(_) => Nil
-      }
+      def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
+        rq match {
+          case ResolvedQuery.Class(cls, args) =>
+            val argParts = cls.typeParameters.zip(args).flatMap {
+              case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
+            }
+            (variance, depth, cls) :: argParts
+          case ResolvedQuery.TypeParam(_) => Nil
+        }
 
-      def withAlternatives(variance: Variance, cls: ClassEntity): List[FlattenedQuery.Type] = {
+      def withAlternatives(variance: Variance, depth: Int, cls: ClassEntity): List[FlattenedQuery.Type] = {
         val alternativesWithDistance: List[(String, Int)] = variance match {
           case Covariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
           case Contravariant => findSubClasses(cls).get
-            .map(subCls => { println(subCls); (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1) }).toList
+            .map(subCls => (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1)).toList
           case Invariant => Nil
         }
 
         ((cls.name, 0) :: alternativesWithDistance).map {
-          case (alt, distance) => FlattenedQuery.Type(variance, alt, distance)
+          case (alt, distance) => FlattenedQuery.Type(variance, alt, distance, depth)
         }
       }
 
-      val types = flattenWithVariance(Covariant, resolved)
+      val types = flattenWithVarianceAndDepth(Covariant, 0, resolved)
         .map((withAlternatives _).tupled)
 
       FlattenedQuery(types)
     }
 
   private[searching] def toApiQuery(flattened: FlattenedQuery): APIQuery = {
-    val distancesPerType: Map[(Variance, String), List[Int]] =
-      flattened.types.flatten.foldLeft(Map[(Variance, String), List[Int]]()) {
-        (distancesPerType, tpe) =>
+    val boostsPerType: Map[(Variance, String), List[Float]] =
+      flattened.types.flatten.foldLeft(Map[(Variance, String), List[Float]]()) {
+        (boostsPerType, tpe) =>
           val key = (tpe.variance, tpe.typeName)
-          val distances = distancesPerType.get(key).getOrElse(Nil)
+          val boosts = boostsPerType.get(key).getOrElse(Nil)
 
-          distancesPerType + (key -> (tpe.distance :: distances))
+          boostsPerType + (key -> (boost(tpe) :: boosts))
       }
 
-    val orderedDistancesPerType = distancesPerType.mapValues(_.sorted(Ordering[Int].reverse))
+    val orderedBoostsPerType = boostsPerType.mapValues(_.sorted(Ordering[Float].reverse))
 
     val types = for {
-      ((variance, tpe), distances) <- orderedDistancesPerType
-      (distance, idx) <- distances.zipWithIndex
-    } yield APIQuery.Type(variance, tpe, idx, distanceBoost(distance))
+      ((variance, tpe), distances) <- orderedBoostsPerType
+      (boost, idx) <- distances.zipWithIndex
+    } yield APIQuery.Type(variance, tpe, idx, boost)
 
     APIQuery(types.toList.sortBy(-_.boost))
   }
 
-  private def distanceBoost(dist: Int): Float = (1f / (0.2f * dist + 1f))
+  private def boost(tpe: FlattenedQuery.Type): Float =
+    distanceBoost(tpe.distance) * depthBoost(tpe.depth)
+
+  private def distanceBoost(dist: Int): Float = (1f / (0.1f * dist + 1f))
+  private def depthBoost(depth: Int): Float = (1f / (0.1f * depth + 1f))
 }
