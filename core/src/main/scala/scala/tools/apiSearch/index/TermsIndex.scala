@@ -80,14 +80,11 @@ class TermsIndex(val dir: Directory) extends Index {
     query.types.foreach { tpe =>
       val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
       val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
-      tq.setBoost(distanceBoost(tpe.distance))
+      tq.setBoost(tpe.boost)
       q.add(tq, Occur.SHOULD)
     }
-    println(q)
     q
   }
-
-  def distanceBoost(dist: Int): Float = (1f / (dist + 2f) + 0.5f)
 
   /**
    * Searches for term entities whose name matches `name`.

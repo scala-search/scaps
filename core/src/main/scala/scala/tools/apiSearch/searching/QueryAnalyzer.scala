@@ -22,7 +22,7 @@ case class APIQuery(types: List[APIQuery.Type]) {
     } yield s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
 }
 object APIQuery {
-  case class Type(variance: Variance, typeName: String, occurrence: Int, distance: Int)
+  case class Type(variance: Variance, typeName: String, occurrence: Int, boost: Float)
 }
 
 /**
@@ -126,10 +126,12 @@ class QueryAnalyzer(
     val types = for {
       ((variance, tpe), distances) <- orderedDistancesPerType
       (distance, idx) <- distances.zipWithIndex
-    } yield APIQuery.Type(variance, tpe, idx, distance)
+    } yield APIQuery.Type(variance, tpe, idx, distanceBoost(distance))
 
-    APIQuery(types.toList.sortBy(_.distance))
+    APIQuery(types.toList.sortBy(_.boost))
   }
+
+  def distanceBoost(dist: Int): Float = (1f / (dist + 2f) + 0.5f)
 }
 
 object QueryAnalyzer {

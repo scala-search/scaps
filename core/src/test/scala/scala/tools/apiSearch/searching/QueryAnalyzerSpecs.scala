@@ -17,9 +17,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers {
       "A" -> Try(List(A)))
     val analyzer = new QueryAnalyzer(env, _ => Try(Nil))
 
-    analyzer(queryA).get should be(Right(
-      APIQuery(
-        APIQuery.Type(Covariant, "p.A", 0, 0) :: Nil)))
+    analyzer(queryA).get should be('right)
   }
 
   it should "treat unknown names as type parameters" in {
