@@ -9,9 +9,7 @@ import scala.io.StdIn
 import scala.tools.apiSearch.searching.QueryAnalyzer
 import scala.io.Source
 import scala.tools.apiSearch.index.Indexer
-import scala.tools.apiSearch.searching.NameNotFound
-import scala.tools.apiSearch.searching.NameAmbiguous
-import scala.tools.apiSearch.searching.IllegalNumberOfTypeArgs
+import scala.tools.apiSearch.searching.QueryAnalyzer._
 
 object Search extends App {
   val indexDir = args(0)

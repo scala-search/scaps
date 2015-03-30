@@ -9,11 +9,6 @@ import scalaz.std.list._
 import scalaz.syntax.traverse._
 import scalaz.syntax.validation._
 
-sealed trait AnalyzerError
-case class NameNotFound(part: RawQuery.Type) extends AnalyzerError
-case class NameAmbiguous(part: RawQuery.Type, candidates: Seq[ClassEntity]) extends AnalyzerError
-case class IllegalNumberOfTypeArgs(part: RawQuery.Type, expectedArgs: Int) extends AnalyzerError
-
 private[searching] sealed trait ResolvedQuery
 private[searching] object ResolvedQuery {
   case class Class(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
@@ -36,7 +31,12 @@ object APIQuery {
 }
 
 object QueryAnalyzer {
-  type ErrorsOr[T] = ValidationNel[AnalyzerError, T]
+  sealed trait Error
+  case class NameNotFound(part: RawQuery.Type) extends Error
+  case class NameAmbiguous(part: RawQuery.Type, candidates: Seq[ClassEntity]) extends Error
+  case class IllegalNumberOfTypeArgs(part: RawQuery.Type, expectedArgs: Int) extends Error
+
+  type ErrorsOr[T] = ValidationNel[Error, T]
 
   def apply(classes: ClassIndex) =
     new QueryAnalyzer(classes.findClass _, classes.findSubClasses _)
@@ -45,7 +45,7 @@ object QueryAnalyzer {
 /**
  *
  */
-class QueryAnalyzer(
+class QueryAnalyzer private[searching] (
   findClass: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
 
@@ -70,7 +70,7 @@ class QueryAnalyzer(
             ResolvedQuery.TypeParam(raw.name).successNel
           case Seq() =>
             NameNotFound(raw).failureNel
-          case Seq(cls) if raw.args.length == cls.typeParameters.length || raw.args.length == 0 =>
+          case Seq(cls) if resolvedArgs.length == cls.typeParameters.length || raw.args.length == 0 =>
             ResolvedQuery.Class(cls, resolvedArgs).successNel
           case Seq(cls) =>
             IllegalNumberOfTypeArgs(raw, cls.typeParameters.length).failureNel
@@ -111,9 +111,10 @@ class QueryAnalyzer(
 
       def withAlternatives(variance: Variance, cls: ClassEntity): List[FlattenedQuery.Type] = {
         val alternativesWithDistance: List[(String, Int)] = variance match {
-          case Covariant     => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
-          case Contravariant => findSubClasses(cls).get.map(subCls => (subCls.name, 1)).toList
-          case Invariant     => Nil
+          case Covariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
+          case Contravariant => findSubClasses(cls).get
+            .map(subCls => { println(subCls); (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1) }).toList
+          case Invariant => Nil
         }
 
         ((cls.name, 0) :: alternativesWithDistance).map {
@@ -144,8 +145,8 @@ class QueryAnalyzer(
       (distance, idx) <- distances.zipWithIndex
     } yield APIQuery.Type(variance, tpe, idx, distanceBoost(distance))
 
-    APIQuery(types.toList.sortBy(_.boost))
+    APIQuery(types.toList.sortBy(-_.boost))
   }
 
-  private def distanceBoost(dist: Int): Float = (1f / (dist + 2f) + 0.5f)
+  private def distanceBoost(dist: Int): Float = (1f / (0.2f * dist + 1f))
 }

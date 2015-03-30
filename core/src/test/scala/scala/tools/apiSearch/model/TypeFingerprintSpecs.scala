@@ -16,6 +16,20 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       ("p.O.i", _.fingerprint should be("+scala.Int_0")))
   }
 
+  it should "increse occurrence numbers on repeated types" in {
+    extractTerms("""
+      package p
+
+      object O {
+        val i = (1, 2, 3)
+      }
+      """)(
+      ("p.O.i", _.fingerprint should (
+        include("+scala.Int_0") and
+        include("+scala.Int_1") and
+        include("+scala.Int_2"))))
+  }
+
   it should "include type arguments" in {
     extractTerms("""
       package p
