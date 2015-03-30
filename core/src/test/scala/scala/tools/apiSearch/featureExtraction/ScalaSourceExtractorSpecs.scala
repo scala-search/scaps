@@ -303,6 +303,25 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.P", _.tpe.toString should be("+<refinement3>[+java.lang.Object, +p.S, +p.T[scala.Int]]")))
   }
 
+  it should "not extract private terms and classes" in {
+    val entities = extractAll("""
+      package p
+
+      private trait T
+      private object O
+
+      object P {
+        private trait T
+        private object O
+      }
+      """)
+
+    val privateNames = List("p.T", "p.O", "p.P.T", "p.P.O")
+    val privateEntities = entities.filter(t => privateNames.contains(t.name))
+
+    privateEntities should be('empty)
+  }
+
   it should "extract class entities" in {
     extractClasses("""
       package p

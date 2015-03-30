@@ -51,7 +51,8 @@ trait EntityFactory {
   def isClassOfInterest(sym: Symbol): Boolean =
     (sym.isClass || sym.isModuleOrModuleClass) &&
       !sym.isAnonOrRefinementClass &&
-      !sym.isLocalClass
+      !sym.isLocalClass &&
+      sym.isPublic
 
   def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
     val (typeParams, tpe) = createTypeEntity(sym)
