@@ -1,22 +1,22 @@
 package scala.tools.apiSearch.index
 
 import org.apache.lucene.store.FSDirectory
-import java.nio.file.Paths
-import scala.reflect.io.Path
 import scala.tools.nsc.interactive.Global
 import scala.tools.apiSearch.model._
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
 import scala.util.Try
+import scala.tools.apiSearch.settings.IndexSettings
+import java.io.File
 
-class Indexer(indexDir: Path) {
+class Indexer(settings: IndexSettings) {
   lazy val (termsIndex, classesIndex) = {
-    def createDir(path: Path) = {
-      path.jfile.mkdirs()
-      FSDirectory.open(path.jfile)
+    def createDir(path: File) = {
+      path.mkdirs()
+      FSDirectory.open(path)
     }
 
-    (new TermsIndex(createDir(indexDir / "terms")), new ClassIndex(createDir(indexDir / "classes")))
+    (new TermsIndex(createDir(settings.termsDir)), new ClassIndex(createDir(settings.classesDir)))
   }
 
   def reset() = for {

@@ -14,14 +14,16 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.tools.apiSearch.index.Indexer
+import scala.tools.apiSearch.settings.Settings
 
 object CreateIndexFromJar extends App with CompilerAccess {
   val libraryPath = args(0)
   val indexDir = args(1)
+  val settings = Settings.fromApplicationConf()
 
   val extractor = new JarExtractor(compiler)
 
-  val indexer = new Indexer(indexDir)
+  val indexer = new Indexer(settings.index)
 
   indexer.reset().get
 

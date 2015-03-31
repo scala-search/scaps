@@ -2,7 +2,6 @@ package scala.tools.apiSearch.benchmark
 
 import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.tools.apiSearch.utils.CompilerAccess
-import scala.tools.apiSearch.settings.QuerySettings
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
 import java.nio.file.Path
@@ -21,11 +20,13 @@ import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.io.FileWriter
 import scala.tools.apiSearch.utils.using
+import scala.tools.apiSearch.settings.Settings
 
 object Benchmark extends App with CompilerAccess {
   val libraryPath = "/Applications/eclipseScala/plugins/org.scala-lang.scala-library.source_2.11.5.v20150101-184742-3fafbc204f.jar"
   val indexDir = "benchmark/target/index"
   val outputDir = "benchmark/target/results"
+  val settings = Settings.fromApplicationConf()
 
   val outputPath = {
     val output = new File(outputDir)
@@ -59,7 +60,7 @@ object Benchmark extends App with CompilerAccess {
     // Future.sequence (highly generic with higher kinded type param)
     "(collection.Seq[concurrent.Future[A]]) => concurrent.Future[collection.Seq[A]]")
 
-  val indexer = new Indexer(indexDir)
+  val indexer = new Indexer(settings.index)
 
   if (rebuildIndex) {
     indexer.reset().get
@@ -70,7 +71,7 @@ object Benchmark extends App with CompilerAccess {
     Await.result(indexer.index(entities), 1.hour)
   }
 
-  val analyzer = QueryAnalyzer(QuerySettings.fromApplicationConf(), indexer.classesIndex)
+  val analyzer = QueryAnalyzer(settings.query, indexer.classesIndex)
 
   using(new FileWriter(outputPath)) { writer =>
     writer.write("Query; Index; Result; Fingerprint;\n")

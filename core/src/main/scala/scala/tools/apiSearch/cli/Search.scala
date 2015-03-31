@@ -11,13 +11,15 @@ import scala.io.Source
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.tools.apiSearch.index.Indexer
 import scala.tools.apiSearch.searching.QueryAnalyzer._
+import scala.tools.apiSearch.settings.IndexSettings
+import scala.tools.apiSearch.settings.Settings
 
 object Search extends App {
-  val indexDir = args(0)
+  val settings = Settings.fromApplicationConf()
 
-  val indexer = new Indexer(indexDir)
+  val indexer = new Indexer(settings.index)
 
-  val analyzer = QueryAnalyzer(QuerySettings.fromApplicationConf(), indexer.classesIndex)
+  val analyzer = QueryAnalyzer(settings.query, indexer.classesIndex)
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { in =>
     QueryParser(in).fold(println, { raw =>

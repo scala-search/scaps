@@ -9,8 +9,7 @@ import java.nio.file.Paths
 
 case class Settings(
   extractor: ExtractorSettings,
-  classIndex: ClassIndexSettings,
-  termIndex: TermIndexSettings,
+  index: IndexSettings,
   query: QuerySettings)
 
 object Settings {
@@ -20,8 +19,7 @@ object Settings {
   def apply(conf: Config): Settings =
     Settings(
       ExtractorSettings(conf.getConfig("extractor")),
-      ClassIndexSettings(conf.getConfig("class-index")),
-      TermIndexSettings(conf.getConfig("term-index")),
+      IndexSettings(conf.getConfig("index")),
       QuerySettings(conf.getConfig("query")))
 }
 
@@ -37,28 +35,18 @@ object ExtractorSettings {
       conf.getStringList("jars").map(new File(_)).toList)
 }
 
-case class ClassIndexSettings(
-  path: Path)
+case class IndexSettings(
+  classesDir: File,
+  termsDir: File)
 
-object ClassIndexSettings {
+object IndexSettings {
   def fromApplicationConf() =
-    Settings.fromApplicationConf().classIndex
+    Settings.fromApplicationConf().index
 
-  def apply(conf: Config): ClassIndexSettings =
-    ClassIndexSettings(
-      Paths.get(conf.getString("path")))
-}
-
-case class TermIndexSettings(
-  path: Path)
-
-object TermIndexSettings {
-  def fromApplicationConf() =
-    Settings.fromApplicationConf().termIndex
-
-  def apply(conf: Config): TermIndexSettings =
-    TermIndexSettings(
-      Paths.get(conf.getString("path")))
+  def apply(conf: Config): IndexSettings =
+    IndexSettings(
+      new File(conf.getString("classes-dir")),
+      new File(conf.getString("terms-dir")))
 }
 
 case class QuerySettings(
