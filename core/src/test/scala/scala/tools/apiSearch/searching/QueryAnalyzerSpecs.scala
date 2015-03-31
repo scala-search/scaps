@@ -3,6 +3,7 @@ package scala.tools.apiSearch.searching
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import scala.tools.apiSearch.model._
+import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
 import scala.collection.immutable.Map
 import scala.util.Failure
@@ -222,6 +223,6 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       baseCls <- classEntities.filter(_.name == base.name)
     } yield (baseCls, cls))
 
-    new QueryAnalyzer(findClasses, findSubClasses)
+    new QueryAnalyzer(QuerySettings.fromApplicationConf(), findClasses, findSubClasses)
   }
 }

@@ -2,6 +2,7 @@ package scala.tools.apiSearch.benchmark
 
 import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.tools.apiSearch.utils.CompilerAccess
+import scala.tools.apiSearch.settings.QuerySettings
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
 import java.nio.file.Path
@@ -69,7 +70,7 @@ object Benchmark extends App with CompilerAccess {
     Await.result(indexer.index(entities), 1.hour)
   }
 
-  val analyzer = QueryAnalyzer(indexer.classesIndex)
+  val analyzer = QueryAnalyzer(QuerySettings.fromApplicationConf(), indexer.classesIndex)
 
   using(new FileWriter(outputPath)) { writer =>
     writer.write("Query; Index; Result; Fingerprint;\n")

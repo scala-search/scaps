@@ -8,6 +8,7 @@ import scalaz.Validation.FlatMap._
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 import scalaz.syntax.validation._
+import scala.tools.apiSearch.settings.QuerySettings
 
 private[searching] sealed trait ResolvedQuery
 private[searching] object ResolvedQuery {
@@ -38,14 +39,15 @@ object QueryAnalyzer {
 
   type ErrorsOr[T] = ValidationNel[Error, T]
 
-  def apply(classes: ClassIndex) =
-    new QueryAnalyzer(classes.findClass _, classes.findSubClasses _)
+  def apply(settings: QuerySettings, classes: ClassIndex) =
+    new QueryAnalyzer(settings, classes.findClass _, classes.findSubClasses _)
 }
 
 /**
  *
  */
 class QueryAnalyzer private[searching] (
+  settings: QuerySettings,
   findClass: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
 
@@ -170,6 +172,6 @@ class QueryAnalyzer private[searching] (
   private def boost(tpe: FlattenedQuery.Type): Float =
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
-  private def distanceBoost(dist: Int): Float = (1f / (0.1f * dist + 1f))
-  private def depthBoost(depth: Int): Float = (1f / (0.1f * depth + 1f))
+  private def distanceBoost(dist: Int): Float = (1f / (settings.distanceBoostGradient * dist + 1f))
+  private def depthBoost(depth: Int): Float = (1f / (settings.depthBoostGradient * depth + 1f))
 }

@@ -15,20 +15,23 @@ case class Settings(
 
 object Settings {
   def fromApplicationConf() =
-    Settings(ConfigFactory.load())
+    Settings(ConfigFactory.load().getConfig("scala-api-search"))
 
   def apply(conf: Config): Settings =
     Settings(
       ExtractorSettings(conf.getConfig("extractor")),
       ClassIndexSettings(conf.getConfig("class-index")),
       TermIndexSettings(conf.getConfig("term-index")),
-      QuerySettings(conf.getConfig("queries")))
+      QuerySettings(conf.getConfig("query")))
 }
 
 case class ExtractorSettings(
   jars: List[File])
 
 object ExtractorSettings {
+  def fromApplicationConf() =
+    Settings.fromApplicationConf().extractor
+
   def apply(conf: Config): ExtractorSettings =
     ExtractorSettings(
       conf.getStringList("jars").map(new File(_)).toList)
@@ -38,6 +41,9 @@ case class ClassIndexSettings(
   path: Path)
 
 object ClassIndexSettings {
+  def fromApplicationConf() =
+    Settings.fromApplicationConf().classIndex
+
   def apply(conf: Config): ClassIndexSettings =
     ClassIndexSettings(
       Paths.get(conf.getString("path")))
@@ -47,6 +53,9 @@ case class TermIndexSettings(
   path: Path)
 
 object TermIndexSettings {
+  def fromApplicationConf() =
+    Settings.fromApplicationConf().termIndex
+
   def apply(conf: Config): TermIndexSettings =
     TermIndexSettings(
       Paths.get(conf.getString("path")))
@@ -61,6 +70,9 @@ case class QuerySettings(
 }
 
 object QuerySettings {
+  def fromApplicationConf() =
+    Settings.fromApplicationConf().query
+
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getDouble("distance-boost-gradient").toFloat,

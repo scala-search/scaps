@@ -8,6 +8,7 @@ import scala.tools.apiSearch.searching.QueryParser
 import scala.io.StdIn
 import scala.tools.apiSearch.searching.QueryAnalyzer
 import scala.io.Source
+import scala.tools.apiSearch.settings.QuerySettings
 import scala.tools.apiSearch.index.Indexer
 import scala.tools.apiSearch.searching.QueryAnalyzer._
 
@@ -16,7 +17,7 @@ object Search extends App {
 
   val indexer = new Indexer(indexDir)
 
-  val analyzer = QueryAnalyzer(indexer.classesIndex)
+  val analyzer = QueryAnalyzer(QuerySettings.fromApplicationConf(), indexer.classesIndex)
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { in =>
     QueryParser(in).fold(println, { raw =>
