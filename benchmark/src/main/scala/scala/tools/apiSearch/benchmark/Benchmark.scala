@@ -21,11 +21,11 @@ import java.text.SimpleDateFormat
 import java.io.FileWriter
 import scala.tools.apiSearch.utils.using
 import scala.tools.apiSearch.settings.Settings
+import scala.tools.apiSearch.featureExtraction.StandaloneExtractor
 
-object Benchmark extends App with CompilerAccess {
-  val libraryPath = "/Applications/eclipseScala/plugins/org.scala-lang.scala-library.source_2.11.5.v20150101-184742-3fafbc204f.jar"
-  val indexDir = "benchmark/target/index"
+object Benchmark extends App {
   val outputDir = "benchmark/target/results"
+
   val settings = Settings.fromApplicationConf()
 
   val outputPath = {
@@ -60,13 +60,14 @@ object Benchmark extends App with CompilerAccess {
     // Future.sequence (highly generic with higher kinded type param)
     "(collection.Seq[concurrent.Future[A]]) => concurrent.Future[collection.Seq[A]]")
 
+  val extractor = new StandaloneExtractor(settings.extractor)
+
   val indexer = new Indexer(settings.index)
 
   if (rebuildIndex) {
     indexer.reset().get
 
-    val extractor = new JarExtractor(compiler)
-    val entities = extractor(new File(libraryPath))
+    val entities = extractor()
 
     Await.result(indexer.index(entities), 1.hour)
   }

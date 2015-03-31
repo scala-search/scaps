@@ -1,6 +1,6 @@
 package scala.tools.apiSearch.cli
 
-import scala.tools.apiSearch.featureExtraction.JarExtractor
+import scala.tools.apiSearch.featureExtraction.StandaloneExtractor
 import scala.tools.apiSearch.utils.CompilerAccess
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.FSDirectory
@@ -17,17 +17,15 @@ import scala.tools.apiSearch.index.Indexer
 import scala.tools.apiSearch.settings.Settings
 
 object CreateIndexFromJar extends App with CompilerAccess {
-  val libraryPath = args(0)
-  val indexDir = args(1)
   val settings = Settings.fromApplicationConf()
 
-  val extractor = new JarExtractor(compiler)
+  val extractor = new StandaloneExtractor(settings.extractor)
 
   val indexer = new Indexer(settings.index)
 
   indexer.reset().get
 
-  val entities = extractor(new File(libraryPath))
+  val entities = extractor()
 
   Await.result(indexer.index(entities), 1.hour)
 }
