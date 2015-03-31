@@ -76,7 +76,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       include("A minimal doc comment"))
   }
 
-  ignore should "expand variables in doc comments (only locally)" in {
+  it should "expand variables in doc comments (only locally)" in {
     extractTerms("""
       package p
 

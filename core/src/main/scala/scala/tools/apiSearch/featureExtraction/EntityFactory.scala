@@ -8,12 +8,12 @@ trait EntityFactory {
 
   import compiler._
 
-  def extractEntities(classSym: Symbol, getDocComment: Symbol => String): List[Entity] = {
+  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[Entity] = {
     if (isClassOfInterest(classSym)) {
       val cls = createClassEntity(classSym)
 
       val objTerm =
-        if (isTermOfInterest(classSym)) createTermEntity(classSym, getDocComment(classSym)) :: Nil
+        if (isTermOfInterest(classSym)) createTermEntity(classSym, getDocComment(classSym, classSym)) :: Nil
         else Nil
 
       val memberSymsWithComments = classSym.tpe.members
@@ -21,7 +21,7 @@ trait EntityFactory {
         .map { m =>
           val copy = m.cloneSymbol(classSym)
           copy.info = classSym.tpe.memberInfo(m)
-          (copy, getDocComment(m))
+          (copy, getDocComment(m, classSym))
         }
 
       val referencedClasses = memberSymsWithComments.flatMap {

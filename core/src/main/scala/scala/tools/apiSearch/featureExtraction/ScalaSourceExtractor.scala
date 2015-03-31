@@ -19,9 +19,9 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
           sym <- symsMayContributingComments(root)
         } yield (sym, sourceFile)
 
-        def getDocComment(sym: Symbol): String = {
+        def getDocComment(sym: Symbol, site: Symbol): String = {
           val cr = new Response[(String, String, Position)]
-          compiler.askDocComment(sym, sourceFile, sym.enclosingPackage, fragments.toList, cr)
+          compiler.askDocComment(sym, sourceFile, site, fragments.toList, cr)
           cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
         }
 
