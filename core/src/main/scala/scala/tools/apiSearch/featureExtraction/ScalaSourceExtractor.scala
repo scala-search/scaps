@@ -2,10 +2,10 @@ package scala.tools.apiSearch.featureExtraction
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile
-import scala.tools.apiSearch.model._
+import scala.tools.apiSearch.model.Entity
 import scala.tools.nsc.interactive.Global
-import scala.util.Success
 import scala.util.Failure
+import scala.util.Success
 
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
   import compiler._

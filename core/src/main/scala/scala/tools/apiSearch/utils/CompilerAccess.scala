@@ -1,12 +1,8 @@
 package scala.tools.apiSearch.utils
 
+import scala.tools.nsc.doc.ScaladocGlobalTrait
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.ConsoleReporter
-import scala.tools.nsc.doc.ScaladocGlobalTrait
-import scala.tools.nsc.doc.base.MemberLookupBase
-import scala.tools.nsc.doc.base.CommentFactoryBase
-import scala.tools.nsc.doc.base.LinkTo
-import scala.util.Try
 
 /**
  * Provides an instance of the Scala presentation compiler

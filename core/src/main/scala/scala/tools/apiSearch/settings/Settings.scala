@@ -1,11 +1,11 @@
 package scala.tools.apiSearch.settings
 
-import com.typesafe.config.Config
-import scala.collection.JavaConversions._
 import java.io.File
+
+import scala.collection.JavaConversions.asScalaBuffer
+
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import java.nio.file.Path
-import java.nio.file.Paths
 
 case class Settings(
   extractor: ExtractorSettings,

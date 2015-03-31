@@ -10,13 +10,11 @@ import scala.tools.apiSearch.settings.Settings
 object CreateIndexFromJar extends App {
   val settings = Settings.fromApplicationConf()
 
-  val extractor = new StandaloneExtractor(settings.extractor)
-
   val indexer = new Indexer(settings.index)
 
   indexer.reset().get
 
-  val entities = extractor()
+  val entities = StandaloneExtractor(settings.extractor)
 
   Await.result(indexer.index(entities), 1.hour)
 }

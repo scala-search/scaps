@@ -1,26 +1,18 @@
 package scala.tools.apiSearch.index
 
-import scala.collection.JavaConversions._
 import scala.tools.apiSearch.model.ClassEntity
-import scala.tools.apiSearch.utils.using
 import scala.util.Try
+
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
-import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
-import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
-import scala.tools.apiSearch.model.ClassEntity
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause.Occur
 
 /**
  * Persists class entities and provides lookup for classes by name.

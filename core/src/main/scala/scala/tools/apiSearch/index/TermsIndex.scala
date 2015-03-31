@@ -1,17 +1,20 @@
 package scala.tools.apiSearch.index
 
 import java.io.Reader
+
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.collection.JavaConversions.seqAsJavaList
 import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searching.APIQuery
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
+import org.apache.lucene.analysis.core.LowerCaseFilter
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.analysis.core.WhitespaceTokenizer
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
-import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilterFactory
+import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
@@ -25,8 +28,6 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
-import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter
-import org.apache.lucene.analysis.core.LowerCaseFilter
 
 class TermsIndex(val dir: Directory) extends Index {
   import TermsIndex._

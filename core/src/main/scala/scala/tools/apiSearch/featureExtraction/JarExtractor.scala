@@ -1,13 +1,12 @@
 package scala.tools.apiSearch.featureExtraction
 
-import scala.collection.JavaConversions._
-import scala.tools.apiSearch.model._
-import scala.tools.nsc.interactive.Global
-import java.util.jar.JarFile
-import java.io.InputStreamReader
-import scala.collection.mutable.ArrayBuilder
-import scala.reflect.internal.util.BatchSourceFile
 import java.io.File
+import java.util.jar.JarFile
+
+import scala.collection.JavaConversions.enumerationAsScalaIterator
+import scala.reflect.internal.util.BatchSourceFile
+import scala.tools.apiSearch.model.Entity
+import scala.tools.nsc.interactive.Global
 
 class JarExtractor(val compiler: Global) {
   val scalaExtractor = new ScalaSourceExtractor(compiler)

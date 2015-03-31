@@ -1,17 +1,12 @@
 package scala.tools.apiSearch.cli
 
-import org.apache.lucene.store.FSDirectory
-import java.nio.file.Paths
-import scala.tools.apiSearch.index.TermsIndex
-import scala.tools.apiSearch.index.ClassIndex
-import scala.tools.apiSearch.searching.QueryParser
-import scala.io.StdIn
-import scala.tools.apiSearch.searching.QueryAnalyzer
 import scala.io.Source
-import scala.tools.apiSearch.settings.QuerySettings
 import scala.tools.apiSearch.index.Indexer
-import scala.tools.apiSearch.searching.QueryAnalyzer._
-import scala.tools.apiSearch.settings.IndexSettings
+import scala.tools.apiSearch.searching.QueryAnalyzer
+import scala.tools.apiSearch.searching.QueryAnalyzer.IllegalNumberOfTypeArgs
+import scala.tools.apiSearch.searching.QueryAnalyzer.NameAmbiguous
+import scala.tools.apiSearch.searching.QueryAnalyzer.NameNotFound
+import scala.tools.apiSearch.searching.QueryParser
 import scala.tools.apiSearch.settings.Settings
 
 object Search extends App {

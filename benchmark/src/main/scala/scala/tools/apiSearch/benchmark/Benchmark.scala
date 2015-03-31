@@ -60,14 +60,12 @@ object Benchmark extends App {
     // Future.sequence (highly generic with higher kinded type param)
     "(collection.Seq[concurrent.Future[A]]) => concurrent.Future[collection.Seq[A]]")
 
-  val extractor = new StandaloneExtractor(settings.extractor)
-
   val indexer = new Indexer(settings.index)
 
   if (rebuildIndex) {
     indexer.reset().get
 
-    val entities = extractor()
+    val entities = StandaloneExtractor(settings.extractor)
 
     Await.result(indexer.index(entities), 1.hour)
   }

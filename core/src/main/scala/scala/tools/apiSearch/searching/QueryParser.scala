@@ -1,8 +1,7 @@
 package scala.tools.apiSearch.searching
 
-import scala.util.parsing.combinator.RegexParsers
-import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.model.TypeEntity
+import scala.util.parsing.combinator.RegexParsers
 
 case class RawQuery(keywords: List[String], tpe: RawQuery.Type)
 

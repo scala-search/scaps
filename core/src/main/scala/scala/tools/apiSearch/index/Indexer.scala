@@ -1,13 +1,16 @@
 package scala.tools.apiSearch.index
 
-import org.apache.lucene.store.FSDirectory
-import scala.tools.nsc.interactive.Global
-import scala.tools.apiSearch.model._
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
-import scala.util.Try
-import scala.tools.apiSearch.settings.IndexSettings
 import java.io.File
+
+import scala.annotation.implicitNotFound
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.model.Entity
+import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.settings.IndexSettings
+
+import org.apache.lucene.store.FSDirectory
 
 class Indexer(settings: IndexSettings) {
   lazy val (termsIndex, classesIndex) = {

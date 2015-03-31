@@ -1,14 +1,17 @@
 package scala.tools.apiSearch.searching
 
-import scala.tools.apiSearch.model._
+import scala.Ordering
 import scala.tools.apiSearch.index.ClassIndex
+import scala.tools.apiSearch.model._
+import scala.tools.apiSearch.model.Variance
+import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
+
+import scalaz.Validation.FlatMap.ValidationFlatMapRequested
 import scalaz.ValidationNel
-import scalaz.Validation.FlatMap._
 import scalaz.std.list._
 import scalaz.syntax.traverse._
 import scalaz.syntax.validation._
-import scala.tools.apiSearch.settings.QuerySettings
 
 private[searching] sealed trait ResolvedQuery
 private[searching] object ResolvedQuery {

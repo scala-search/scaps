@@ -1,7 +1,7 @@
 package scala.tools.apiSearch.featureExtraction
 
-import scala.tools.nsc.interactive.Global
 import scala.tools.apiSearch.model._
+import scala.tools.nsc.interactive.Global
 
 trait EntityFactory {
   val compiler: Global

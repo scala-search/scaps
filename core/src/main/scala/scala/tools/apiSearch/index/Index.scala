@@ -1,16 +1,17 @@
 package scala.tools.apiSearch.index
 
-import org.apache.lucene.store.Directory
-import org.apache.lucene.analysis.Analyzer
-import org.apache.lucene.index.IndexWriter
-import scala.util.Try
-import org.apache.lucene.index.IndexWriterConfig
 import scala.tools.apiSearch.utils.using
-import org.apache.lucene.search.IndexSearcher
+import scala.util.Try
+
+import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.util.Version
-import org.apache.lucene.search.similarities.Similarity
+import org.apache.lucene.index.IndexWriter
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.similarities.DefaultSimilarity
+import org.apache.lucene.search.similarities.Similarity
+import org.apache.lucene.store.Directory
+import org.apache.lucene.util.Version
 
 trait Index {
   def dir: Directory
