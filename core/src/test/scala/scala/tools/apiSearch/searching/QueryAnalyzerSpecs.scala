@@ -110,20 +110,13 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "correctly trace variance in nested type constructor applications" in {
     val res = expectSuccess("(A => B) => (C => D)")
 
-    res.fingerprint should (
-      contain("+p.A_0") and
-      contain("-p.B_0") and
-      contain("-p.C_0") and
-      contain("+p.D_0"))
+    res.fingerprint should contain allOf ("+p.A_0", "-p.B_0", "-p.C_0", "+p.D_0")
   }
 
   it should "add increasing occurrence numbers to repeated elements" in {
     val res = expectSuccess("(A, A, A)")
 
-    res.fingerprint should (
-      contain("+p.A_0") and
-      contain("+p.A_1") and
-      contain("+p.A_2"))
+    res.fingerprint should contain allOf ("+p.A_0", "+p.A_1", "+p.A_2")
   }
 
   it should "include sub classes of types at covariant positions" in {
@@ -167,7 +160,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
     val A = res.types.find(_.typeName == "p.A").get
 
-    A.boost should be(1f)
+    A.boost should be(1f +- 0.01f)
   }
 
   it should "omit the outermost function application" in {
@@ -180,12 +173,12 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     val res1 = expectSuccess("A => B => C")
     val res2 = expectSuccess("(A, B) => C")
 
-    res1 should be(res2)
+    res1 should equal(res2)
 
     val res3 = expectSuccess("A => (B, C) => D")
     val res4 = expectSuccess("(A, B, C) => D")
 
-    res3 should be(res4)
+    res3 should equal(res4)
   }
 
   it should "not omit inner function types" in {

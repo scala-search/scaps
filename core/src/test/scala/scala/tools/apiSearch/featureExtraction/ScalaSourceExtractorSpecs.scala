@@ -69,10 +69,11 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
     val comments = entities.map(_.comment).mkString("\n")
 
-    comments should include("A doc comment")
-    comments should not include ("A single line comment")
-    comments should not include ("A multi line comment")
-    comments should include("A minimal doc comment")
+    comments should (
+      include("A doc comment") and
+      not include ("A single line comment") and
+      not include ("A multi line comment") and
+      include("A minimal doc comment"))
   }
 
   ignore should "expand variables in doc comments (only locally)" in {
@@ -99,7 +100,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         val a = 1
       }
       """)(
-      ("p.O.a", a => a.tpe should be(TypeEntity("scala.Int"))))
+      ("p.O.a", _.tpe should be(TypeEntity("scala.Int"))))
   }
 
   it should "extract method types" in {
@@ -361,12 +362,15 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
       class E extends C
       """)(
-      ("p.C", _.baseTypes should (contain(TypeEntity("p.T"))
-        and contain(TypeEntity.any))),
-      ("p.D", _.baseTypes should (contain(TypeEntity("p.C"))
-        and contain(TypeEntity("p.T")))),
-      ("p.E", _.baseTypes should (contain(TypeEntity("p.C"))
-        and contain(TypeEntity("p.T")))))
+      ("p.C", _.baseTypes should (
+        contain(TypeEntity("p.T")) and
+        contain(TypeEntity.any))),
+      ("p.D", _.baseTypes should (
+        contain(TypeEntity("p.C")) and
+        contain(TypeEntity("p.T")))),
+      ("p.E", _.baseTypes should (
+        contain(TypeEntity("p.C")) and
+        contain(TypeEntity("p.T")))))
   }
 
   it should "extract class entities with type parameters" in {

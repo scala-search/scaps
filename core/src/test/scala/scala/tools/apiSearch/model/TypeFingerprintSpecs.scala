@@ -38,10 +38,9 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val is = List(1)
       }
       """)(
-      ("p.O.is", is => {
-        is.fingerprint should include("+scala.collection.immutable.List_0")
-        is.fingerprint should include("+scala.Int_0")
-      }))
+      ("p.O.is", _.fingerprint should (
+        include("+scala.collection.immutable.List_0") and
+        include("+scala.Int_0"))))
   }
 
   it should "use upper type parameter bounds at covariant positions" in {
@@ -52,10 +51,9 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A <: scala.AnyVal]: A
       }
       """)(
-      ("p.T#m", m => {
-        m.fingerprint should include("+scala.AnyVal_0")
-        m.fingerprint should not include ("+A_0")
-      }))
+      ("p.T#m", _.fingerprint should (
+        include("+scala.AnyVal_0") and
+        not include ("+A_0"))))
   }
 
   it should "use upper type parameter bounds at contravariant positions" in {
@@ -66,10 +64,9 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A <: scala.AnyVal](x: A): Any
       }
       """)(
-      ("p.T#m", m => {
-        m.fingerprint should include("-scala.AnyVal_0")
-        m.fingerprint should not include ("-A_0")
-      }))
+      ("p.T#m", _.fingerprint should (
+        include("-scala.AnyVal_0") and
+        not include ("-A_0"))))
   }
 
   it should "ignore unbound type parameters" in {
@@ -80,11 +77,10 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A](x: A): A
       }
       """)(
-      ("p.T#m", m => {
-        m.fingerprint should not include ("+scala.Any_0")
-        m.fingerprint should not include ("-scala.Any_0")
-        m.fingerprint should not include ("+A_0")
-        m.fingerprint should not include ("-A_0")
-      }))
+      ("p.T#m", _.fingerprint should (
+        not include ("+scala.Any_0") and
+        not include ("-scala.Any_0") and
+        not include ("+A_0") and
+        not include ("-A_0"))))
   }
 }

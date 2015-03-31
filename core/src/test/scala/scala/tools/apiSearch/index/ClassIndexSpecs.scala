@@ -82,8 +82,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       val result = index.findClass("T").get
 
-      result should contain(CT)
-      result should contain(DT)
+      result should contain allOf (CT, DT)
     }
   }
 
@@ -100,13 +99,11 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       val result = index.findSubClasses(A).get
 
-      result should contain(B)
-      result should not contain (A)
+      result should (contain(B) and not contain (A))
 
       val anySubClasses = index.findSubClasses(ClassEntity(TypeEntity.any.name, Nil, Nil)).get
 
-      anySubClasses should contain(A)
-      anySubClasses should contain(B)
+      anySubClasses should contain allOf (A, B)
     }
   }
 
