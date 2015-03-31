@@ -21,7 +21,7 @@ private[searching] object FlattenedQuery {
   case class Type(variance: Variance, typeName: String, distance: Int, depth: Int)
 }
 
-case class APIQuery(types: List[APIQuery.Type]) {
+case class APIQuery(keywords: List[String], types: List[APIQuery.Type]) {
   def fingerprint: List[String] =
     for {
       tpe <- types
@@ -56,7 +56,11 @@ class QueryAnalyzer private[searching] (
   def apply(raw: RawQuery): Try[ErrorsOr[APIQuery]] =
     Try {
       resolveNames(raw.tpe).get.map(
-        (normalizeFunctions _) andThen (flattenQuery _) andThen (_.get) andThen (toApiQuery _))
+        (normalizeFunctions _) andThen
+          (flattenQuery _) andThen
+          (_.get) andThen
+          (toApiQuery _) andThen
+          { apiQuery => apiQuery.copy(keywords = raw.keywords) })
     }
 
   private[searching] def resolveNames(raw: RawQuery.Type): Try[ErrorsOr[ResolvedQuery]] =
@@ -166,7 +170,7 @@ class QueryAnalyzer private[searching] (
       (boost, idx) <- distances.zipWithIndex
     } yield APIQuery.Type(variance, tpe, idx, boost)
 
-    APIQuery(types.toList.sortBy(-_.boost))
+    APIQuery(Nil, types.toList.sortBy(-_.boost))
   }
 
   private def boost(tpe: FlattenedQuery.Type): Float =

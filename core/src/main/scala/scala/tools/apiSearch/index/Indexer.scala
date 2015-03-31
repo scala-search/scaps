@@ -27,6 +27,6 @@ class Indexer(settings: IndexSettings) {
   def index(entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] = {
     val f1 = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t }) }
     val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }
-    Future.sequence(f1 :: f2 :: Nil).map(_ => ())
+    Future.sequence(f1 :: f2 :: Nil).map(_.foreach(_.get))
   }
 }

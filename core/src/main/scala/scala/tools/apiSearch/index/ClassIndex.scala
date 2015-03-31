@@ -36,17 +36,10 @@ class ClassIndex(val dir: Directory) extends Index {
    * Adds all entities to the index.
    */
   def addEntities(entities: Seq[ClassEntity]): Try[Unit] = {
-    Try {
+    withWriter { writer =>
       entities.foreach { entity =>
-        // We want class entities to be unique and therefore have to lookup its name first.
-        // Maybe there is a faster way to do this but for now it seems fast enough.
-        val indexedEntity = findClassByName(entity.name)
-        if (!(indexedEntity.isSuccess && indexedEntity.get.isDefined)) {
-          withWriter { writer =>
-            val doc = toDocument(entity)
-            writer.addDocument(doc)
-          }.get
-        }
+        val doc = toDocument(entity)
+        writer.updateDocument(new Term(fields.name, entity.name), doc)
       }
     }
   }

@@ -8,27 +8,27 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   import RawQuery._
 
   "the query parser" should "parse simple types" in {
-    "Int" shouldBeParsedAs Type("Int")
+    parse("Int").tpe should equal(Type("Int"))
   }
 
   it should "parse types with arguments" in {
-    "List[Int]" shouldBeParsedAs Type("List", List(Type("Int")))
-    "Map[Int, String]" shouldBeParsedAs Type("Map", List(Type("Int"), Type("String")))
-    "List[Option[String]]" shouldBeParsedAs Type("List", List(Type("Option", List(Type("String")))))
+    parse("List[Int]").tpe should equal(Type("List", List(Type("Int"))))
+    parse("Map[Int, String]").tpe should equal(Type("Map", List(Type("Int"), Type("String"))))
+    parse("List[Option[String]]").tpe should equal(Type("List", List(Type("Option", List(Type("String"))))))
   }
 
   it should "fail on empty argument lists" in {
-    "List[]" shouldFail
+    failParse("List[]")
   }
 
   it should "parse namespaces" in {
-    "p.q.C" shouldBeParsedAs Type("p.q.C")
-    "p.q.C[argument.Name]" shouldBeParsedAs Type("p.q.C", List(Type("argument.Name")))
+    parse("p.q.C").tpe should equal(Type("p.q.C"))
+    parse("p.q.C[argument.Name]").tpe should equal(Type("p.q.C", List(Type("argument.Name"))))
   }
 
   it should "parse type projections" in {
-    "Outer#Inner" shouldBeParsedAs Type("Outer#Inner")
-    "Outer#Inner[A#B]" shouldBeParsedAs Type("Outer#Inner", List(Type("A#B")))
+    parse("Outer#Inner").tpe should equal(Type("Outer#Inner"))
+    parse("Outer#Inner[A#B]").tpe should equal(Type("Outer#Inner", List(Type("A#B"))))
   }
 
   val A = Type("A")
@@ -36,53 +36,60 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   val C = Type("C")
 
   it should "parse function types" in {
-    "A => B" shouldBeParsedAs function(A :: Nil, B)
+    parse("A => B").tpe should equal(function(A :: Nil, B))
   }
 
   it should "parse function types with multiple args" in {
-    "(A, B) => C" shouldBeParsedAs function(A :: B :: Nil, C)
+    parse("(A, B) => C").tpe should equal(function(A :: B :: Nil, C))
   }
 
   it should "follow precedence rules in nested function types" in {
-    "A => B => C" shouldBeParsedAs function(A :: Nil, function(B :: Nil, C))
+    parse("A => B => C").tpe should equal(function(A :: Nil, function(B :: Nil, C)))
   }
 
   it should "parse tuple types" in {
-    "(A, B)" shouldBeParsedAs tuple(A, B)
+    parse("(A, B)").tpe should equal(tuple(A, B))
   }
 
   it should "allow tuples in function args" in {
-    "((A, B)) => C" shouldBeParsedAs function(tuple(A, B) :: Nil, C)
+    parse("((A, B)) => C").tpe should equal(function(tuple(A, B) :: Nil, C))
   }
 
   it should "allow tuples in return types" in {
-    "A => (B, C)" shouldBeParsedAs function(A :: Nil, tuple(B, C))
+    parse("A => (B, C)").tpe should equal(function(A :: Nil, tuple(B, C)))
   }
 
   it should "not parse Tuple1 literals" in {
-    "(A)" shouldBeParsedAs A
+    parse("(A)").tpe should equal(A)
   }
 
   it should "fail on empty tuples" in {
-    "()".shouldFail
-    "A => ()".shouldFail
-    "(())".shouldFail
+    failParse("()")
+    failParse("A => ()")
+    failParse("(())")
   }
 
   it should "allow empty argument lists" in {
-    "() => A" shouldBeParsedAs function(Nil, A)
+    parse("() => A").tpe should equal(function(Nil, A))
   }
 
-  implicit class ParserResultExtensions(query: String) {
-    lazy val res = QueryParser(query)
+  it should "parse single keywords preceding the type" in {
+    parse("keyword: Int").keywords should contain("keyword")
+  }
 
-    def shouldBeParsedAs(expected: Type) = {
-      res should be('right)
-      res.right.get.tpe should be(expected)
-    }
+  it should "parse keywords escaped by backticks" in {
+    parse("`two keywords`: Int").keywords should contain allOf ("two", "keywords")
+  }
 
-    def shouldFail() = {
-      res should be('left)
-    }
+  def parse(query: String) = {
+    val res = QueryParser(query)
+    res should be('right)
+    res.right.get
+  }
+
+  def failParse(query: String) = {
+    val res = QueryParser(query)
+    res should be('left)
+    res.left.get
   }
 }

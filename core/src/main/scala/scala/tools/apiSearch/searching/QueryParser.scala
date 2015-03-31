@@ -4,7 +4,7 @@ import scala.util.parsing.combinator.RegexParsers
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.model.TypeEntity
 
-case class RawQuery(tpe: RawQuery.Type)
+case class RawQuery(keywords: List[String], tpe: RawQuery.Type)
 
 object RawQuery {
   case class Type(name: String, args: List[Type] = Nil)
@@ -22,7 +22,15 @@ object RawQuery {
 object QueryParser extends RegexParsers {
   import RawQuery._
 
-  def query: Parser[RawQuery] = tpe ^^ { tpe => RawQuery(tpe) }
+  def query: Parser[RawQuery] = keywords ~ tpe ^^ {
+    case keywords ~ tpe => RawQuery(keywords, tpe)
+  }
+
+  def keywords: Parser[List[String]] = opt((escapedKeywords | singleKeyword) <~ ":") ^^ { _.getOrElse(Nil) }
+
+  def singleKeyword: Parser[List[String]] = """[^`\s\:]*""".r ^^ { _ :: Nil }
+
+  def escapedKeywords: Parser[List[String]] = "`" ~> rep("""[^`\s]+""".r) <~ "`"
 
   def tpe: Parser[Type] = functionTpe | tupleTpe | simpleTpe
 
@@ -43,7 +51,7 @@ object QueryParser extends RegexParsers {
     case tpes       => tuple(tpes: _*)
   }
 
-  def name: Parser[String] = identifier ~ rep("""[\.#]""".r ~ identifier) ^^ {
+  def name: Parser[String] = identifier ~ rep("""[\.\#]""".r ~ identifier) ^^ {
     case head ~ rest => head + rest.map { case sep ~ ident => s"$sep$ident" }.mkString("")
   }
 
@@ -53,7 +61,7 @@ object QueryParser extends RegexParsers {
    * This does not really implement Scala's identifier but suffices to distinguish them from whitespaces, brackets and
    * namespace delimiters.
    */
-  def identifier: Parser[String] = """[^\.\#\,\[\]\s\(\)]+""".r
+  def identifier: Parser[String] = """[^\.\#\,\[\]\s\(\)`]+""".r
 
   def apply(input: String): Either[String, RawQuery] =
     parseAll(query, input) match {
