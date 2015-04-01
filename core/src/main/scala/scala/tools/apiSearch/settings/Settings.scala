@@ -8,7 +8,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 
 case class Settings(
-  extractor: ExtractorSettings,
   index: IndexSettings,
   query: QuerySettings)
 
@@ -18,21 +17,8 @@ object Settings {
 
   def apply(conf: Config): Settings =
     Settings(
-      ExtractorSettings(conf.getConfig("extractor")),
       IndexSettings(conf.getConfig("index")),
       QuerySettings(conf.getConfig("query")))
-}
-
-case class ExtractorSettings(
-  jars: List[File])
-
-object ExtractorSettings {
-  def fromApplicationConf() =
-    Settings.fromApplicationConf().extractor
-
-  def apply(conf: Config): ExtractorSettings =
-    ExtractorSettings(
-      conf.getStringList("jars").map(new File(_)).toList)
 }
 
 case class IndexSettings(

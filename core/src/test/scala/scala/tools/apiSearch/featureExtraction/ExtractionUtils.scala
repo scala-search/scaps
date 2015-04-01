@@ -7,6 +7,7 @@ import scala.reflect.internal.util.BatchSourceFile
 import org.scalatest.Matchers
 
 trait ExtractionUtils extends CompilerAccess with Matchers {
+  val compiler = initCompiler()
   val extractor = new ScalaSourceExtractor(compiler)
 
   def extractAll(source: String): Seq[Entity] = {

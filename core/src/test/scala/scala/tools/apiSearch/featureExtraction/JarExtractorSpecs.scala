@@ -6,7 +6,7 @@ import scala.tools.apiSearch.utils.CompilerAccess
 import java.io.File
 
 class JarExtractorSpecs extends FlatSpec with Matchers with CompilerAccess {
-  val extractor = new JarExtractor(compiler)
+  val extractor = new JarExtractor(initCompiler())
   val extractorTestSources = new File(getClass.getResource("/jarExtractorTests.jar").toURI().getPath)
 
   "the jar extractor" should "extract entities from source files in jars" in {
