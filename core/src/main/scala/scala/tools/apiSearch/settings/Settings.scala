@@ -37,10 +37,17 @@ object IndexSettings {
 
 case class QuerySettings(
   distanceBoostGradient: Float,
-  depthBoostGradient: Float) {
+  depthBoostGradient: Float,
+  idfWeight: Float,
+  nameBoost: Float,
+  docBoost: Float) {
+  import QuerySettings._
 
-  QuerySettings.assertFloat(0f, 1f)(distanceBoostGradient)
-  QuerySettings.assertFloat(0f, 1f)(depthBoostGradient)
+  assertFloat(0f, 1f)(distanceBoostGradient)
+  assertFloat(0f, 1f)(depthBoostGradient)
+  assertPositive(idfWeight)
+  assertPositive(nameBoost)
+  assertPositive(docBoost)
 }
 
 object QuerySettings {
@@ -50,10 +57,15 @@ object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getDouble("distance-boost-gradient").toFloat,
-      conf.getDouble("depth-boost-gradient").toFloat)
+      conf.getDouble("depth-boost-gradient").toFloat,
+      conf.getDouble("idf-weight").toFloat,
+      conf.getDouble("name-boost").toFloat,
+      conf.getDouble("doc-boost").toFloat)
 
-  private def assertFloat(min: Float, max: Float)(value: Double) = {
+  private def assertFloat(min: Float, max: Float)(value: Float) = {
     assert(value >= min)
     assert(value <= max)
   }
+
+  private val assertPositive = assertFloat(0f, Float.MaxValue)_
 }

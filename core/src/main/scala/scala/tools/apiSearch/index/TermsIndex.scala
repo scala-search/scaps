@@ -1,13 +1,11 @@
 package scala.tools.apiSearch.index
 
 import java.io.Reader
-
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.collection.JavaConversions.seqAsJavaList
 import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searching.APIQuery
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.LowerCaseFilter
@@ -28,8 +26,10 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
+import scala.tools.apiSearch.settings.QuerySettings
+import org.apache.lucene.index.FieldInvertState
 
-class TermsIndex(val dir: Directory) extends Index {
+class TermsIndex(val dir: Directory, settings: QuerySettings) extends Index {
   import TermsIndex._
 
   override val analyzer =
@@ -58,12 +58,13 @@ class TermsIndex(val dir: Directory) extends Index {
       case fields.fingerprint => new DefaultSimilarity {
         // Reduce influence of IDF in order to cope with missing reflection
         // of type hierarchies in doc frequencies
-        override def idf(a: Long, b: Long) = 1
+        override def idf(a: Long, b: Long) =
+          settings.idfWeight * (super.idf(a, b) - 1f) + 1f
 
         // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
         // because fingerprints are relatively short documents
-        //        override def lengthNorm(state: FieldInvertState): Float =
-        //          state.getBoost * (1f / Math.sqrt(2 * state.getLength))
+        override def lengthNorm(state: FieldInvertState): Float =
+          state.getBoost * (1f / Math.sqrt(2 * state.getLength).toFloat)
       }
       case _ => default
     }
@@ -89,8 +90,13 @@ class TermsIndex(val dir: Directory) extends Index {
   private def toLuceneQuery(query: APIQuery): Query = {
     val q = new BooleanQuery
     query.keywords.foreach { keyword =>
-      q.add(new TermQuery(new Term(fields.name, keyword)), Occur.SHOULD)
-      q.add(new TermQuery(new Term(fields.doc, keyword)), Occur.SHOULD)
+      val nameQuery = new TermQuery(new Term(fields.name, keyword))
+      nameQuery.setBoost(settings.nameBoost)
+      q.add(nameQuery, Occur.SHOULD)
+
+      val docQuery = new TermQuery(new Term(fields.doc, keyword))
+      docQuery.setBoost(settings.docBoost)
+      q.add(docQuery, Occur.SHOULD)
     }
     query.types.foreach { tpe =>
       val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"

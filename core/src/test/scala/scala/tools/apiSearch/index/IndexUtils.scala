@@ -5,15 +5,18 @@ import scala.tools.apiSearch.utils.using
 import org.apache.lucene.store.RAMDirectory
 import scala.tools.apiSearch.model._
 import org.apache.lucene.store.Directory
+import scala.tools.apiSearch.settings.Settings
 
 trait IndexUtils extends ExtractionUtils {
+
+  val settings = Settings.fromApplicationConf()
 
   def withDir(f: Directory => Unit) =
     using(new RAMDirectory)(f)
 
   def withTermIndex(f: TermsIndex => Unit): Unit =
     withDir { dir =>
-      val index = new TermsIndex(dir)
+      val index = new TermsIndex(dir, settings.query)
       f(index)
     }
 

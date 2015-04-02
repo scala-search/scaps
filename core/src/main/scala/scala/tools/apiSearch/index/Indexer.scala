@@ -8,18 +8,19 @@ import scala.concurrent.Future
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.model.Entity
 import scala.tools.apiSearch.model.TermEntity
-import scala.tools.apiSearch.settings.IndexSettings
+import scala.tools.apiSearch.settings.Settings
 
 import org.apache.lucene.store.FSDirectory
 
-class Indexer(settings: IndexSettings) {
+class Indexer(settings: Settings) {
   lazy val (termsIndex, classesIndex) = {
     def createDir(path: File) = {
       path.mkdirs()
       FSDirectory.open(path)
     }
 
-    (new TermsIndex(createDir(settings.termsDir)), new ClassIndex(createDir(settings.classesDir)))
+    (new TermsIndex(createDir(settings.index.termsDir), settings.query),
+      new ClassIndex(createDir(settings.index.classesDir)))
   }
 
   def reset() = for {

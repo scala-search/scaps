@@ -12,7 +12,7 @@ import scala.tools.apiSearch.settings.Settings
 object Search extends App {
   val settings = Settings.fromApplicationConf()
 
-  val indexer = new Indexer(settings.index)
+  val indexer = new Indexer(settings)
 
   val analyzer = QueryAnalyzer(settings.query, indexer.classesIndex)
 

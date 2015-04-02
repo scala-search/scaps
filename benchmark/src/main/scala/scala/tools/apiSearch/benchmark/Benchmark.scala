@@ -59,11 +59,9 @@ object Benchmark extends App {
     validationSettings.downloadDir.mkdirs()
   }
 
-  val rebuildIndex = true
+  val indexer = new Indexer(settings)
 
-  val indexer = new Indexer(settings.index)
-
-  if (rebuildIndex) {
+  if (validationSettings.rebuildIndex) {
     indexer.reset().get
 
     validationSettings.projects.foreach { project =>

@@ -8,7 +8,11 @@ import scala.collection.mutable.Buffer
 import com.typesafe.config.ConfigObject
 import java.net.URL
 
-case class ValidationSettings(downloadDir: File, projects: List[ProjectSettings], queries: Map[String, List[String]])
+case class ValidationSettings(
+  downloadDir: File,
+  rebuildIndex: Boolean,
+  projects: List[ProjectSettings],
+  queries: Map[String, List[String]])
 
 object ValidationSettings {
   def fromApplicationConf() =
@@ -17,6 +21,7 @@ object ValidationSettings {
   def apply(conf: Config): ValidationSettings =
     ValidationSettings(
       new File(conf.getString("download-dir")),
+      conf.getBoolean("rebuild-index"),
       conf.getObject("projects").asScala
         .values
         .map(p => ProjectSettings(p.atPath("temp").getConfig("temp")))
