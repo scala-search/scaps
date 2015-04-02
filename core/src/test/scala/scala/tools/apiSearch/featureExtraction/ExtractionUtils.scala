@@ -1,13 +1,12 @@
 package scala.tools.apiSearch.featureExtraction
 
-import scala.tools.apiSearch.utils.CompilerAccess
 import scala.tools.apiSearch.model._
 import scala.util.Random
 import scala.reflect.internal.util.BatchSourceFile
 import org.scalatest.Matchers
 
-trait ExtractionUtils extends CompilerAccess with Matchers {
-  val compiler = initCompiler()
+trait ExtractionUtils extends Matchers {
+  val compiler = CompilerUtils.initCompiler()
   val extractor = new ScalaSourceExtractor(compiler)
 
   def extractAll(source: String): Seq[Entity] = {

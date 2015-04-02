@@ -1,27 +1,23 @@
-package scala.tools.apiSearch.utils
+package scala.tools.apiSearch.featureExtraction
 
 import scala.tools.nsc.doc.ScaladocGlobalTrait
-import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.ConsoleReporter
 
 /**
  * Provides an instance of the Scala presentation compiler
  */
-trait CompilerAccess {
-  def initCompiler(classpaths: List[String] = Nil) = {
+object CompilerUtils {
+  def initCompiler(classpath: List[String] = Nil) = {
     val settings = new scala.tools.nsc.Settings(msg => throw sys.error(msg))
 
-    // in order to run the tests from sbt, we must add the scala library to the class path
-    // but the protection domain might return null when run from eclipse
-    val scalaLibClassPath = Option(Class.forName("scala.Unit").getProtectionDomain.getCodeSource)
-      .map(_.getLocation.toExternalForm())
+    val scalaLibClassPath =
+      if (classpath == Nil) scalaLibRef
+      else None
 
-    (scalaLibClassPath.toList ::: classpaths).foreach { cp =>
+    (scalaLibClassPath.toList ::: classpath).foreach { cp =>
       settings.classpath.append(cp)
       settings.bootclasspath.append(cp)
     }
-
-    println(settings.classpath)
 
     val reporter = new ConsoleReporter(settings)
 
@@ -31,4 +27,10 @@ trait CompilerAccess {
 
     compiler
   }
+
+  def scalaLibRef =
+    // in order to run the tests from sbt, we must add the scala library to the class path
+    // but the protection domain might return null when run from eclipse
+    Option(Class.forName("scala.Unit").getProtectionDomain.getCodeSource)
+      .map(_.getLocation.toExternalForm())
 }
