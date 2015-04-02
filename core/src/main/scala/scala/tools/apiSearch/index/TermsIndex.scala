@@ -26,10 +26,10 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
-import scala.tools.apiSearch.settings.QuerySettings
+import scala.tools.apiSearch.settings.Settings
 import org.apache.lucene.index.FieldInvertState
 
-class TermsIndex(val dir: Directory, settings: QuerySettings) extends Index {
+class TermsIndex(val dir: Directory, settings: Settings) extends Index {
   import TermsIndex._
 
   override val analyzer =
@@ -59,12 +59,12 @@ class TermsIndex(val dir: Directory, settings: QuerySettings) extends Index {
         // Reduce influence of IDF in order to cope with missing reflection
         // of type hierarchies in doc frequencies
         override def idf(a: Long, b: Long) =
-          settings.idfWeight * (super.idf(a, b) - 1f) + 1f
+          settings.query.idfWeight * (super.idf(a, b) - 1f) + 1f
 
         // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
         // because fingerprints are relatively short documents
-        override def lengthNorm(state: FieldInvertState): Float =
-          state.getBoost * (1f / Math.sqrt(2 * state.getLength).toFloat)
+        //        override def lengthNorm(state: FieldInvertState): Float =
+        //          state.getBoost * (1f / Math.sqrt(settings.index.lengthNormWeight * state.getLength).toFloat)
       }
       case _ => default
     }
@@ -91,11 +91,11 @@ class TermsIndex(val dir: Directory, settings: QuerySettings) extends Index {
     val q = new BooleanQuery
     query.keywords.foreach { keyword =>
       val nameQuery = new TermQuery(new Term(fields.name, keyword))
-      nameQuery.setBoost(settings.nameBoost)
+      nameQuery.setBoost(settings.query.nameBoost)
       q.add(nameQuery, Occur.SHOULD)
 
       val docQuery = new TermQuery(new Term(fields.doc, keyword))
-      docQuery.setBoost(settings.docBoost)
+      docQuery.setBoost(settings.query.docBoost)
       q.add(docQuery, Occur.SHOULD)
     }
     query.types.foreach { tpe =>
@@ -104,6 +104,7 @@ class TermsIndex(val dir: Directory, settings: QuerySettings) extends Index {
       tq.setBoost(tpe.boost)
       q.add(tq, Occur.SHOULD)
     }
+    println(q)
     q
   }
 

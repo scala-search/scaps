@@ -19,11 +19,23 @@ object Settings {
     Settings(
       IndexSettings(conf.getConfig("index")),
       QuerySettings(conf.getConfig("query")))
+
+  private[settings] def assertFloat(min: Float, max: Float)(value: Float) = {
+    assert(value >= min)
+    assert(value <= max)
+  }
+
+  private[settings] val assertPositive = assertFloat(0f, Float.MaxValue)_
 }
 
 case class IndexSettings(
   classesDir: File,
-  termsDir: File)
+  termsDir: File,
+  lengthNormWeight: Float) {
+
+  import Settings._
+  assertPositive(lengthNormWeight)
+}
 
 object IndexSettings {
   def fromApplicationConf() =
@@ -32,19 +44,21 @@ object IndexSettings {
   def apply(conf: Config): IndexSettings =
     IndexSettings(
       new File(conf.getString("classes-dir")),
-      new File(conf.getString("terms-dir")))
+      new File(conf.getString("terms-dir")),
+      conf.getDouble("length-norm-weight").toFloat)
 }
 
 case class QuerySettings(
-  distanceBoostGradient: Float,
-  depthBoostGradient: Float,
+  distanceBoostWeight: Float,
+  depthBoostWeight: Float,
   idfWeight: Float,
   nameBoost: Float,
   docBoost: Float) {
-  import QuerySettings._
 
-  assertFloat(0f, 1f)(distanceBoostGradient)
-  assertFloat(0f, 1f)(depthBoostGradient)
+  import Settings._
+
+  assertFloat(0f, 1f)(distanceBoostWeight)
+  assertFloat(0f, 1f)(depthBoostWeight)
   assertPositive(idfWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
@@ -56,16 +70,9 @@ object QuerySettings {
 
   def apply(conf: Config): QuerySettings =
     QuerySettings(
-      conf.getDouble("distance-boost-gradient").toFloat,
-      conf.getDouble("depth-boost-gradient").toFloat,
+      conf.getDouble("distance-boost-weight").toFloat,
+      conf.getDouble("depth-boost-weight").toFloat,
       conf.getDouble("idf-weight").toFloat,
       conf.getDouble("name-boost").toFloat,
       conf.getDouble("doc-boost").toFloat)
-
-  private def assertFloat(min: Float, max: Float)(value: Float) = {
-    assert(value >= min)
-    assert(value <= max)
-  }
-
-  private val assertPositive = assertFloat(0f, Float.MaxValue)_
 }

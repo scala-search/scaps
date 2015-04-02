@@ -16,7 +16,7 @@ trait IndexUtils extends ExtractionUtils {
 
   def withTermIndex(f: TermsIndex => Unit): Unit =
     withDir { dir =>
-      val index = new TermsIndex(dir, settings.query)
+      val index = new TermsIndex(dir, settings)
       f(index)
     }
 

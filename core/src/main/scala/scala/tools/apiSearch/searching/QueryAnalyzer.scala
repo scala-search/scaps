@@ -179,6 +179,6 @@ class QueryAnalyzer private[searching] (
   private def boost(tpe: FlattenedQuery.Type): Float =
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
-  private def distanceBoost(dist: Int): Float = (1f / (settings.distanceBoostGradient * dist + 1f))
-  private def depthBoost(depth: Int): Float = (1f / (settings.depthBoostGradient * depth + 1f))
+  private def distanceBoost(dist: Int): Float = (1f / (settings.distanceBoostWeight * dist + 1f))
+  private def depthBoost(depth: Int): Float = (1f / (settings.depthBoostWeight * depth + 1f))
 }

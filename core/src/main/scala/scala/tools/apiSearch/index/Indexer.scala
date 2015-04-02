@@ -19,7 +19,7 @@ class Indexer(settings: Settings) {
       FSDirectory.open(path)
     }
 
-    (new TermsIndex(createDir(settings.index.termsDir), settings.query),
+    (new TermsIndex(createDir(settings.index.termsDir), settings),
       new ClassIndex(createDir(settings.index.classesDir)))
   }
 

@@ -276,6 +276,15 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.m", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +scala.Unit]")))
   }
 
+  it should "extract terms in package objects" in {
+    extractTerms("""
+      package object p{
+        def m = 1
+      }
+      """)(
+      ("p.m", _ => ()))
+  }
+
   it should "extract objects as terms and classes" in {
     val src = """
       package p
