@@ -18,32 +18,33 @@ import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.searching.QueryAnalyzer
 import scala.tools.apiSearch.searching.QueryParser
 import scala.tools.apiSearch.settings.Settings
-import scala.tools.apiSearch.utils.CompilerAccess
+import scala.tools.apiSearch.utils.CompilerUtils
 import scala.tools.apiSearch.utils.using
 import scala.collection.JavaConverters._
 
-object Benchmark extends App with CompilerAccess {
+object Benchmark extends App {
   val outputDir = "benchmark/target/results"
 
   val settings = Settings.fromApplicationConf()
   val validationSettings = ValidationSettings.fromApplicationConf()
 
+  validationSettings.downloadDir.mkdirs()
+
   val classPaths = for {
     project <- validationSettings.projects
     dependency <- project.dependencies
   } yield {
-    val name = dependency.getPath.split("/").last
-    val file = new File(validationSettings.downloadDir, name)
+    val file = new File(validationSettings.downloadDir, dependency.name)
 
     if (!file.exists()) {
       import sys.process._
-      (dependency #> file).!!
+      (dependency.url #> file).!!
     }
 
     file.getAbsolutePath()
   }
 
-  val compiler = initCompiler(classPaths)
+  val compiler = CompilerUtils.initCompiler(classPaths)
   val extractor = new JarExtractor(compiler)
 
   val outputPath = {

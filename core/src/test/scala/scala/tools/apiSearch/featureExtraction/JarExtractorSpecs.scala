@@ -2,11 +2,11 @@ package scala.tools.apiSearch.featureExtraction
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
-import scala.tools.apiSearch.utils.CompilerAccess
+import scala.tools.apiSearch.utils.CompilerUtils
 import java.io.File
 
-class JarExtractorSpecs extends FlatSpec with Matchers with CompilerAccess {
-  val extractor = new JarExtractor(initCompiler())
+class JarExtractorSpecs extends FlatSpec with Matchers {
+  val extractor = new JarExtractor(CompilerUtils.initCompiler())
   val extractorTestSources = new File(getClass.getResource("/jarExtractorTests.jar").toURI().getPath)
 
   "the jar extractor" should "extract entities from source files in jars" in {

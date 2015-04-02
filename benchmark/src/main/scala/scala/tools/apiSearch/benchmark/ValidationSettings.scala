@@ -26,12 +26,17 @@ object ValidationSettings {
         .toMap)
 }
 
-case class ProjectSettings(name: String, url: URL, dependencies: List[URL])
+case class ProjectSettings(url: URL, dependencies: List[DependencySettings]) {
+  val name = url.getPath().split("/").last
+}
 
 object ProjectSettings {
   def apply(conf: Config): ProjectSettings =
     ProjectSettings(
-      conf.getString("name"),
       new URL(conf.getString("url")),
-      conf.getStringList("dependencies").asScala.map(new URL(_)).toList)
+      conf.getStringList("dependencies").asScala.map(url => DependencySettings(new URL(url))).toList)
+}
+
+case class DependencySettings(url: URL) {
+  val name = url.getPath().split("/").last
 }

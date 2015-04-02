@@ -2,7 +2,6 @@ package scala.tools.apiSearch.featureExtraction
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
-import scala.tools.apiSearch.utils.CompilerAccess
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.apiSearch.model._
 import scala.util.Random
