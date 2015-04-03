@@ -1,11 +1,10 @@
-package scala.tools.apiSearch.index
+package scala.tools.apiSearch.searchEngine.index
+
+import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.model.TypeEntity
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import org.apache.lucene.store.RAMDirectory
-import scala.tools.apiSearch.utils.using
-import scala.tools.apiSearch.featureExtraction.ScalaSourceExtractor
-import scala.tools.apiSearch.model._
 
 class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {
@@ -52,7 +51,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "ignore cases in names" in {
     withTermIndex("""
-      package p
+      package scala.tools.apiSearch.searchEngine.index
 
       object O{
         val vAlUe = 1

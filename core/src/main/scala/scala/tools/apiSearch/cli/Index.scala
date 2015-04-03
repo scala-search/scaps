@@ -5,7 +5,7 @@ import java.io.File
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.tools.apiSearch.SearchEngine
+import scala.tools.apiSearch.searchEngine.SearchEngine
 import scala.tools.apiSearch.featureExtraction.CompilerUtils
 import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.tools.apiSearch.settings.Settings
@@ -15,7 +15,7 @@ object Index extends App {
 
   val extractor = new JarExtractor(CompilerUtils.initCompiler())
 
-  val engine = new SearchEngine(Settings.fromApplicationConf)
+  val engine = SearchEngine(Settings.fromApplicationConf).get
 
   Await.result(engine.indexEntities(extractor(sourceJar)), 1.hour)
 }

@@ -1,4 +1,4 @@
-package scala.tools.apiSearch.index
+package scala.tools.apiSearch.searchEngine.index
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
@@ -88,7 +88,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "retrieve subclasses" in {
     withClassIndex("""
-      package p
+      package scala.tools.apiSearch.searchEngine.index
 
       trait A
 

@@ -1,37 +1,27 @@
-package scala.tools.apiSearch.searching
+package scala.tools.apiSearch.searchEngine.queries
 
 import scala.Ordering
-import scala.tools.apiSearch.index.ClassIndex
 import scala.tools.apiSearch.model._
-import scala.tools.apiSearch.model.Variance
+import scala.tools.apiSearch.searchEngine.APIQuery
+import scala.tools.apiSearch.searchEngine.index.ClassIndex
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
 
 import scalaz.Validation.FlatMap.ValidationFlatMapRequested
 import scalaz.ValidationNel
-import scalaz.std.list._
-import scalaz.syntax.traverse._
-import scalaz.syntax.validation._
+import scalaz.std.list.listInstance
+import scalaz.syntax.traverse.ToTraverseOps
+import scalaz.syntax.validation.ToValidationOps
 
-private[searching] sealed trait ResolvedQuery
-private[searching] object ResolvedQuery {
+private[queries] sealed trait ResolvedQuery
+private[queries] object ResolvedQuery {
   case class Class(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
   case class TypeParam(name: String) extends ResolvedQuery
 }
 
-private[searching] case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
-private[searching] object FlattenedQuery {
+private[queries] case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
+private[queries] object FlattenedQuery {
   case class Type(variance: Variance, typeName: String, distance: Int, depth: Int)
-}
-
-case class APIQuery(keywords: List[String], types: List[APIQuery.Type]) {
-  def fingerprint: List[String] =
-    for {
-      tpe <- types
-    } yield s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
-}
-object APIQuery {
-  case class Type(variance: Variance, typeName: String, occurrence: Int, boost: Float)
 }
 
 object QueryAnalyzer {
@@ -50,7 +40,7 @@ object QueryAnalyzer {
 /**
  *
  */
-class QueryAnalyzer private[searching] (
+class QueryAnalyzer private[queries] (
   settings: QuerySettings,
   findClass: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
@@ -67,7 +57,7 @@ class QueryAnalyzer private[searching] (
           { apiQuery => apiQuery.copy(keywords = raw.keywords) })
     }
 
-  private[searching] def resolveNames(raw: RawQuery.Type): Try[ErrorsOr[ResolvedQuery]] =
+  private[queries] def resolveNames(raw: RawQuery.Type): Try[ErrorsOr[ResolvedQuery]] =
     Try {
       val resolvedArgs: ErrorsOr[List[ResolvedQuery]] =
         raw.args.map(arg => resolveNames(arg).get).sequenceU
@@ -106,7 +96,7 @@ class QueryAnalyzer private[searching] (
     }
   }
 
-  private[searching] def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
+  private[queries] def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
     def uncurry(rq: ResolvedQuery, args: List[ResolvedQuery]): ResolvedQuery =
       rq match {
         case ResolvedQuery.Class(cls, functionArgs) if cls.isFunction =>
@@ -122,7 +112,7 @@ class QueryAnalyzer private[searching] (
     uncurry(resolved, Nil)
   }
 
-  private[searching] def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
+  private[queries] def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
         rq match {
@@ -157,7 +147,7 @@ class QueryAnalyzer private[searching] (
       FlattenedQuery(types)
     }
 
-  private[searching] def toApiQuery(flattened: FlattenedQuery): APIQuery = {
+  private[queries] def toApiQuery(flattened: FlattenedQuery): APIQuery = {
     val boostsPerType: Map[(Variance, String), List[Float]] =
       flattened.types.flatten.foldLeft(Map[(Variance, String), List[Float]]()) {
         (boostsPerType, tpe) =>

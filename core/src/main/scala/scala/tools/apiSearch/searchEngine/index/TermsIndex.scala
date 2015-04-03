@@ -1,11 +1,14 @@
-package scala.tools.apiSearch.index
+package scala.tools.apiSearch.searchEngine.index
 
 import java.io.Reader
+
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.collection.JavaConversions.seqAsJavaList
 import scala.tools.apiSearch.model.TermEntity
-import scala.tools.apiSearch.searching.APIQuery
+import scala.tools.apiSearch.searchEngine.APIQuery
+import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.LowerCaseFilter
@@ -26,8 +29,6 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
-import scala.tools.apiSearch.settings.Settings
-import org.apache.lucene.index.FieldInvertState
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index {
   import TermsIndex._

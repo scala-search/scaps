@@ -1,4 +1,4 @@
-package scala.tools.apiSearch.searching
+package scala.tools.apiSearch.searchEngine.queries
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
@@ -35,7 +35,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       class Int
     }
 
-    package loadTypes {
+    package scala.tools.apiSearch.searchEngine.queries {
       trait TypesToBeLoaded {
         val char: Char
         val float: Float

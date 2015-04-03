@@ -1,33 +1,37 @@
-package scala.tools.apiSearch
+package scala.tools.apiSearch.searchEngine
 
 import java.io.File
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.model.Entity
 import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.searchEngine.index.ClassIndex
+import scala.tools.apiSearch.searchEngine.index.TermsIndex
+import scala.tools.apiSearch.searchEngine.queries.QueryAnalyzer
+import scala.tools.apiSearch.searchEngine.queries.QueryParser
 import scala.tools.apiSearch.settings.Settings
-import org.apache.lucene.store.FSDirectory
-import scala.tools.apiSearch.searching.QueryParser
-import scala.tools.apiSearch.searching.QueryAnalyzer
-import scalaz.std.list._
-import scalaz.syntax.traverse._
-import scalaz.syntax.validation._
 import scala.util.Try
-import scala.tools.apiSearch.index.ClassIndex
-import scala.tools.apiSearch.index.TermsIndex
 
-class SearchEngine(settings: Settings) {
-  lazy val (termsIndex, classesIndex) = {
+import org.apache.lucene.store.FSDirectory
+
+import scalaz.syntax.validation.ToValidationOps
+
+object SearchEngine {
+  def apply(settings: Settings): Try[SearchEngine] = Try {
     def createDir(path: File) = {
       path.mkdirs()
       FSDirectory.open(path)
     }
 
-    (new TermsIndex(createDir(settings.index.termsDir), settings),
+    new SearchEngine(settings,
+      new TermsIndex(createDir(settings.index.termsDir), settings),
       new ClassIndex(createDir(settings.index.classesDir)))
   }
+}
 
+class SearchEngine private (settings: Settings, val termsIndex: TermsIndex, val classesIndex: ClassIndex) {
   def reset() = for {
     _ <- termsIndex.delete()
     _ <- classesIndex.delete()

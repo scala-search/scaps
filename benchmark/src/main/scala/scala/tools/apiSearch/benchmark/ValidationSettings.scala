@@ -1,12 +1,12 @@
 package scala.tools.apiSearch.benchmark
 
 import java.io.File
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.Config
-import scala.collection.JavaConverters._
-import scala.collection.mutable.Buffer
-import com.typesafe.config.ConfigObject
 import java.net.URL
+
+import scala.collection.JavaConverters._
+
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
 
 case class ValidationSettings(
   downloadDir: File,

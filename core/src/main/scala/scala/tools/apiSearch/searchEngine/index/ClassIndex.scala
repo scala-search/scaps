@@ -1,4 +1,4 @@
-package scala.tools.apiSearch.index
+package scala.tools.apiSearch.searchEngine.index
 
 import scala.tools.apiSearch.model.ClassEntity
 import scala.util.Try

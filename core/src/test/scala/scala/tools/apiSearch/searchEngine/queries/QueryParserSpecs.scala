@@ -1,8 +1,13 @@
-package scala.tools.apiSearch.searching
+package scala.tools.apiSearch.searchEngine.queries
+
+import scala.language.postfixOps
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scala.language.postfixOps
+
+import RawQuery.Type
+import RawQuery.function
+import RawQuery.tuple
 
 class QueryParserSpecs extends FlatSpec with Matchers {
   import RawQuery._

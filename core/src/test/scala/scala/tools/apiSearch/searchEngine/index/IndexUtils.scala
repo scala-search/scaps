@@ -1,11 +1,13 @@
-package scala.tools.apiSearch.index
+package scala.tools.apiSearch.searchEngine.index
 
 import scala.tools.apiSearch.featureExtraction.ExtractionUtils
-import scala.tools.apiSearch.utils.using
-import org.apache.lucene.store.RAMDirectory
-import scala.tools.apiSearch.model._
-import org.apache.lucene.store.Directory
+import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.settings.Settings
+import scala.tools.apiSearch.utils.using
+
+import org.apache.lucene.store.Directory
+import org.apache.lucene.store.RAMDirectory
 
 trait IndexUtils extends ExtractionUtils {
 

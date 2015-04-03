@@ -1,6 +1,4 @@
-package scala.tools.apiSearch
-
-package model
+package scala.tools.apiSearch.model
 
 sealed trait Entity {
   def name: String

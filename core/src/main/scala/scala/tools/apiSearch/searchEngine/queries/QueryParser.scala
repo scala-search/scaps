@@ -1,4 +1,4 @@
-package scala.tools.apiSearch.searching
+package scala.tools.apiSearch.searchEngine.queries
 
 import scala.tools.apiSearch.model.TypeEntity
 import scala.util.parsing.combinator.RegexParsers
