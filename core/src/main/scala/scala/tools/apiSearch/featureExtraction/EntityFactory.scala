@@ -88,10 +88,14 @@ trait EntityFactory {
 
   def qualifiedName(sym: Symbol, isTypeName: Boolean): String = {
     def toName(sym: Symbol) =
-      sym.name.decode
+      if (sym.isPackageObject)
+        ""
+      else
+        sym.name.decode
 
     def rec(sym: Symbol): String =
       if (sym.isRootSymbol || sym == sym.owner) ""
+      else if (sym.isPackageObject) rec(sym.owner)
       else if (sym.hasPackageFlag || sym.hasModuleFlag) rec(sym.owner) + toName(sym) + "."
       else rec(sym.owner) + toName(sym) + "#"
 
