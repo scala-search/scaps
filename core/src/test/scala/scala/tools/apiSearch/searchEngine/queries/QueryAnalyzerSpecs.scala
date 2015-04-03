@@ -1,14 +1,11 @@
 package scala.tools.apiSearch.searchEngine.queries
 
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers
-import scala.tools.apiSearch.model._
-import scala.tools.apiSearch.settings.QuerySettings
-import scala.util.Try
 import scala.collection.immutable.Map
-import scala.util.Failure
 import scala.tools.apiSearch.featureExtraction.ExtractionUtils
 import scala.tools.apiSearch.settings.Settings
+import scala.util.Try
+
+import org.scalatest.FlatSpec
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 

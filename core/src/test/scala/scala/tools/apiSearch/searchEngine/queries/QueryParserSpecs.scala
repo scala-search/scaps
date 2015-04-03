@@ -5,10 +5,6 @@ import scala.language.postfixOps
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
-import RawQuery.Type
-import RawQuery.function
-import RawQuery.tuple
-
 class QueryParserSpecs extends FlatSpec with Matchers {
   import RawQuery._
 

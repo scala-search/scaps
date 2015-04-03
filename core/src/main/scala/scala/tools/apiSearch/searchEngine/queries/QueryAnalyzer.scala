@@ -3,15 +3,14 @@ package scala.tools.apiSearch.searchEngine.queries
 import scala.Ordering
 import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.searchEngine.APIQuery
-import scala.tools.apiSearch.searchEngine.index.ClassIndex
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
 
 import scalaz.Validation.FlatMap.ValidationFlatMapRequested
 import scalaz.ValidationNel
-import scalaz.std.list.listInstance
-import scalaz.syntax.traverse.ToTraverseOps
-import scalaz.syntax.validation.ToValidationOps
+import scalaz.std.list._
+import scalaz.syntax.traverse._
+import scalaz.syntax.validation._
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -32,15 +31,12 @@ object QueryAnalyzer {
   case class IllegalNumberOfTypeArgs(part: RawQuery.Type, expectedArgs: Int) extends Error
 
   type ErrorsOr[T] = ValidationNel[Error, T]
-
-  def apply(settings: QuerySettings, classes: ClassIndex) =
-    new QueryAnalyzer(settings, classes.findClass _, classes.findSubClasses _)
 }
 
 /**
  *
  */
-class QueryAnalyzer private[queries] (
+class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
   findClass: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {

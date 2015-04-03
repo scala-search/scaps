@@ -44,7 +44,7 @@ class SearchEngine private (settings: Settings, val termsIndex: TermsIndex, val 
   }
 
   def search(query: String): Try[QueryAnalyzer.ErrorsOr[Seq[TermEntity]]] = Try {
-    val analyzer = QueryAnalyzer(settings.query, classesIndex)
+    val analyzer = new QueryAnalyzer(settings.query, classesIndex.findClass _, classesIndex.findSubClasses _)
     QueryParser(query).fold({ msg =>
       QueryAnalyzer.SyntaxError(msg).failureNel
     }, { raw =>
