@@ -8,6 +8,7 @@ import scala.util.Try
 import scala.collection.immutable.Map
 import scala.util.Failure
 import scala.tools.apiSearch.featureExtraction.ExtractionUtils
+import scala.tools.apiSearch.settings.Settings
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
@@ -223,6 +224,6 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       baseCls <- classEntities.filter(_.name == base.name)
     } yield (baseCls, cls))
 
-    new QueryAnalyzer(QuerySettings.fromApplicationConf(), findClasses, findSubClasses)
+    new QueryAnalyzer(Settings.fromApplicationConf.query, findClasses, findSubClasses)
   }
 }

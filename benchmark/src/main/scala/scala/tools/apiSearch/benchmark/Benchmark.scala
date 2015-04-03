@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.tools.apiSearch.index.ClassIndex
-import scala.tools.apiSearch.index.Indexer
+import scala.tools.apiSearch.SearchEngine
 import scala.tools.apiSearch.index.TermsIndex
 import scala.tools.apiSearch.model._
 import scala.tools.apiSearch.searching.QueryAnalyzer
@@ -25,27 +25,10 @@ import scala.collection.JavaConverters._
 object Benchmark extends App {
   val outputDir = "benchmark/target/results"
 
-  val settings = Settings.fromApplicationConf()
-  val validationSettings = ValidationSettings.fromApplicationConf()
+  val settings = Settings.fromApplicationConf
+  val validationSettings = ValidationSettings.fromApplicationConf
 
-  validationSettings.downloadDir.mkdirs()
-
-  val classPaths = for {
-    project <- validationSettings.projects
-    dependency <- project.dependencies
-  } yield {
-    val file = new File(validationSettings.downloadDir, dependency.name)
-
-    if (!file.exists()) {
-      import sys.process._
-      (dependency.url #> file).!!
-    }
-
-    file.getAbsolutePath()
-  }
-
-  val compiler = CompilerUtils.initCompiler(classPaths)
-  val extractor = new JarExtractor(compiler)
+  val engine = new SearchEngine(settings)
 
   val outputPath = {
     val output = new File(outputDir)
@@ -55,14 +38,12 @@ object Benchmark extends App {
     s"$outputDir/${format.format(now)}.csv"
   }
 
-  if (!validationSettings.downloadDir.exists()) {
-    validationSettings.downloadDir.mkdirs()
-  }
-
-  val indexer = new Indexer(settings)
-
   if (validationSettings.rebuildIndex) {
-    indexer.reset().get
+    val classPaths = initEnvironment(validationSettings)
+    val compiler = CompilerUtils.initCompiler(classPaths)
+    val extractor = new JarExtractor(compiler)
+
+    engine.reset().get
 
     validationSettings.projects.foreach { project =>
       val jar = new File(validationSettings.downloadDir, project.name)
@@ -72,13 +53,9 @@ object Benchmark extends App {
         (project.url #> jar).!!
       }
 
-      val entities = extractor(jar)
-
-      Await.result(indexer.index(entities), 1.hour)
+      Await.result(engine.indexEntities(extractor(jar)), 1.hour)
     }
   }
-
-  val analyzer = QueryAnalyzer(settings.query, indexer.classesIndex)
 
   using(new FileWriter(outputPath)) { writer =>
     writer.write("Query; Index; Result; Fingerprint;\n")
@@ -87,17 +64,33 @@ object Benchmark extends App {
       case (query, expectedResults) =>
         println(query)
 
-        val raw = QueryParser(query).right.get
-
-        val analyzed = analyzer(raw).get.getOrElse(???)
-
-        indexer.termsIndex.find(analyzed).get.take(20).zipWithIndex.foreach {
-          case (t, idx) =>
-            val term = t.withoutComment
-            val entry = s"${query}; $idx; $term; ${term.fingerprint}\n"
-            println(entry)
-            writer.write(entry)
-        }
+        engine.search(query).get.fold(
+          errors => println(errors),
+          results => results.take(20).zipWithIndex.foreach {
+            case (t, idx) =>
+              val term = t.withoutComment
+              val entry = s"${query}; $idx; $term; ${term.fingerprint}\n"
+              println(entry)
+              writer.write(entry)
+          })
     }
   }.get
+
+  def initEnvironment(settings: ValidationSettings) = {
+    settings.downloadDir.mkdirs()
+
+    for {
+      project <- settings.projects
+      dependency <- project.dependencies
+    } yield {
+      val file = new File(settings.downloadDir, dependency.name)
+
+      if (!file.exists()) {
+        import sys.process._
+        (dependency.url #> file).!!
+      }
+
+      file.getAbsolutePath()
+    }
+  }
 }

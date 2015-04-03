@@ -12,7 +12,7 @@ case class Settings(
   query: QuerySettings)
 
 object Settings {
-  def fromApplicationConf() =
+  def fromApplicationConf =
     Settings(ConfigFactory.load().getConfig("scala-api-search"))
 
   def apply(conf: Config): Settings =
@@ -38,9 +38,6 @@ case class IndexSettings(
 }
 
 object IndexSettings {
-  def fromApplicationConf() =
-    Settings.fromApplicationConf().index
-
   def apply(conf: Config): IndexSettings =
     IndexSettings(
       new File(conf.getString("classes-dir")),
@@ -65,9 +62,6 @@ case class QuerySettings(
 }
 
 object QuerySettings {
-  def fromApplicationConf() =
-    Settings.fromApplicationConf().query
-
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getDouble("distance-boost-weight").toFloat,

@@ -36,6 +36,7 @@ object APIQuery {
 
 object QueryAnalyzer {
   sealed trait Error
+  case class SyntaxError(msg: String) extends Error
   case class NameNotFound(part: RawQuery.Type) extends Error
   case class NameAmbiguous(part: RawQuery.Type, candidates: Seq[ClassEntity]) extends Error
   case class IllegalNumberOfTypeArgs(part: RawQuery.Type, expectedArgs: Int) extends Error

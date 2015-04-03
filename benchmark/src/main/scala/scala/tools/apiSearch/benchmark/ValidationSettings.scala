@@ -15,7 +15,7 @@ case class ValidationSettings(
   queries: Map[String, List[String]])
 
 object ValidationSettings {
-  def fromApplicationConf() =
+  def fromApplicationConf =
     ValidationSettings(ConfigFactory.load().getConfig("scala-api-search.validation"))
 
   def apply(conf: Config): ValidationSettings =

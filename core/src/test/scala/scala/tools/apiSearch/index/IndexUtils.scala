@@ -9,7 +9,7 @@ import scala.tools.apiSearch.settings.Settings
 
 trait IndexUtils extends ExtractionUtils {
 
-  val settings = Settings.fromApplicationConf()
+  val settings = Settings.fromApplicationConf
 
   def withDir(f: Directory => Unit) =
     using(new RAMDirectory)(f)
