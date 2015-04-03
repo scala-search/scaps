@@ -21,6 +21,7 @@ import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
+import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
@@ -64,8 +65,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
 
         // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
         // because fingerprints are relatively short documents
-        //        override def lengthNorm(state: FieldInvertState): Float =
-        //          state.getBoost * (1f / Math.sqrt(settings.index.lengthNormWeight * state.getLength).toFloat)
+        override def lengthNorm(state: FieldInvertState): Float =
+          state.getBoost * (1f / Math.sqrt(settings.index.lengthNormWeight * state.getLength).toFloat)
       }
       case _ => default
     }
@@ -82,7 +83,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
 
   def find(query: APIQuery): Try[Seq[TermEntity]] =
     withSearcher { searcher =>
-      val docs = searcher.search(toLuceneQuery(query), maxResults)
+      val docs = searcher.search(toLuceneQuery(query), settings.query.maxResults)
 
       docs.scoreDocs.map(scoreDoc =>
         toTermEntity(searcher.doc(scoreDoc.doc)))
@@ -105,7 +106,6 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
       tq.setBoost(tpe.boost)
       q.add(tq, Occur.SHOULD)
     }
-    println(q)
     q
   }
 
@@ -116,7 +116,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
     withSearcher { searcher =>
       val query = new TermQuery(new Term(fields.name, name))
 
-      val docs = searcher.search(query, maxResults)
+      val docs = searcher.search(query, settings.query.maxResults)
 
       docs.scoreDocs.map(scoreDoc =>
         toTermEntity(searcher.doc(scoreDoc.doc)))

@@ -27,7 +27,7 @@ object SearchEngine {
 
     new SearchEngine(settings,
       new TermsIndex(createDir(settings.index.termsDir), settings),
-      new ClassIndex(createDir(settings.index.classesDir)))
+      new ClassIndex(createDir(settings.index.classesDir), settings))
   }
 }
 

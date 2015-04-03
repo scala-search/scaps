@@ -31,7 +31,7 @@ trait IndexUtils extends ExtractionUtils {
 
   def withClassIndex(f: ClassIndex => Unit): Unit =
     withDir { dir =>
-      val index = new ClassIndex(dir)
+      val index = new ClassIndex(dir, settings)
       f(index)
     }
 

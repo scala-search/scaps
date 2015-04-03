@@ -1,6 +1,7 @@
 package scala.tools.apiSearch.searchEngine.index
 
 import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
 
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
@@ -19,7 +20,7 @@ import org.apache.lucene.store.Directory
  *
  * This index is mainly used for fast access to class hierarchies for query building.
  */
-class ClassIndex(val dir: Directory) extends Index {
+class ClassIndex(val dir: Directory, settings: Settings) extends Index {
   import ClassIndex._
 
   val analyzer = new WhitespaceAnalyzer
@@ -59,7 +60,7 @@ class ClassIndex(val dir: Directory) extends Index {
       val query = new BooleanQuery()
       query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
 
-      val docs = searcher.search(query, maxResults)
+      val docs = searcher.search(query, settings.query.maxResults)
 
       docs.scoreDocs.map(scoreDoc =>
         toClassEntity(searcher.doc(scoreDoc.doc)))
@@ -70,7 +71,7 @@ class ClassIndex(val dir: Directory) extends Index {
     withSearcher { searcher =>
       val query = new TermQuery(new Term(fields.baseClass, cls.name))
 
-      val docs = searcher.search(query, maxResults)
+      val docs = searcher.search(query, settings.query.maxResults)
 
       docs.scoreDocs.map(scoreDoc =>
         toClassEntity(searcher.doc(scoreDoc.doc)))

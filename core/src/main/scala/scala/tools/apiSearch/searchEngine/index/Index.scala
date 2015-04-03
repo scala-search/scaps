@@ -19,8 +19,6 @@ trait Index {
 
   val similarity: Similarity = new DefaultSimilarity
 
-  val maxResults = 1000
-
   def delete(): Try[Unit] = Try {
     dir.listAll().foreach(dir.deleteFile(_))
   }

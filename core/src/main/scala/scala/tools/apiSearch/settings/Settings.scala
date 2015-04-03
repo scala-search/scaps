@@ -46,6 +46,7 @@ object IndexSettings {
 }
 
 case class QuerySettings(
+  maxResults: Int,
   distanceBoostWeight: Float,
   depthBoostWeight: Float,
   idfWeight: Float,
@@ -64,6 +65,7 @@ case class QuerySettings(
 object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
+      conf.getInt("max-results"),
       conf.getDouble("distance-boost-weight").toFloat,
       conf.getDouble("depth-boost-weight").toFloat,
       conf.getDouble("idf-weight").toFloat,
