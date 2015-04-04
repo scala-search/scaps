@@ -11,6 +11,7 @@ import scala.concurrent.duration.DurationInt
 import scala.sys.process.urlToProcess
 import scala.tools.apiSearch.featureExtraction.CompilerUtils
 import scala.tools.apiSearch.featureExtraction.JarExtractor
+import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searchEngine.SearchEngine
 import scala.tools.apiSearch.settings.Settings
 import scala.tools.apiSearch.utils.using
@@ -23,31 +24,14 @@ object Benchmark extends App {
 
   val engine = SearchEngine(settings).get
 
+  initEnvironment(validationSettings, engine)
+
   val outputPath = {
     val output = new File(outputDir)
     output.mkdirs()
     val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
     val now = Calendar.getInstance.getTime
     s"$outputDir/${format.format(now)}.csv"
-  }
-
-  if (validationSettings.rebuildIndex) {
-    val classPaths = initEnvironment(validationSettings)
-    val compiler = CompilerUtils.initCompiler(classPaths)
-    val extractor = new JarExtractor(compiler)
-
-    engine.reset().get
-
-    validationSettings.projects.foreach { project =>
-      val jar = new File(validationSettings.downloadDir, project.name)
-      println(jar)
-      if (!jar.exists()) {
-        import sys.process._
-        (project.url #> jar).!!
-      }
-
-      Await.result(engine.indexEntities(extractor(jar)), 1.hour)
-    }
   }
 
   using(new FileWriter(outputPath)) { writer =>
@@ -69,21 +53,41 @@ object Benchmark extends App {
     }
   }.get
 
-  def initEnvironment(settings: ValidationSettings) = {
-    settings.downloadDir.mkdirs()
+  def avaragePrecision(expected: Seq[String], results: Seq[TermEntity]): Double = ???
 
-    for {
-      project <- settings.projects
-      dependency <- project.dependencies
-    } yield {
-      val file = new File(settings.downloadDir, dependency.name)
+  def initEnvironment(settings: ValidationSettings, engine: SearchEngine) = {
+    if (settings.rebuildIndex) {
+      settings.downloadDir.mkdirs()
 
-      if (!file.exists()) {
-        import sys.process._
-        (dependency.url #> file).!!
+      val classPaths = for {
+        project <- settings.projects
+        dependency <- project.dependencies
+      } yield {
+        val file = new File(settings.downloadDir, dependency.name)
+
+        if (!file.exists()) {
+          import sys.process._
+          (dependency.url #> file).!!
+        }
+
+        file.getAbsolutePath()
       }
 
-      file.getAbsolutePath()
+      val compiler = CompilerUtils.initCompiler(classPaths)
+      val extractor = new JarExtractor(compiler)
+
+      engine.reset().get
+
+      settings.projects.foreach { project =>
+        val jar = new File(settings.downloadDir, project.name)
+
+        if (!jar.exists()) {
+          import sys.process._
+          (project.url #> jar).!!
+        }
+
+        Await.result(engine.indexEntities(extractor(jar)), 1.hour)
+      }
     }
   }
 }

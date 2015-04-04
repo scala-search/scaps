@@ -2,6 +2,9 @@ package scala.tools.apiSearch.searchEngine.queries
 
 import scala.tools.apiSearch.model.TypeEntity
 import scala.util.parsing.combinator.RegexParsers
+import scala.tools.apiSearch.searchEngine.SyntaxError
+import scalaz.syntax.validation._
+import scalaz.ValidationNel
 
 case class RawQuery(keywords: List[String], tpe: RawQuery.Type)
 
@@ -62,9 +65,9 @@ object QueryParser extends RegexParsers {
    */
   def identifier: Parser[String] = """[^\.\#\,\[\]\s\(\)`]+""".r
 
-  def apply(input: String): Either[String, RawQuery] =
+  def apply(input: String): ValidationNel[SyntaxError, RawQuery] =
     parseAll(query, input) match {
-      case Success(result, _) => Right(result)
-      case NoSuccess(msg, _)  => Left(msg)
+      case Success(result, _) => result.successNel
+      case NoSuccess(msg, _)  => SyntaxError(msg).failureNel
     }
 }

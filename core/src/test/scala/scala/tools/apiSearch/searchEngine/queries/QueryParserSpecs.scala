@@ -84,13 +84,13 @@ class QueryParserSpecs extends FlatSpec with Matchers {
 
   def parse(query: String) = {
     val res = QueryParser(query)
-    res should be('right)
-    res.right.get
+    res should be('success)
+    res.getOrElse(???)
   }
 
   def failParse(query: String) = {
     val res = QueryParser(query)
-    res should be('left)
-    res.left.get
+    res should be('failure)
+    res.swap.getOrElse(???)
   }
 }
