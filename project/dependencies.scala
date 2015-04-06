@@ -5,7 +5,7 @@ object Dependencies {
   val scalaCompiler = "org.scala-lang" % "scala-compiler" % Commons.targetedScalaVersion
   val scalaPickling = "org.scala-lang" %% "scala-pickling" % "0.9.1"
 
-  val scalaTest = "org.scalatest" %% "scalatest" % "2.2.1" % "test"
+  val scalatest = "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
   val scalaz = "org.scalaz" %% "scalaz-core" % "7.1.1"
 
@@ -18,10 +18,13 @@ object Dependencies {
   val coreDependencies: Seq[ModuleID] = Seq(
     scalaCompiler,
     scalaPickling,
-    scalaTest,
+    scalatest,
     scalaz,
     config,
     luceneCore,
     luceneAnalyzersCommon
   )
+
+  val evaluationDependencies: Seq[ModuleID] = Seq(
+    scalatest)
 }

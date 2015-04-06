@@ -4,21 +4,24 @@ import java.io.File
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Calendar
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.urlToProcess
+import scala.tools.apiSearch.evaluation.stats.QueryStats
 import scala.tools.apiSearch.featureExtraction.CompilerUtils
 import scala.tools.apiSearch.featureExtraction.JarExtractor
-import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searchEngine.SearchEngine
 import scala.tools.apiSearch.settings.Settings
 import scala.tools.apiSearch.utils.using
+import scalaz._
+import scalaz.Validation
+import scalaz.std.list._
+import scalaz.syntax.validation._
+import scalaz.syntax.traverse._
+import scala.tools.apiSearch.evaluation.stats.Stats
 
 object Benchmark extends App {
-  val outputDir = "benchmark/target/results"
-
   val settings = Settings.fromApplicationConf
   val validationSettings = ValidationSettings.fromApplicationConf
 
@@ -26,34 +29,18 @@ object Benchmark extends App {
 
   initEnvironment(validationSettings, engine)
 
-  val outputPath = {
-    val output = new File(outputDir)
-    output.mkdirs()
-    val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
-    val now = Calendar.getInstance.getTime
-    s"$outputDir/${format.format(now)}.csv"
-  }
+  val stats = validationSettings.queries.map {
+    case (query, relevant) =>
+      engine.search(query).get.map(
+        results => QueryStats(query, results.map(_.withoutComment.toString()), relevant))
+  }.sequenceU.map(Stats(_))
 
-  using(new FileWriter(outputPath)) { writer =>
-    writer.write("Query; Index; Result; Fingerprint;\n")
-
-    validationSettings.queries.foreach {
-      case (query, expectedResults) =>
-        println(query)
-
-        engine.search(query).get.fold(
-          errors => println(errors),
-          results => results.take(20).zipWithIndex.foreach {
-            case (t, idx) =>
-              val term = t.withoutComment
-              val entry = s"${query}; $idx; $term; ${term.fingerprint}\n"
-              println(entry)
-              writer.write(entry)
-          })
-    }
-  }.get
-
-  def avaragePrecision(expected: Seq[String], results: Seq[TermEntity]): Double = ???
+  stats.fold(
+    errors => println(errors),
+    stats => {
+      stats.queryStats.foreach { qs => println(qs.query); println(qs); println() }
+      println(stats)
+    })
 
   def initEnvironment(settings: ValidationSettings, engine: SearchEngine) = {
     if (settings.rebuildIndex) {

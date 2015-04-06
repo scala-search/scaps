@@ -12,7 +12,7 @@ case class ValidationSettings(
   downloadDir: File,
   rebuildIndex: Boolean,
   projects: List[ProjectSettings],
-  queries: Map[String, List[String]])
+  queries: List[(String, Set[String])])
 
 object ValidationSettings {
   def fromApplicationConf =
@@ -27,8 +27,8 @@ object ValidationSettings {
         .map(p => ProjectSettings(p.atPath("temp").getConfig("temp")))
         .toList,
       conf.getObject("queries").asScala
-        .mapValues(o => o.atPath("temp").getStringList("temp").asScala.toList)
-        .toMap)
+        .map { case (key, o) => (key, o.atPath("temp").getStringList("temp").asScala.toSet) }
+        .toList)
 }
 
 case class ProjectSettings(url: URL, dependencies: List[DependencySettings]) {
