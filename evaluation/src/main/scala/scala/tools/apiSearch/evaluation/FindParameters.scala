@@ -15,14 +15,14 @@ object FindParameters extends App {
 
   val distanceBoostWeights = List(0.01f, 0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1f)
   val depthBoostWeights = List(0.01f, 0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1f)
-  val idfWeights = List(0.01f, 0.02f, 0.05f, 0.1f)
+  val idfWeights = List(0.01f, 0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1f)
   val nameBoosts = List(0.01f, 0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1f)
   val docBoosts = List(0.01f, 0.02f, 0.05f, 0.1f, 0.2f, 0.5f, 1f)
 
   using(new FileWriter(outputFile)) { writer =>
     writer.write("idx; lengthNormWeight; distanceBoostWeight; depthBoostWeight; idfWeight; nameBoost; docBoost; MAP;\n")
 
-    generateConfs(1000, Math.pow(42, 42).toLong, Settings.fromApplicationConf, EvaluationSettings.fromApplicationConf)
+    generateConfs(3000, Math.pow(42, 42).toLong, Settings.fromApplicationConf, EvaluationSettings.fromApplicationConf)
       .zipWithIndex
       .foreach {
         case ((settings, evaluationSettings), idx) =>
