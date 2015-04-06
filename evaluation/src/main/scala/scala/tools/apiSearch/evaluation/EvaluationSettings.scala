@@ -1,25 +1,23 @@
-package scala.tools.apiSearch.benchmark
+package scala.tools.apiSearch.evaluation
 
 import java.io.File
 import java.net.URL
-
 import scala.collection.JavaConverters._
-
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 
-case class ValidationSettings(
+case class EvaluationSettings(
   downloadDir: File,
   rebuildIndex: Boolean,
   projects: List[ProjectSettings],
   queries: List[(String, Set[String])])
 
-object ValidationSettings {
+object EvaluationSettings {
   def fromApplicationConf =
-    ValidationSettings(ConfigFactory.load().getConfig("scala-api-search.validation"))
+    EvaluationSettings(ConfigFactory.load().getConfig("scala-api-search.validation"))
 
-  def apply(conf: Config): ValidationSettings =
-    ValidationSettings(
+  def apply(conf: Config): EvaluationSettings =
+    EvaluationSettings(
       new File(conf.getString("download-dir")),
       conf.getBoolean("rebuild-index"),
       conf.getObject("projects").asScala

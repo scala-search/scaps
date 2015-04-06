@@ -5,7 +5,7 @@ lazy val core = (project in file("core"))
   .settings(libraryDependencies ++= coreDependencies)
   .settings(resourceGenerators in Test <+= JarExtractorTests.createJar)
 
-lazy val benchmark = (project in file("benchmark"))
+lazy val evaluation = (project in file("evaluation"))
   .dependsOn(core)
   .settings(Commons.settings: _*)
   .settings(libraryDependencies ++= evaluationDependencies)
