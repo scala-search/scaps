@@ -3,7 +3,6 @@ package scala.tools.apiSearch.searchEngine.index
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
-
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
@@ -14,6 +13,7 @@ import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
+import org.apache.lucene.search.MatchAllDocsQuery
 
 /**
  * Persists class entities and provides lookup for classes by name.
@@ -72,6 +72,15 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index {
       val query = new TermQuery(new Term(fields.baseClass, cls.name))
 
       val docs = searcher.search(query, settings.query.maxResults)
+
+      docs.scoreDocs.map(scoreDoc =>
+        toClassEntity(searcher.doc(scoreDoc.doc)))
+    }
+  }
+
+  def allClasses(): Try[Seq[ClassEntity]] = {
+    withSearcher { searcher =>
+      val docs = searcher.search(new MatchAllDocsQuery, Int.MaxValue)
 
       docs.scoreDocs.map(scoreDoc =>
         toClassEntity(searcher.doc(scoreDoc.doc)))

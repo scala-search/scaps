@@ -1,7 +1,6 @@
 package scala.tools.apiSearch.evaluation
 
 import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -13,11 +12,11 @@ import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.tools.apiSearch.searchEngine.QueryError
 import scala.tools.apiSearch.searchEngine.SearchEngine
 import scala.tools.apiSearch.settings.Settings
-
 import scalaz._
 import scalaz.ValidationNel
 import scalaz.std.list.listInstance
 import scalaz.syntax.traverse.ToTraverseOps
+import scala.concurrent.Future
 
 object Common {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): ValidationNel[QueryError, Stats] = {
@@ -47,22 +46,41 @@ object Common {
         file.getAbsolutePath()
       }
 
-      val compiler = CompilerUtils.initCompiler(classPaths)
-      val extractor = new JarExtractor(compiler)
+      CompilerUtils.withCompiler(classPaths) { compiler =>
+        val extractor = new JarExtractor(compiler)
 
-      engine.reset().get
+        engine.reset().get
 
-      evaluationSettings.projects.foreach { project =>
-        val jar = new File(evaluationSettings.downloadDir, project.name)
+        evaluationSettings.projects.foreach { project =>
+          val jar = new File(evaluationSettings.downloadDir, project.name)
 
-        if (!jar.exists()) {
-          import sys.process._
-          (project.url #> jar).!!
+          if (!jar.exists()) {
+            import sys.process._
+            (project.url #> jar).!!
+          }
+
+          Await.result(engine.indexEntities(extractor(jar)), 1.hour)
         }
-
-        Await.result(engine.indexEntities(extractor(jar)), 1.hour)
       }
     }
     engine
+  }
+
+  def updateSearchEngine(engine: SearchEngine, newSettings: Settings) = {
+    if (engine.settings.index != newSettings.index) {
+      println("Index time settings have changed!")
+      Await.result(
+        for {
+          entities <- Future { engine.termsIndex.allTerms().get ++ engine.classesIndex.allClasses().get }
+          newEngine = {
+            val e = SearchEngine(newSettings).get
+            e.reset().get
+            e
+          }
+          _ <- newEngine.indexEntities(entities.toStream)
+        } yield (newEngine), 1.hour)
+    } else {
+      SearchEngine(newSettings).get
+    }
   }
 }

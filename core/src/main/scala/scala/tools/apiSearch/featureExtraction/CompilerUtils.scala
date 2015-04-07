@@ -2,11 +2,23 @@ package scala.tools.apiSearch.featureExtraction
 
 import scala.tools.nsc.doc.ScaladocGlobalTrait
 import scala.tools.nsc.reporters.ConsoleReporter
+import scala.util.Try
+import scala.tools.nsc.interactive.Global
 
 /**
  * Provides an instance of the Scala presentation compiler
  */
 object CompilerUtils {
+  def withCompiler[A](classpath: List[String] = Nil)(fn: Global => A): A = {
+    val compiler = initCompiler(classpath)
+
+    val res = fn(compiler)
+
+    compiler.askShutdown()
+
+    res
+  }
+
   def initCompiler(classpath: List[String] = Nil) = {
     val settings = new scala.tools.nsc.Settings(msg => throw sys.error(msg))
 

@@ -1,14 +1,12 @@
 package scala.tools.apiSearch.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.collection.JavaConversions.seqAsJavaList
 import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searchEngine.APIQuery
 import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.LowerCaseFilter
@@ -30,6 +28,7 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
+import org.apache.lucene.search.MatchAllDocsQuery
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index {
   import TermsIndex._
@@ -107,6 +106,15 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
       q.add(tq, Occur.SHOULD)
     }
     q
+  }
+
+  def allTerms(): Try[Seq[TermEntity]] = {
+    withSearcher { searcher =>
+      val docs = searcher.search(new MatchAllDocsQuery, Int.MaxValue)
+
+      docs.scoreDocs.map(scoreDoc =>
+        toTermEntity(searcher.doc(scoreDoc.doc)))
+    }
   }
 
   /**
