@@ -8,7 +8,6 @@ import java.util.Calendar
 import scala.tools.apiSearch.settings.IndexSettings
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.tools.apiSearch.settings.Settings
-import scala.tools.apiSearch.settings.Instances._
 import scala.tools.apiSearch.utils.using
 
 import com.nicta.rng.Rng
@@ -56,7 +55,9 @@ object FindParameters extends App {
   }
 
   def generateConfs(size: Int, seed: Long, settings: Settings): Seq[Settings] = {
-    randomize(settings).fill(size).runUnsafe(seed).sorted(implicitly[Ordering[Settings]].reverse)
+    randomize(settings).fill(size)
+      .runUnsafe(seed)
+      .sorted(Ordering[Double].on((s: Settings) => s.index.lengthNormWeight).reverse)
   }
 
   def randomize(settings: Settings): Rng[Settings] =

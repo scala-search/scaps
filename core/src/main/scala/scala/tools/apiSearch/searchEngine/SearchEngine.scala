@@ -44,11 +44,11 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
   }
 
   def search(query: String): Try[ValidationNel[QueryError, Seq[TermEntity]]] = Try {
-    val analyzer = new QueryAnalyzer(settings.query, classesIndex.findClassBySuffix _, classesIndex.findSubClasses _)
-    QueryParser(query).flatMap { raw =>
-      analyzer(raw).get.map { query =>
-        termsIndex.find(query).get
-      }
-    }
+    def analyzer = new QueryAnalyzer(settings.query, classesIndex.findClassBySuffix _, classesIndex.findSubClasses _)
+
+    for {
+      parsed <- QueryParser(query).toValidationNel
+      analyzed <- analyzer(parsed).get
+    } yield termsIndex.find(analyzed).get
   }
 }

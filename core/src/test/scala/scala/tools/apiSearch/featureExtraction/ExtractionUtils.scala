@@ -6,13 +6,13 @@ import scala.reflect.internal.util.BatchSourceFile
 import org.scalatest.Matchers
 
 trait ExtractionUtils extends Matchers {
-  val compiler = CompilerUtils.initCompiler()
-  val extractor = new ScalaSourceExtractor(compiler)
 
-  def extractAll(source: String): Seq[Entity] = {
-    val randomFileName = s"${Random.nextInt()}.scala"
-    extractor(new BatchSourceFile(randomFileName, source)).distinct
-  }
+  def extractAll(source: String): Seq[Entity] =
+    CompilerUtils.withCompiler() { compiler =>
+      val extractor = new ScalaSourceExtractor(compiler)
+      val randomFileName = s"${Random.nextInt()}.scala"
+      extractor(new BatchSourceFile(randomFileName, source)).distinct
+    }
 
   def extractAllTerms(source: String): Seq[TermEntity] = {
     extractAll(source).collect { case t: TermEntity => t }

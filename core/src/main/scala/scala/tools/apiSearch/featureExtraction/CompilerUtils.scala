@@ -10,16 +10,6 @@ import scala.tools.nsc.interactive.Global
  */
 object CompilerUtils {
   def withCompiler[A](classpath: List[String] = Nil)(fn: Global => A): A = {
-    val compiler = initCompiler(classpath)
-
-    val res = fn(compiler)
-
-    compiler.askShutdown()
-
-    res
-  }
-
-  def initCompiler(classpath: List[String] = Nil) = {
     val settings = new scala.tools.nsc.Settings(msg => throw sys.error(msg))
 
     val scalaLibClassPath =
@@ -37,7 +27,11 @@ object CompilerUtils {
 
     compiler.ask(() => new compiler.Run)
 
-    compiler
+    val res = fn(compiler)
+
+    compiler.askShutdown()
+
+    res
   }
 
   def scalaLibRef =

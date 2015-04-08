@@ -13,9 +13,11 @@ import scala.tools.apiSearch.settings.Settings
 object Index extends App {
   val sourceJar = new File(args(0))
 
-  val extractor = new JarExtractor(CompilerUtils.initCompiler())
+  CompilerUtils.withCompiler() { compiler =>
+    val extractor = new JarExtractor(compiler)
 
-  val engine = SearchEngine(Settings.fromApplicationConf).get
+    val engine = SearchEngine(Settings.fromApplicationConf).get
 
-  Await.result(engine.indexEntities(extractor(sourceJar)), 1.hour)
+    Await.result(engine.indexEntities(extractor(sourceJar)), 1.hour)
+  }
 }
