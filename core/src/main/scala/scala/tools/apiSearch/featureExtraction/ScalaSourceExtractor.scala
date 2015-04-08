@@ -31,20 +31,37 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
       }
     }.getOrElse(Nil).distinct
 
-  private def findClasses(tree: Tree): List[Symbol] = {
-    val classes = new ListBuffer[Symbol]
+  private def findClasses(tree: Tree): List[Symbol] =
+    traverse(tree) {
+      case impl: ImplDef =>
+        (impl.symbol :: Nil, true)
+      case _: ValOrDefDef =>
+        (Nil, false)
+      case _ =>
+        (Nil, true)
+    }
+
+  private def symsMayContributingComments(tree: Tree): List[Symbol] =
+    traverse(tree) {
+      case impl: ImplDef =>
+        val sym = impl.symbol
+        if (sym.isPublic)
+          (sym :: sym.tpe.decls.filter(isTermOfInterest).toList, true)
+        else
+          (Nil, false)
+      case v: ValOrDefDef =>
+        (Nil, false)
+      case _ =>
+        (Nil, true)
+    }
+
+  private def traverse[T](tree: Tree)(collect: Tree => (List[T], Boolean)): List[T] = {
+    val ts = new ListBuffer[T]
 
     val traverser = new Traverser {
       override def traverse(t: Tree) = {
-        val descend = t match {
-          case impl: ImplDef =>
-            classes += impl.symbol
-            true
-          case _: ValOrDefDef =>
-            false
-          case _ =>
-            true
-        }
+        val (newTs, descend) = collect(t)
+        ts ++= newTs
         if (descend) {
           super.traverse(t)
         }
@@ -53,39 +70,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
 
     traverser(tree)
 
-    classes.toList
-  }
-
-  private def symsMayContributingComments(tree: Tree): List[Symbol] = {
-    val members = new ListBuffer[Symbol]
-
-    val traverser = new Traverser {
-      override def traverse(t: Tree) = {
-        val descend = t match {
-          case impl: ImplDef =>
-            val sym = impl.symbol
-            if (sym.isPublic) {
-              members += sym
-
-              members ++= sym.tpe.decls.filter(isTermOfInterest)
-              true
-            } else {
-              false
-            }
-          case v: ValOrDefDef =>
-            false
-          case _ =>
-            true
-        }
-        if (descend) {
-          super.traverse(t)
-        }
-      }
-    }
-
-    traverser(tree)
-
-    members.toList
+    ts.toList
   }
 
   private def withTypedTree[T](sourceFile: SourceFile)(f: Tree => T): util.Try[T] = {

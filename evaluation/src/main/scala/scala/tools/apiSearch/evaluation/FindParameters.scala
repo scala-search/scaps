@@ -28,7 +28,7 @@ object FindParameters extends App {
   val docBoosts = Rng.oneof(0.1)
 
   val settings = Settings.fromApplicationConf
-  val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = false)
+  val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = true)
 
   var engine = Common.initSearchEngine(settings, evaluationSettings)
 
