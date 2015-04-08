@@ -73,8 +73,10 @@ trait EntityFactory {
         (Nil, createTypeEntity(sym.tpe, Covariant))
 
     if (sym.owner.isClass && !sym.owner.isModuleClass) {
-      (typeParamsFromOwningTemplates(sym) ++ params,
-        TypeEntity.memberAccess(TypeEntity(qualifiedName(sym.owner, true), Contravariant, Nil), memberType))
+      val ownerParams = typeParamsFromOwningTemplates(sym)
+      val ownerArgs = ownerParams.map(p => TypeEntity(p.name, p.variance, Nil))
+      (ownerParams ++ params,
+        TypeEntity.memberAccess(TypeEntity(qualifiedName(sym.owner, true), Contravariant, ownerArgs), memberType))
     } else {
       (params, memberType)
     }

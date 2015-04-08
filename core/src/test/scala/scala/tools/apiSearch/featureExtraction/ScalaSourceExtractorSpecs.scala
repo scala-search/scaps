@@ -145,6 +145,22 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.Outer#Inner#m", _.tpe.toString should be("+<memberAccess>[-p.Outer#Inner, +scala.Int]")))
   }
 
+  it should "include type args in owner type of member access" in {
+    extractTerms("""
+      package p
+
+      trait T[A] {
+        def m = 1
+      }
+
+      trait S[+A] {
+        def m = 1
+      }
+      """)(
+      ("p.T#m", _.tpe.toString should be("+<memberAccess>[-p.T[A], +scala.Int]")),
+      ("p.S#m", _.tpe.toString should be("+<memberAccess>[-p.S[+A], +scala.Int]")))
+  }
+
   it should "add correct variance annotations" in {
     extractTerms("""
       package p
@@ -234,7 +250,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
       class A(x: Int)
       """)(
-      ("p.A#<init>", _ => ()))
+      ("p.A#<init>", _.tpe.toString should be("+<constructor1>[-Int, +A]")))
   }
 
   it should "not extract constructors of abstract classes" in {
