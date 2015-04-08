@@ -14,11 +14,8 @@ class JarExtractor(val compiler: Global) {
   def apply(file: File): Stream[Entity] = {
     val jar = new JarFile(file)
 
-    println(jar)
-
     jar.entries().toStream.flatMap { entry =>
       if (!entry.isDirectory && entry.getName.endsWith(".scala")) {
-        println(entry.getName)
         val source = scala.io.Source.fromInputStream(jar.getInputStream(entry)).toSeq
         val sourceFile = new BatchSourceFile(entry.getName, source)
         scalaExtractor(sourceFile)

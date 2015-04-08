@@ -20,18 +20,18 @@ object Settings {
       IndexSettings(conf.getConfig("index")),
       QuerySettings(conf.getConfig("query")))
 
-  private[settings] def assertFloat(min: Float, max: Float)(value: Float) = {
+  def assertDouble(min: Double, max: Double)(value: Double) = {
     assert(value >= min)
     assert(value <= max)
   }
 
-  private[settings] val assertPositive = assertFloat(0f, Float.MaxValue)_
+  private[settings] val assertPositive = assertDouble(0d, Double.MaxValue)_
 }
 
 case class IndexSettings(
   classesDir: File,
   termsDir: File,
-  lengthNormWeight: Float) {
+  lengthNormWeight: Double) {
 
   import Settings._
   assertPositive(lengthNormWeight)
@@ -42,21 +42,21 @@ object IndexSettings {
     IndexSettings(
       new File(conf.getString("classes-dir")),
       new File(conf.getString("terms-dir")),
-      conf.getDouble("length-norm-weight").toFloat)
+      conf.getDouble("length-norm-weight"))
 }
 
 case class QuerySettings(
   maxResults: Int,
-  distanceBoostWeight: Float,
-  depthBoostWeight: Float,
-  idfWeight: Float,
-  nameBoost: Float,
-  docBoost: Float) {
+  distanceBoostGradient: Double,
+  depthBoostGradient: Double,
+  idfWeight: Double,
+  nameBoost: Double,
+  docBoost: Double) {
 
   import Settings._
 
-  assertFloat(0f, 1f)(distanceBoostWeight)
-  assertFloat(0f, 1f)(depthBoostWeight)
+  assertPositive(distanceBoostGradient)
+  assertPositive(depthBoostGradient)
   assertPositive(idfWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
@@ -66,9 +66,9 @@ object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getInt("max-results"),
-      conf.getDouble("distance-boost-weight").toFloat,
-      conf.getDouble("depth-boost-weight").toFloat,
-      conf.getDouble("idf-weight").toFloat,
-      conf.getDouble("name-boost").toFloat,
-      conf.getDouble("doc-boost").toFloat)
+      conf.getDouble("distance-boost-weight"),
+      conf.getDouble("depth-boost-weight"),
+      conf.getDouble("idf-weight"),
+      conf.getDouble("name-boost"),
+      conf.getDouble("doc-boost"))
 }

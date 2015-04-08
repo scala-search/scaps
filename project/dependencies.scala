@@ -11,6 +11,8 @@ object Dependencies {
 
   val config = "com.typesafe" % "config" % "1.2.0"
 
+  val rng = "com.nicta" %% "rng" % "1.3.0"
+
   val luceneVersion = "4.10.4"
   val luceneCore = "org.apache.lucene" % "lucene-core" % luceneVersion
   val luceneAnalyzersCommon = "org.apache.lucene" % "lucene-analyzers-common" % luceneVersion
@@ -26,5 +28,6 @@ object Dependencies {
   )
 
   val evaluationDependencies: Seq[ModuleID] = Seq(
-    scalatest)
+    scalatest,
+    rng)
 }

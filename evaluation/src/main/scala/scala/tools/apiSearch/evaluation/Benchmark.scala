@@ -18,7 +18,7 @@ import scalaz.syntax.traverse.ToTraverseOps
 
 object Benchmark extends App {
   val settings = Settings.fromApplicationConf
-  val evaluationSettings = EvaluationSettings.fromApplicationConf
+  val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = false)
 
   val engine = Common.initSearchEngine(settings, evaluationSettings)
 

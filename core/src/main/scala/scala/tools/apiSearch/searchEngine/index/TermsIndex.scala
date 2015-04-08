@@ -60,7 +60,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
         // Reduce influence of IDF in order to cope with missing reflection
         // of type hierarchies in doc frequencies
         override def idf(a: Long, b: Long) =
-          settings.query.idfWeight * (super.idf(a, b) - 1f) + 1f
+          settings.query.idfWeight.toFloat * (super.idf(a, b) - 1f) + 1f
 
         // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
         // because fingerprints are relatively short documents
@@ -92,11 +92,11 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
     val q = new BooleanQuery
     query.keywords.foreach { keyword =>
       val nameQuery = new TermQuery(new Term(fields.name, keyword))
-      nameQuery.setBoost(settings.query.nameBoost)
+      nameQuery.setBoost(settings.query.nameBoost.toFloat)
       q.add(nameQuery, Occur.SHOULD)
 
       val docQuery = new TermQuery(new Term(fields.doc, keyword))
-      docQuery.setBoost(settings.query.docBoost)
+      docQuery.setBoost(settings.query.docBoost.toFloat)
       q.add(docQuery, Occur.SHOULD)
     }
     query.types.foreach { tpe =>
