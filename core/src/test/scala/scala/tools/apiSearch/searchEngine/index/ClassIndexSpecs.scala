@@ -6,19 +6,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
 class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
-  "the class index" should "persist class entities and retrieve them by name" in {
-    withClassIndex("""
-      package p
-
-      class C
-      """) { index =>
-      val C = cls("p.C")()()
-
-      index.findClassByName("p.C").get should be(Option(C))
-    }
-  }
-
-  it should "persist class entities only once" in {
+  "the class index" should "persist class entities only once" in {
     withClassIndex("""
       package p
 
@@ -28,7 +16,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       index.addEntities(C :: Nil)
 
-      index.findClass("C").get.size should be(1)
+      index.findClassBySuffix("C").get.size should be(1)
     }
   }
 
@@ -40,9 +28,9 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val C = cls("p.q.C")()()
 
-      index.findClass("C").get should contain(C)
-      index.findClass("q.C").get should contain(C)
-      index.findClass("p.q.C").get should contain(C)
+      index.findClassBySuffix("C").get should contain(C)
+      index.findClassBySuffix("q.C").get should contain(C)
+      index.findClassBySuffix("p.q.C").get should contain(C)
     }
   }
 
@@ -56,10 +44,10 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val T = cls("p.q.C#T")()()
 
-      index.findClass("T").get should contain(T)
-      index.findClass("C#T").get should contain(T)
-      index.findClass("q.C#T").get should contain(T)
-      index.findClass("p.q.C#T").get should contain(T)
+      index.findClassBySuffix("T").get should contain(T)
+      index.findClassBySuffix("C#T").get should contain(T)
+      index.findClassBySuffix("q.C#T").get should contain(T)
+      index.findClassBySuffix("p.q.C#T").get should contain(T)
     }
   }
 
@@ -78,7 +66,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       val CT = cls("p.C#T")()()
       val DT = cls("p.D#T")()()
 
-      val result = index.findClass("T").get
+      val result = index.findClassBySuffix("T").get
 
       result should contain allOf (CT, DT)
     }

@@ -13,8 +13,8 @@ trait EntityFactory {
       val cls = createClassEntity(classSym)
 
       val objTerm =
-        if (isTermOfInterest(classSym)) createTermEntity(classSym, getDocComment(classSym, classSym)) :: Nil
-        else Nil
+        if (isTermOfInterest(classSym)) Some(createTermEntity(classSym, getDocComment(classSym, classSym)))
+        else None
 
       val memberSymsWithComments = classSym.tpe.members
         .filter(isTermOfInterest)
@@ -35,7 +35,7 @@ trait EntityFactory {
         .map((createTermEntity _).tupled)
         .toList
 
-      cls :: objTerm ::: members ::: referencedClasses
+      cls :: objTerm.toList ::: members ::: referencedClasses
     } else {
       Nil
     }

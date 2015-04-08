@@ -1,12 +1,13 @@
 package scala.tools.apiSearch.searchEngine.index
 
 import java.io.Reader
+
 import scala.collection.JavaConversions.mapAsJavaMap
-import scala.collection.JavaConversions.seqAsJavaList
 import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searchEngine.APIQuery
 import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.LowerCaseFilter
@@ -23,14 +24,14 @@ import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
-import org.apache.lucene.search.MatchAllDocsQuery
 
-class TermsIndex(val dir: Directory, settings: Settings) extends Index {
+class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
 
   override val analyzer =
@@ -71,22 +72,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
     }
   }
 
-  /**
-   * Adds all entities to the index.
-   */
-  def addEntities(entities: Seq[TermEntity]): Try[Unit] =
-    withWriter { writer =>
-      val docs = entities.map(toDocument)
-      Try(writer.addDocuments(docs))
-    }
-
   def find(query: APIQuery): Try[Seq[TermEntity]] =
-    withSearcher { searcher =>
-      val docs = searcher.search(toLuceneQuery(query), settings.query.maxResults)
-
-      docs.scoreDocs.map(scoreDoc =>
-        toTermEntity(searcher.doc(scoreDoc.doc)))
-    }
+    search(toLuceneQuery(query), settings.query.maxResults)
 
   private def toLuceneQuery(query: APIQuery): Query = {
     val q = new BooleanQuery
@@ -108,30 +95,13 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
     q
   }
 
-  def allTerms(): Try[Seq[TermEntity]] = {
-    withSearcher { searcher =>
-      val docs = searcher.search(new MatchAllDocsQuery, Int.MaxValue)
+  def allTerms(): Try[Seq[TermEntity]] =
+    search(new MatchAllDocsQuery)
 
-      docs.scoreDocs.map(scoreDoc =>
-        toTermEntity(searcher.doc(scoreDoc.doc)))
-    }
-  }
+  private[index] def findTermsByName(name: String): Try[Seq[TermEntity]] =
+    search(new TermQuery(new Term(fields.name, name)))
 
-  /**
-   * Searches for term entities whose name matches `name`.
-   */
-  def findTermsByName(name: String): Try[Seq[TermEntity]] = {
-    withSearcher { searcher =>
-      val query = new TermQuery(new Term(fields.name, name))
-
-      val docs = searcher.search(query, settings.query.maxResults)
-
-      docs.scoreDocs.map(scoreDoc =>
-        toTermEntity(searcher.doc(scoreDoc.doc)))
-    }
-  }
-
-  private def toDocument(entity: TermEntity): Document = {
+  override def toDocument(entity: TermEntity): Document = {
     val doc = new Document
 
     def add(field: String, value: String) =
@@ -145,7 +115,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index {
     doc
   }
 
-  private def toTermEntity(doc: Document): TermEntity = {
+  override def toEntity(doc: Document): TermEntity = {
     val bytes = doc.getBinaryValues(fields.entity).flatMap(_.bytes)
 
     Serialization.unpickleTerm(bytes)

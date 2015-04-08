@@ -32,7 +32,7 @@ object SearchEngine {
 }
 
 class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, val classesIndex: ClassIndex) {
-  def reset() = for {
+  def deleteIndexes() = for {
     _ <- termsIndex.delete()
     _ <- classesIndex.delete()
   } yield ()
@@ -44,7 +44,7 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
   }
 
   def search(query: String): Try[ValidationNel[QueryError, Seq[TermEntity]]] = Try {
-    val analyzer = new QueryAnalyzer(settings.query, classesIndex.findClass _, classesIndex.findSubClasses _)
+    val analyzer = new QueryAnalyzer(settings.query, classesIndex.findClassBySuffix _, classesIndex.findSubClasses _)
     QueryParser(query).flatMap { raw =>
       analyzer(raw).get.map { query =>
         termsIndex.find(query).get
