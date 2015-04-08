@@ -72,7 +72,7 @@ trait EntityFactory {
       else
         (Nil, createTypeEntity(sym.tpe, Covariant))
 
-    if (sym.owner.isClass && !sym.owner.isModuleClass) {
+    if (sym.owner.isClass && !sym.owner.isModuleClass && !sym.isConstructor) {
       val ownerParams = typeParamsFromOwningTemplates(sym)
       val ownerArgs = ownerParams.map(p => TypeEntity(p.name, p.variance, Nil))
       (ownerParams ++ params,
@@ -95,16 +95,24 @@ trait EntityFactory {
       else
         sym.name.decode
 
-    def rec(sym: Symbol): String =
-      if (sym.isRootSymbol || sym == sym.owner) ""
-      else if (sym.isPackageObject) rec(sym.owner)
-      else if (sym.hasPackageFlag || sym.hasModuleFlag) rec(sym.owner) + toName(sym) + "."
-      else rec(sym.owner) + toName(sym) + "#"
+    def rec(member: Symbol): String = {
+      val owner = member.owner
 
-    val name = if (sym.isTypeParameter)
-      toName(sym)
-    else
-      rec(sym.owner) + toName(sym)
+      if (owner.isRootSymbol || owner == owner.owner)
+        ""
+      else if (owner.isPackageObject)
+        rec(owner)
+      else if (owner.hasPackageFlag || owner.hasModuleFlag || member.isConstructor)
+        rec(owner) + toName(owner) + "."
+      else
+        rec(owner) + toName(owner) + "#"
+    }
+
+    val name =
+      if (sym.isTypeParameter)
+        toName(sym)
+      else
+        rec(sym) + toName(sym)
 
     if (isTypeName)
       s"$name${sym.moduleSuffix}"

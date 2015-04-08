@@ -101,12 +101,6 @@ object TypeEntity {
     TypeEntity(methodInvocationType(paramTypes.length), Covariant, typeArgs)
   }
 
-  def constructorType(n: Int) = s"<constructor$n>"
-  def constructor(params: List[TypeEntity], result: TypeEntity) = {
-    val typeArgs = params.map(_.copy(variance = Contravariant)) :+ result.copy(variance = Covariant)
-    TypeEntity(constructorType(params.length), Covariant, typeArgs)
-  }
-
   val unknownType = "<unknown>"
   val unknown = TypeEntity(unknownType, Covariant, Nil)
 

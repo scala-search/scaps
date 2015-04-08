@@ -244,13 +244,31 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A", Invariant), TypeParameterEntity("B", Invariant)))))
   }
 
-  it should "extract constructors" in {
+  it should "extract constructors as 'static' method named '<init>'" in {
     extractTerms("""
       package p
 
       class A(x: Int)
+
+      class B[T](x: T)
       """)(
-      ("p.A#<init>", _.tpe.toString should be("+<constructor1>[-Int, +A]")))
+      ("p.A.<init>", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +p.A]")),
+      ("p.B.<init>", _.tpe.toString should be("+<methodInvocation1>[-T, +p.B[T]]")))
+  }
+
+  it should "extract auxiliary constructors" in {
+    val terms = extractAllTerms("""
+      package p
+
+      class A(x: Int) {
+        def this() = this(1)
+      }
+      """)
+
+    val ctorTypes = terms.filter(_.name == "p.A.<init>").map(_.tpe.toString)
+
+    ctorTypes should have length (2)
+    ctorTypes should contain("+<methodInvocation0>[+p.A]")
   }
 
   it should "not extract constructors of abstract classes" in {
