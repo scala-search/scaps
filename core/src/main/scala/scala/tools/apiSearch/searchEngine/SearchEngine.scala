@@ -31,9 +31,36 @@ object SearchEngine {
       new TermsIndex(createDir(settings.index.termsDir), settings),
       new ClassIndex(createDir(settings.index.classesDir), settings))
   }
+
+  /**
+   * Names from the `scala` root package are favored over other names and all names in
+   * the `scala` namespace have a higher priority. This allows queries like `List => Future`.
+   */
+  def favorScalaStdLib(results: Try[Seq[ClassEntity]]) =
+    for {
+      candidates <- results
+    } yield {
+      // classes in root `scala` namespace and java.lang.String are always favored
+      val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
+      // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
+      val secondPrioPattern = """scala\..*"""
+
+      candidates.filter(_.name.matches(firstPrioPattern)) match {
+        case Seq(fav) => Seq(fav)
+        case _ => candidates.filter(_.name.matches(secondPrioPattern)) match {
+          case Seq(fav) => Seq(fav)
+          case _        => candidates
+        }
+      }
+    }
 }
 
 class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, val classesIndex: ClassIndex) {
+  val analyzer = new QueryAnalyzer(
+    settings.query,
+    (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
+    classesIndex.findSubClasses _)
+
   def deleteIndexes() = for {
     _ <- termsIndex.delete()
     _ <- classesIndex.delete()
@@ -46,8 +73,6 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
   }
 
   def search(query: String): Try[ValidationNel[QueryError, Seq[TermEntity]]] = Try {
-    def analyzer = new QueryAnalyzer(settings.query, classesIndex.findClassBySuffix _, classesIndex.findSubClasses _)
-
     for {
       parsed <- QueryParser(query).toValidationNel
       analyzed <- analyzer(parsed).get

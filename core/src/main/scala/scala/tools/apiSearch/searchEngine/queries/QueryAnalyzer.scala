@@ -28,30 +28,42 @@ private[queries] object FlattenedQuery {
 }
 
 /**
+ * Analyzes parsed queries.
  *
+ * Instances require access to the class index which can be injected via
+ * `findClassesBySuffix` and `findSubClasses`
  */
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
-  findClass: (String) => Try[Seq[ClassEntity]],
+  findClassesBySuffix: (String) => Try[Seq[ClassEntity]],
   findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
 
+  /**
+   * Transforms a parsed query into a query that can be passed to the terms index.
+   *
+   * Fails when `findClassesBySuffix` or `findSubClasses` fails.
+   */
   def apply(raw: RawQuery): Try[ValidationNel[SemanticError, APIQuery]] =
     Try {
       resolveNames(raw.tpe).get.map(
         (normalizeFunctions _) andThen
-          (flattenQuery _) andThen
-          (_.get) andThen
+          (q => flattenQuery(q).get) andThen
           (toApiQuery _) andThen
           { apiQuery => apiQuery.copy(keywords = raw.keywords) })
     }
 
-  private[queries] def resolveNames(raw: RawQuery.Type): Try[ValidationNel[SemanticError, ResolvedQuery]] =
+  /**
+   * Resolves all type names in the query and assigns the according class entities.
+   *
+   * Names that cannot be resolved and have length 1 are treated as type parameters.
+   */
+  private def resolveNames(raw: RawQuery.Type): Try[ValidationNel[SemanticError, ResolvedQuery]] =
     Try {
       val resolvedArgs: ValidationNel[SemanticError, List[ResolvedQuery]] =
         raw.args.map(arg => resolveNames(arg).get).sequenceU
 
       resolvedArgs.flatMap { resolvedArgs =>
-        filterFavored(findClass(raw.name).get) match {
+        findClassesBySuffix(raw.name).get match {
           case Seq() if isTypeParam(raw.name) =>
             ResolvedQuery.TypeParam(raw.name).successNel
           case Seq() =>
@@ -69,29 +81,17 @@ class QueryAnalyzer private[searchEngine] (
   private def isTypeParam(name: String): Boolean =
     name.length() == 1
 
-  private def filterFavored(candidates: Seq[ClassEntity]): Seq[ClassEntity] = {
-    // classes in root `scala` namespace and java.lang.String are always favored
-    val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
-    // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
-    val secondPrioPattern = """scala\..*"""
-
-    candidates.filter(_.name.matches(firstPrioPattern)) match {
-      case Seq(fav) => Seq(fav)
-      case _ => candidates.filter(_.name.matches(secondPrioPattern)) match {
-        case Seq(fav) => Seq(fav)
-        case _        => candidates
-      }
-    }
-  }
-
-  private[queries] def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
+  /**
+   *
+   */
+  private def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
     def uncurry(rq: ResolvedQuery, args: List[ResolvedQuery]): ResolvedQuery =
       rq match {
         case ResolvedQuery.Class(cls, functionArgs) if cls.isFunction =>
           uncurry(functionArgs.last, args ::: functionArgs.init)
         case _ =>
           val typeParams = args.map(_ => TypeParameterEntity("A", Contravariant)) :+ TypeParameterEntity("R", Covariant)
-          // this is not a complete ClassEntity but it shouldn't matter as it gets elided
+          // this is not a proper ClassEntity but it shouldn't matter as it gets elided
           // in later processing steps
           val function = ClassEntity(TypeEntity.functionType(args.length), typeParams, Nil)
           ResolvedQuery.Class(function, args :+ rq)
@@ -100,7 +100,7 @@ class QueryAnalyzer private[searchEngine] (
     uncurry(resolved, Nil)
   }
 
-  private[queries] def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
+  private def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
         rq match {
@@ -135,7 +135,7 @@ class QueryAnalyzer private[searchEngine] (
       FlattenedQuery(types)
     }
 
-  private[queries] def toApiQuery(flattened: FlattenedQuery): APIQuery = {
+  private def toApiQuery(flattened: FlattenedQuery): APIQuery = {
     val boostsPerType: Map[(Variance, String), List[Float]] =
       flattened.types.flatten.foldLeft(Map[(Variance, String), List[Float]]()) {
         (boostsPerType, tpe) =>

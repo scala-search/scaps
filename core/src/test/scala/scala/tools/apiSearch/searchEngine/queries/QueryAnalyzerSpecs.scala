@@ -1,4 +1,5 @@
-package scala.tools.apiSearch.searchEngine.queries
+package scala.tools.apiSearch.searchEngine
+package queries
 
 import scala.collection.immutable.Map
 import scala.tools.apiSearch.featureExtraction.ExtractionUtils
@@ -34,7 +35,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       class Int
     }
 
-    package scala.tools.apiSearch.searchEngine.queries {
+    package loadTypes {
       trait TypesToBeLoaded {
         val char: Char
         val float: Float
@@ -212,10 +213,10 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       .mapValues(sub => Try(sub))
       .withDefaultValue(Try(Nil))
 
-    val findClasses = toMultiMap(for {
+    val findClassesBySuffix = toMultiMap(for {
       cls <- classEntities
       suffix <- cls.name.split("\\.").toList.tails.filterNot(_ == Nil).map(_.mkString("."))
-    } yield (suffix, cls))
+    } yield (suffix, cls)) andThen (SearchEngine.favorScalaStdLib _)
 
     val findSubClasses = toMultiMap(for {
       cls <- classEntities
@@ -223,6 +224,6 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       baseCls <- classEntities.filter(_.name == base.name)
     } yield (baseCls, cls))
 
-    new QueryAnalyzer(Settings.fromApplicationConf.query, findClasses, findSubClasses)
+    new QueryAnalyzer(Settings.fromApplicationConf.query, findClassesBySuffix, findSubClasses)
   }
 }
