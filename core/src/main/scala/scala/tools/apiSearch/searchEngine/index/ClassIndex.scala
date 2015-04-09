@@ -1,5 +1,6 @@
 package scala.tools.apiSearch.searchEngine.index
 
+import scala.collection.JavaConverters._
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
@@ -25,6 +26,14 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
   import ClassIndex._
 
   val analyzer = new WhitespaceAnalyzer
+
+  override def addEntities(entities: Seq[ClassEntity]): Try[Unit] =
+    withWriter { writer =>
+      entities.foreach { entity =>
+        val doc = toDocument(entity)
+        writer.updateDocument(new Term(fields.name, entity.name), doc)
+      }
+    }
 
   /**
    * Searches for class entities whose last parts of the full qualified name are `suffix`

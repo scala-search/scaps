@@ -43,7 +43,7 @@ trait Index[E] {
         toEntity(searcher.doc(scoreDoc.doc)))
     }
 
-  private def withWriter[A](f: IndexWriter => A): Try[A] = {
+  private[index] def withWriter[A](f: IndexWriter => A): Try[A] = {
     val writerConf = new IndexWriterConfig(Version.LUCENE_4_10_4, analyzer)
     writerConf.setSimilarity(similarity)
 
@@ -52,7 +52,7 @@ trait Index[E] {
     }
   }
 
-  private def withSearcher[A](f: IndexSearcher => A): Try[A] = {
+  private[index] def withSearcher[A](f: IndexSearcher => A): Try[A] = {
     using(DirectoryReader.open(dir)) { reader =>
       val searcher = new IndexSearcher(reader)
       searcher.setSimilarity(similarity)

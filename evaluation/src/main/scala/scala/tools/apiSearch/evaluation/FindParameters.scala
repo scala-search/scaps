@@ -20,8 +20,8 @@ object FindParameters extends App {
 
   val lengthNormWeights = Rng.oneof(0.7) //RngExtensions.normalSample(1d, 0.05d).map(d => (d * 10).round / 10d)
 
-  val distanceBoostGradients = Rng.oneof(1)
-  val depthBoostGradients = Rng.oneof(0.2)
+  val distanceBoostGradients = Rng.choosedouble(0, 2)
+  val depthBoostGradients = Rng.choosedouble(0, 2)
   val idfWeights = Rng.oneof(0.35)
   val nameBoosts = Rng.oneof(0.2)
   val docBoosts = Rng.oneof(0.1)
@@ -34,25 +34,31 @@ object FindParameters extends App {
   using(new FileWriter(outputFile)) { writer =>
     writer.write("lengthNormWeight; distanceBoostGradient; depthBoostGradient; idfWeight; nameBoost; docBoost; MAP;\n")
 
-    generateConfs(1, Math.pow(42d, 42d).toLong, settings).foreach {
+    generateConfs(200, Math.pow(42d, 42d).toLong, settings).foreach {
       case settings =>
         println(settings)
         engine = Common.updateSearchEngine(engine, settings)
-        val stats = Common.runQueries(engine, evaluationSettings.queries).getOrElse(???)
-        println(stats.meanAveragePrecision)
-        println()
+        Common.runQueries(engine, evaluationSettings.queries).fold(
+          errors => {
+            println(errors)
+            ???
+          },
+          stats => {
+            println(stats.meanAveragePrecision)
+            println()
 
-        val cells = List(
-          settings.index.lengthNormWeight,
-          settings.query.distanceBoostGradient,
-          settings.query.depthBoostGradient,
-          settings.query.idfWeight,
-          settings.query.nameBoost,
-          settings.query.docBoost,
-          stats.meanAveragePrecision)
-        writer.write(cells.mkString("", "; ", ";\n"))
+            val cells = List(
+              settings.index.lengthNormWeight,
+              settings.query.distanceBoostGradient,
+              settings.query.depthBoostGradient,
+              settings.query.idfWeight,
+              settings.query.nameBoost,
+              settings.query.docBoost,
+              stats.meanAveragePrecision)
+            writer.write(cells.mkString("", "; ", ";\n"))
+          })
     }
-  }
+  }.get
 
   def generateConfs(size: Int, seed: Long, settings: Settings): Seq[Settings] = {
     randomize(settings).fill(size)
