@@ -7,3 +7,8 @@ case class Stats(queryStats: List[QueryStats]) {
 
   override def toString = s"no. queries: $noQueries, MAP: $meanAveragePrecision, gMAP: $geometricMeanAveragePrecision"
 }
+
+object Stats {
+  implicit val statsOrdering =
+    Ordering[Double].on((s: Stats) => s.meanAveragePrecision)
+}
