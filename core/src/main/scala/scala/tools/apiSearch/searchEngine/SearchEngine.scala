@@ -1,6 +1,7 @@
 package scala.tools.apiSearch.searchEngine
 
 import java.io.File
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.tools.apiSearch.model.ClassEntity
@@ -12,11 +13,12 @@ import scala.tools.apiSearch.searchEngine.queries.QueryAnalyzer
 import scala.tools.apiSearch.searchEngine.queries.QueryParser
 import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
+
 import org.apache.lucene.store.FSDirectory
-import scalaz.ValidationNel
-import scalaz.syntax.validation.ToValidationOps
+
+import scalaz._
 import scalaz.Validation.FlatMap.ValidationFlatMapRequested
-import scala.concurrent.Await
+import scalaz.ValidationNel
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -49,6 +51,7 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
     for {
       parsed <- QueryParser(query).toValidationNel
       analyzed <- analyzer(parsed).get
-    } yield termsIndex.find(analyzed).get
+      results <- termsIndex.find(analyzed).get.toValidationNel
+    } yield results
   }
 }

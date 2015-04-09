@@ -9,6 +9,7 @@ import scala.tools.apiSearch.searchEngine.SyntaxError
 import scala.tools.apiSearch.searchEngine.NameNotFound
 import scala.tools.apiSearch.searchEngine.NameAmbiguous
 import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
+import scala.tools.apiSearch.searchEngine.TooUnspecific
 
 object Search extends App {
   val engine = SearchEngine(Settings.fromApplicationConf).get
@@ -25,6 +26,8 @@ object Search extends App {
           candidates.foreach(c => println(s"    ${c.name}"))
         case UnexpectedNumberOfTypeArgs(raw, n) =>
           println(s"$raw has wrong number of arguments ($n expected)")
+        case TooUnspecific() =>
+          println(s"Query too unspecific consider using wildcards '_' instead of 'Any' types")
       },
       results => results.take(10).foreach { term =>
         println(term.withoutComment)

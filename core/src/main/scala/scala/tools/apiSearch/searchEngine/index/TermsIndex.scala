@@ -5,6 +5,8 @@ import java.io.Reader
 import scala.collection.JavaConversions.mapAsJavaMap
 import scala.tools.apiSearch.model.TermEntity
 import scala.tools.apiSearch.searchEngine.APIQuery
+import scala.tools.apiSearch.searchEngine.ProcessingError
+import scala.tools.apiSearch.searchEngine.TooUnspecific
 import scala.tools.apiSearch.settings.Settings
 import scala.util.Try
 
@@ -30,6 +32,9 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
+
+import scalaz._
+import scalaz.syntax.validation.ToValidationOps
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -72,27 +77,34 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  def find(query: APIQuery): Try[Seq[TermEntity]] =
-    search(toLuceneQuery(query), settings.query.maxResults)
-
-  private def toLuceneQuery(query: APIQuery): Query = {
-    val q = new BooleanQuery
-    query.keywords.foreach { keyword =>
-      val nameQuery = new TermQuery(new Term(fields.name, keyword))
-      nameQuery.setBoost(settings.query.nameBoost.toFloat)
-      q.add(nameQuery, Occur.SHOULD)
-
-      val docQuery = new TermQuery(new Term(fields.doc, keyword))
-      docQuery.setBoost(settings.query.docBoost.toFloat)
-      q.add(docQuery, Occur.SHOULD)
+  def find(query: APIQuery): Try[Validation[ProcessingError, Seq[TermEntity]]] =
+    Try {
+      toLuceneQuery(query).map(
+        lq => search(lq, settings.query.maxResults).get)
     }
-    query.types.foreach { tpe =>
-      val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
-      val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
-      tq.setBoost(tpe.boost)
-      q.add(tq, Occur.SHOULD)
+
+  private def toLuceneQuery(query: APIQuery): Validation[ProcessingError, Query] = {
+    try {
+      val q = new BooleanQuery
+      query.keywords.foreach { keyword =>
+        val nameQuery = new TermQuery(new Term(fields.name, keyword))
+        nameQuery.setBoost(settings.query.nameBoost.toFloat)
+        q.add(nameQuery, Occur.SHOULD)
+
+        val docQuery = new TermQuery(new Term(fields.doc, keyword))
+        docQuery.setBoost(settings.query.docBoost.toFloat)
+        q.add(docQuery, Occur.SHOULD)
+      }
+      query.types.foreach { tpe =>
+        val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
+        val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
+        tq.setBoost(tpe.boost)
+        q.add(tq, Occur.SHOULD)
+      }
+      q.success
+    } catch {
+      case _: BooleanQuery.TooManyClauses => TooUnspecific().failure
     }
-    q
   }
 
   def allTerms(): Try[Seq[TermEntity]] =
