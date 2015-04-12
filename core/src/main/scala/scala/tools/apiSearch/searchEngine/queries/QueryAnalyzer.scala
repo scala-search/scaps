@@ -1,20 +1,25 @@
 package scala.tools.apiSearch.searchEngine.queries
 
 import scala.Ordering
-import scala.tools.apiSearch.model._
+import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.model.Contravariant
+import scala.tools.apiSearch.model.Covariant
+import scala.tools.apiSearch.model.Invariant
+import scala.tools.apiSearch.model.TypeEntity
+import scala.tools.apiSearch.model.TypeParameterEntity
+import scala.tools.apiSearch.model.Variance
 import scala.tools.apiSearch.searchEngine.APIQuery
+import scala.tools.apiSearch.searchEngine.NameAmbiguous
+import scala.tools.apiSearch.searchEngine.NameNotFound
+import scala.tools.apiSearch.searchEngine.SemanticError
+import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
-import scalaz.Validation.FlatMap.ValidationFlatMapRequested
-import scalaz.ValidationNel
-import scalaz.std.list._
-import scalaz.syntax.traverse._
-import scalaz.syntax.validation._
-import scala.tools.apiSearch.searchEngine.SemanticError
-import scala.tools.apiSearch.searchEngine.NameNotFound
-import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
-import scala.tools.apiSearch.searchEngine.NameNotFound
-import scala.tools.apiSearch.searchEngine.NameAmbiguous
+
+import scalaz.\/
+import scalaz.std.list.listInstance
+import scalaz.syntax.either.ToEitherOps
+import scalaz.syntax.traverse.ToTraverseOps
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -43,7 +48,7 @@ class QueryAnalyzer private[searchEngine] (
    *
    * Fails when `findClassesBySuffix` or `findSubClasses` fails.
    */
-  def apply(raw: RawQuery): Try[ValidationNel[SemanticError, APIQuery]] =
+  def apply(raw: RawQuery): Try[SemanticError \/ APIQuery] =
     Try {
       resolveNames(raw.tpe).get.map(
         (normalizeFunctions _) andThen
@@ -57,23 +62,23 @@ class QueryAnalyzer private[searchEngine] (
    *
    * Names that cannot be resolved and have length 1 are treated as type parameters.
    */
-  private def resolveNames(raw: RawQuery.Type): Try[ValidationNel[SemanticError, ResolvedQuery]] =
+  private def resolveNames(raw: RawQuery.Type): Try[SemanticError \/ ResolvedQuery] =
     Try {
-      val resolvedArgs: ValidationNel[SemanticError, List[ResolvedQuery]] =
+      val resolvedArgs: SemanticError \/ List[ResolvedQuery] =
         raw.args.map(arg => resolveNames(arg).get).sequenceU
 
       resolvedArgs.flatMap { resolvedArgs =>
         findClassesBySuffix(raw.name).get match {
           case Seq() if isTypeParam(raw.name) =>
-            ResolvedQuery.TypeParam(raw.name).successNel
+            ResolvedQuery.TypeParam(raw.name).right
           case Seq() =>
-            NameNotFound(raw.name).failureNel
+            NameNotFound(raw.name).left
           case Seq(cls) if resolvedArgs.length == cls.typeParameters.length || raw.args.length == 0 =>
-            ResolvedQuery.Class(cls, resolvedArgs).successNel
+            ResolvedQuery.Class(cls, resolvedArgs).right
           case Seq(cls) =>
-            UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length).failureNel
+            UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length).left
           case candidates =>
-            NameAmbiguous(raw.name, candidates).failureNel
+            NameAmbiguous(raw.name, candidates).left
         }
       }
     }

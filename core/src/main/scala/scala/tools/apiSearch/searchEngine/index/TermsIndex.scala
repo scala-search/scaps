@@ -33,8 +33,8 @@ import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
 
-import scalaz._
-import scalaz.syntax.validation.ToValidationOps
+import scalaz.\/
+import scalaz.syntax.either.ToEitherOps
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -77,13 +77,13 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  def find(query: APIQuery): Try[Validation[ProcessingError, Seq[TermEntity]]] =
+  def find(query: APIQuery): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
       toLuceneQuery(query).map(
         lq => search(lq, settings.query.maxResults).get)
     }
 
-  private def toLuceneQuery(query: APIQuery): Validation[ProcessingError, Query] = {
+  private def toLuceneQuery(query: APIQuery): ProcessingError \/ Query = {
     try {
       val q = new BooleanQuery
       query.keywords.foreach { keyword =>
@@ -101,9 +101,9 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         tq.setBoost(tpe.boost)
         q.add(tq, Occur.SHOULD)
       }
-      q.success
+      q.right
     } catch {
-      case _: BooleanQuery.TooManyClauses => TooUnspecific().failure
+      case _: BooleanQuery.TooManyClauses => TooUnspecific().left
     }
   }
 

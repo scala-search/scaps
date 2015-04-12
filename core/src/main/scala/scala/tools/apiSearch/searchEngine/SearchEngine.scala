@@ -16,9 +16,7 @@ import scala.util.Try
 
 import org.apache.lucene.store.FSDirectory
 
-import scalaz._
-import scalaz.Validation.FlatMap.ValidationFlatMapRequested
-import scalaz.ValidationNel
+import scalaz.\/
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -72,11 +70,11 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
     Future.sequence(f1 :: f2 :: Nil).map(_.foreach(_.get))
   }
 
-  def search(query: String): Try[ValidationNel[QueryError, Seq[TermEntity]]] = Try {
+  def search(query: String): Try[QueryError \/ Seq[TermEntity]] = Try {
     for {
-      parsed <- QueryParser(query).toValidationNel
+      parsed <- QueryParser(query)
       analyzed <- analyzer(parsed).get
-      results <- termsIndex.find(analyzed).get.toValidationNel
+      results <- termsIndex.find(analyzed).get
     } yield results
   }
 }

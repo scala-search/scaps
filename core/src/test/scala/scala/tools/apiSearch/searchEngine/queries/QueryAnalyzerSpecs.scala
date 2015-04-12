@@ -67,26 +67,19 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "fail on unknown names" in {
     val res = expectFailure("Unknown")
 
-    res.head should be(a[NameNotFound])
-  }
-
-  it should "accumulate errors" in {
-    val res = expectFailure("(Unknown1, Unknown2)")
-
-    res.head should be(a[NameNotFound])
-    res.tail.head should be(a[NameNotFound])
+    res should be(a[NameNotFound])
   }
 
   it should "return suggestions on ambiguous names" in {
     val res = expectFailure("Ambiguous")
 
-    res.head should be(a[NameAmbiguous])
+    res should be(a[NameAmbiguous])
   }
 
   it should "fail on using names with incorrect number of arguments" in {
     val res = expectFailure("List[A, B]")
 
-    res.head should be(a[UnexpectedNumberOfTypeArgs])
+    res should be(a[UnexpectedNumberOfTypeArgs])
   }
 
   it should "succeed when using no type arguments" in {
@@ -191,13 +184,13 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
   def expectSuccess(s: String) = {
     val res = analyzer(QueryParser(s).getOrElse(???)).get
-    res should be('success)
+    res should be('right)
     res.getOrElse(???)
   }
 
   def expectFailure(s: String) = {
     val res = analyzer(QueryParser(s).getOrElse(???)).get
-    res should be('failure)
+    res should be('left)
     res.swap.getOrElse(???)
   }
 

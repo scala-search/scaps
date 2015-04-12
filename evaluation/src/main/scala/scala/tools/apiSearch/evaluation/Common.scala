@@ -1,8 +1,10 @@
 package scala.tools.apiSearch.evaluation
 
 import java.io.File
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.urlToProcess
 import scala.tools.apiSearch.evaluation.stats.QueryStats
@@ -12,14 +14,13 @@ import scala.tools.apiSearch.featureExtraction.JarExtractor
 import scala.tools.apiSearch.searchEngine.QueryError
 import scala.tools.apiSearch.searchEngine.SearchEngine
 import scala.tools.apiSearch.settings.Settings
-import scalaz._
-import scalaz.ValidationNel
+
+import scalaz.\/
 import scalaz.std.list.listInstance
 import scalaz.syntax.traverse.ToTraverseOps
-import scala.concurrent.Future
 
 object Common {
-  def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): ValidationNel[QueryError, Stats] = {
+  def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
     queriesWithRelevantDocs.map {
       case (query, relevantResults) =>
         engine.search(query).get.map(

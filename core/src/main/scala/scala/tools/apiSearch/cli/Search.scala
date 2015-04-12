@@ -16,7 +16,7 @@ object Search extends App {
 
   Source.stdin.getLines().takeWhile(_.nonEmpty).foreach { query =>
     engine.search(query).get.fold(
-      errors => errors.foreach {
+      error => error match {
         case SyntaxError(msg) =>
           println(msg)
         case NameNotFound(name) =>

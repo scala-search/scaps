@@ -60,11 +60,11 @@ object FindParameters extends App {
     }
   }.get
 
-  def generateConfs(size: Int, seed: Long, settings: Settings): Seq[Settings] = {
-    randomize(settings).fill(size)
+  def generateConfs(size: Int, seed: Long, settings: Settings): Seq[Settings] =
+    randomize(settings)
+      .fill(size)
       .runUnsafe(seed)
-      .sorted(Ordering[Double].on((s: Settings) => s.index.lengthNormWeight).reverse)
-  }
+      .sorted(Ordering[Double].on((s: Settings) => s.index.lengthNormWeight))
 
   def randomize(settings: Settings): Rng[Settings] =
     for {
