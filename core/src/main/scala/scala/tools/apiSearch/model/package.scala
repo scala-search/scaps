@@ -20,6 +20,10 @@ case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], 
   def isFunction = typeParameters.length > 0 && name == TypeEntity.functionType(typeParameters.length - 1)
 }
 
+object ClassEntity {
+  val bottomClass = ClassEntity(TypeEntity.bottomType, Nil, Nil)
+}
+
 case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String)
   extends Entity {
 

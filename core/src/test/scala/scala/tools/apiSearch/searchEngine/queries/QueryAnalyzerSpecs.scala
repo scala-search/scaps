@@ -123,6 +123,13 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("p.D"))
   }
 
+  it should "use the bottom type as a sub class of every type" in {
+    val res = expectSuccess("_ => A")
+
+    res.fingerprint.mkString(" ") should (
+      include("scala.Nothing"))
+  }
+
   it should "include base classes of types at contravariant positions" in {
     val res = expectSuccess("C => _")
 
