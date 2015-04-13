@@ -31,24 +31,29 @@ object Benchmark extends App {
   val engine = Common.initSearchEngine(settings, evaluationSettings)
 
   val now = (new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")).format(Calendar.getInstance.getTime())
+  val runInfo = now :: runName :: Nil
 
-  val cells = now :: runName :: Common.runQueries(engine, evaluationSettings.queries).fold(
+  val entries = Common.runQueries(engine, evaluationSettings.queries).fold(
     error => {
       println(error)
-      "---" :: "---" :: Nil
+      List(runInfo ::: "<MAP>" :: "---" :: Nil)
     },
     stats => {
-      stats.noQueries :: stats.meanAveragePrecision :: Nil
+      val queryData = stats.queryStats.map { qs =>
+        runInfo ::: qs.query :: qs.averagePrecision.toString :: Nil
+      }
+      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision.toString :: Nil)
     })
 
-  val csvRow = cells.mkString("", "; ", ";\n")
+  val csvRows = entries.map(_.mkString("", "; ", ";"))
+  val csv = csvRows.mkString("", "\n", "\n")
 
-  println(csvRow)
-  withWriter { writer => writer.write(csvRow) }
+  println(csv)
+  withWriter { writer => writer.write(csv) }
 
   def withWriter(f: Writer => Unit) = {
     outPath.fold {
-      f(new PrintWriter(System.out))
+      ()
     } { p =>
       val name = System.getProperty("user.home") + "/" + p
       val file = new File(name)
@@ -56,5 +61,4 @@ object Benchmark extends App {
       using(new FileWriter(file, true))(f).get
     }
   }
-
 }
