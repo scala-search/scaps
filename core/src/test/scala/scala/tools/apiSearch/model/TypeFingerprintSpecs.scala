@@ -43,25 +43,12 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("+scala.Int_0"))))
   }
 
-  it should "use upper type parameter bounds at covariant positions" in {
-    extractTerms("""
-      package p
-
-      trait T {
-        def m[A <: scala.AnyVal]: A
-      }
-      """)(
-      ("p.T#m", _.fingerprint should (
-        include("+scala.AnyVal_0") and
-        not include ("+A_0"))))
-  }
-
   it should "use upper type parameter bounds at contravariant positions" in {
     extractTerms("""
       package p
 
       trait T {
-        def m[A <: scala.AnyVal](x: A): Any
+        def m[A <: scala.AnyVal](x: A): Unit
       }
       """)(
       ("p.T#m", _.fingerprint should (
@@ -69,18 +56,70 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         not include ("-A_0"))))
   }
 
-  it should "ignore unbound type parameters" in {
+  it should "use lower type parameter bounds at covariant positions" in {
     extractTerms("""
       package p
 
       trait T {
-        def m[A](x: A): A
+        def m[A >: scala.AnyVal]: A
       }
       """)(
       ("p.T#m", _.fingerprint should (
-        not include ("+scala.Any_0") and
-        not include ("-scala.Any_0") and
-        not include ("+A_0") and
-        not include ("-A_0"))))
+        include("+scala.AnyVal_0") and
+        not include ("+A_0"))))
+  }
+
+  it should "use top type for unbound type parameters at contravariant positions" in {
+    extractTerms("""
+      package p
+
+      trait T {
+        def m[A](x: A): Unit
+      }
+      """)(
+      ("p.T#m", _.fingerprint should (
+        include("-scala.Any_0"))))
+  }
+
+  it should "use bottom type for unbound type parameters at covariant positions" in {
+    extractTerms("""
+      package p
+
+      trait T {
+        def m[A]: A
+      }
+      """)(
+      ("p.T#m", _.fingerprint should (
+        include("+scala.Nothing_0"))))
+  }
+
+  it should "support higher kinded type parameters" in {
+    extractTerms("""
+      package p
+
+      trait Tr[X] {}
+
+      object O {
+        def m[M[X] <: Tr[X]](x: M[Int]): M[String] = ???
+      }
+      """)(
+      ("p.O.m", _.fingerprint should (
+        include("-p.Tr_0")
+        and include("+scala.Nothing_0")
+        and include("java.lang.String_0"))))
+  }
+
+  it should "elide all type parameters" in {
+    extractTerms("""
+      package p
+
+      trait Tr[X] {}
+
+      object O {
+        def m[Y, M[X] <: Tr[X]](x: M[Y]): M[Y] = ???
+      }
+      """)(
+      ("p.O.m", _.fingerprint should (
+        not include ("Y"))))
   }
 }

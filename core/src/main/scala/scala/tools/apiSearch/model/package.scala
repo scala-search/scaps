@@ -45,7 +45,7 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
   private def fingerprintTypes(tpe: TypeEntity): List[TypeEntity] = {
     val args = tpe.args.flatMap(fingerprintTypes)
 
-    // don't include member access, it is too common
+    // don't include member access and method invocation
     if (tpe.isMemberAccess || tpe.isMethodInvocation)
       args
     else {
@@ -53,9 +53,10 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
       paramOpt.fold {
         tpe :: args
       } { param =>
-        // also type params with no upper bound provide too little information
-        if (param.upperBound != TypeEntity.topType)
+        if (tpe.variance == Contravariant)
           tpe.copy(name = param.upperBound) :: args
+        else if (tpe.variance == Covariant)
+          tpe.copy(name = param.lowerBound) :: args
         else
           args
       }

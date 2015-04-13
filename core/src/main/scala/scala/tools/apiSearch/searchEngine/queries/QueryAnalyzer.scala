@@ -105,6 +105,11 @@ class QueryAnalyzer private[searchEngine] (
     uncurry(resolved, Nil)
   }
 
+  /**
+   * Flattens out a query to a list of types and their alternatives. Hence types at
+   * covariant positions are represented as a list `tpe :: subTypes` and types at
+   * contravariant positions as `tpe :: superTypes`.
+   */
   private def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
