@@ -16,6 +16,6 @@ object Commons {
       "-feature",
       "-deprecation",
       "-Xfatal-warnings"),
-	EclipseKeys.withSource := true
+	  EclipseKeys.withSource := true
   )
 }
