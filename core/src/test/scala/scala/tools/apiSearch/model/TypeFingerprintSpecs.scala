@@ -30,6 +30,39 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("+scala.Int_2"))))
   }
 
+  it should "handle variance correctly" in {
+    extractTerms("""
+      package p
+
+      trait T[-A, +B]
+
+      object O {
+        val v: T[T[Int, Char], T[Float, String]] = ???
+        def m(x: T[Int, Char]): T[Float, String] = ???
+      }
+
+      class C {
+        def m(x: T[Int, Char]): T[Float, String] = ???
+      }
+      """)(
+      ("p.O.v", _.fingerprint should (
+        include("+scala.Int_0") and
+        include("-scala.Char_0") and
+        include("-scala.Float_0") and
+        include("+java.lang.String_0"))),
+      ("p.O.m", _.fingerprint should (
+        include("+scala.Int_0") and
+        include("-scala.Char_0") and
+        include("-scala.Float_0") and
+        include("+java.lang.String_0"))),
+      ("p.C#m", _.fingerprint should (
+        include("-p.C_0") and
+        include("+scala.Int_0") and
+        include("-scala.Char_0") and
+        include("-scala.Float_0") and
+        include("+java.lang.String_0"))))
+  }
+
   it should "include type arguments" in {
     extractTerms("""
       package p
@@ -109,7 +142,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         and include("java.lang.String_0"))))
   }
 
-  it should "elide all type parameters" in {
+  it should "substitute all type parameters" in {
     extractTerms("""
       package p
 
@@ -121,5 +154,23 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       """)(
       ("p.O.m", _.fingerprint should (
         not include ("Y"))))
+  }
+
+  it should "handle variance correctly when using type params" in {
+    extractTerms("""
+      package p
+
+      class Cl[+A] {
+        def m[B <: AnyVal, C >: Int](x: Cl[B]): Cl[C]
+      }
+      """)(
+      ("p.Cl#m", t => {
+        println(t)
+        println(t.fingerprint)
+        t.fingerprint should (
+          include("-scala.Any_0") and
+          include("-scala.AnyVal_0") and
+          include("+scala.Int_0"))
+      }))
   }
 }

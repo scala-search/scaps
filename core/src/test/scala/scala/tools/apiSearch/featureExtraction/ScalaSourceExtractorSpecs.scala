@@ -158,7 +158,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("p.T#m", _.tpe.toString should be("+<memberAccess>[-p.T[A], +scala.Int]")),
-      ("p.S#m", _.tpe.toString should be("+<memberAccess>[-p.S[+A], +scala.Int]")))
+      ("p.S#m", _.tpe.toString should be("+<memberAccess>[-p.S[-A], +scala.Int]")))
   }
 
   it should "add correct variance annotations" in {
