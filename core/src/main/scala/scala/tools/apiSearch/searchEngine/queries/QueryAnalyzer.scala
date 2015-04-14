@@ -128,8 +128,10 @@ class QueryAnalyzer private[searchEngine] (
 
       def withAlternatives(variance: Variance, depth: Int, cls: ClassEntity): List[FlattenedQuery.Type] = {
         val alternativesWithDistance: List[(String, Int)] = variance match {
-          case Covariant => (findSubClasses(cls).get :+ ClassEntity.bottomClass)
-            .map(subCls => (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1)).toList
+          case Covariant =>
+            val subClasses = (findSubClasses(cls).get)
+              .map(subCls => (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1)).toList
+            subClasses :+ ((TypeEntity.bottomType, subClasses.size + 1))
           case Contravariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
           case Invariant     => Nil
         }
