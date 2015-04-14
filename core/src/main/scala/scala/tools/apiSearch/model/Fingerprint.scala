@@ -3,12 +3,17 @@ package scala.tools.apiSearch.model
 case class Fingerprint(types: List[Fingerprint.Type]) {
   import Fingerprint._
 
+  def typesWithOccurrenceIndex(implicit o: Ordering[Fingerprint.Type]): List[(Type, Int)] =
+    types.groupBy(fpt => (fpt.variance, fpt.name))
+      .toList
+      .flatMap { case (tpe, values) => values.sorted.zipWithIndex }
+
   override def toString =
-    types.groupBy(identity)
-      .flatMap { case (tpe, values) => values.zipWithIndex.map { case (_, idx) => s"${tpe.variance.prefix}${tpe.name}_${idx}" } }
+    typesWithOccurrenceIndex(Ordering[Int].on(_.depth))
+      .map { case (tpe, idx) => s"${tpe.variance.prefix}${tpe.name}_${idx}" }
       .mkString(" ")
 }
 
 object Fingerprint {
-  case class Type(variance: Variance, name: String)
+  case class Type(variance: Variance, name: String, depth: Int, distance: Int = 0)
 }

@@ -115,7 +115,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("p.D"))
   }
 
-  it should "use the bottom type as a sub class of every type" in {
+  ignore should "use the bottom type as a sub class of every type" in {
     val res = expectSuccess("_ => A")
 
     res.fingerprint.mkString(" ") should (
@@ -157,10 +157,10 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     A.boost should be(1f +- 0.01f)
   }
 
-  it should "omit the outermost function application" in {
+  it should "not omit the outermost function application" in {
     val res = expectSuccess("A => B")
 
-    res.fingerprint.mkString(" ") should not include ("Function1")
+    res.fingerprint.mkString(" ") should include("Function1")
   }
 
   it should "normalize curried querries" in {
@@ -214,7 +214,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       cls <- classEntities
       base <- cls.baseTypes
       baseCls <- classEntities.filter(_.name == base.name)
-    } yield (baseCls, cls))
+    } yield (baseCls.name, cls))
 
     new QueryAnalyzer(Settings.fromApplicationConf.query, findClassesBySuffix, findSubClasses)
   }

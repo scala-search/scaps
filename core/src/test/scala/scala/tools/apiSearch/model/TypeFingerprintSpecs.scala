@@ -197,6 +197,6 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
       object O extends T
       """)(
-      ("p.O", _.fingerprint should be(Fingerprint(Fingerprint.Type(Covariant, "p.T") :: Nil))))
+      ("p.O", _.fingerprint.toString should be("+p.T_0")))
   }
 }

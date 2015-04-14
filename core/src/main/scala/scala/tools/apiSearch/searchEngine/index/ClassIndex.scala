@@ -46,6 +46,9 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     search(query)
   }
 
+  def findSubClasses(clsName: String): Try[Seq[ClassEntity]] =
+    search(new TermQuery(new Term(fields.baseClass, clsName)))
+
   def findSubClasses(cls: ClassEntity): Try[Seq[ClassEntity]] =
     search(new TermQuery(new Term(fields.baseClass, cls.name)))
 

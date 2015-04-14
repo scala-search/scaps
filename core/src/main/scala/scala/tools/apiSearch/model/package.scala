@@ -1,6 +1,6 @@
 package scala.tools.apiSearch.model
 
-import scalaz.syntax.std.boolean._
+import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 
 sealed trait Entity {
   def name: String
@@ -38,13 +38,7 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
   }
 
   def fingerprint =
-    Fingerprint(tpe.normalize(typeParameters)
-      .flattened
-      .filter {
-        case TypeEntity.Unknown(_) => false
-        case _                     => true
-      }
-      .map(tpe => Fingerprint.Type(tpe.variance, tpe.name)))
+    Fingerprint(tpe.normalize(typeParameters).fingerprintTypes())
 
   def withoutComment = copy(comment = "")
 }
@@ -60,8 +54,12 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
     s"${variance.prefix}$name$argStr"
   }
 
-  def flattened: List[TypeEntity] =
-    this :: args.flatMap(_.flattened)
+  def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =
+    Fingerprint.Type(variance, name, depth) ::
+      args.flatMap {
+        case TypeEntity.Unknown(_) => Nil
+        case tpe: TypeEntity       => tpe.fingerprintTypes(depth + 1)
+      }
 
   def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity =
     this match {

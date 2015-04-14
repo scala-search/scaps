@@ -4,9 +4,8 @@ import scala.Ordering
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.model.Contravariant
 import scala.tools.apiSearch.model.Covariant
-import scala.tools.apiSearch.model.Invariant
+import scala.tools.apiSearch.model.Fingerprint
 import scala.tools.apiSearch.model.TypeEntity
-import scala.tools.apiSearch.model.TypeParameterEntity
 import scala.tools.apiSearch.model.Variance
 import scala.tools.apiSearch.searchEngine.APIQuery
 import scala.tools.apiSearch.searchEngine.NameAmbiguous
@@ -15,14 +14,11 @@ import scala.tools.apiSearch.searchEngine.SemanticError
 import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
-import scalaz.\/
+
+import scalaz.{ \/ => \/ }
 import scalaz.std.list.listInstance
 import scalaz.syntax.either.ToEitherOps
 import scalaz.syntax.traverse.ToTraverseOps
-import scala.tools.apiSearch.model.TermEntity
-import scala.tools.apiSearch.model.TypeParameterEntity
-import scala.tools.apiSearch.model.TypeParameterEntity
-import scala.tools.apiSearch.model.TypeParameterEntity
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -44,7 +40,7 @@ private[queries] object FlattenedQuery {
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
   findClassesBySuffix: (String) => Try[Seq[ClassEntity]],
-  findSubClasses: (ClassEntity) => Try[Seq[ClassEntity]]) {
+  findSubClasses: (String) => Try[Seq[ClassEntity]]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
@@ -54,8 +50,10 @@ class QueryAnalyzer private[searchEngine] (
   def apply(raw: RawQuery): Try[SemanticError \/ APIQuery] =
     Try {
       resolveNames(raw.tpe).get.map(
-        (normalizeFunctions _) andThen
-          (q => flattenQuery(q).get) andThen
+        (toType _) andThen
+          (_.normalize(Nil)) andThen
+          (tpe => Fingerprint(tpe.fingerprintTypes())) andThen
+          (fp => getAlternatives(fp).get) andThen
           (toApiQuery _) andThen
           { apiQuery => apiQuery.copy(keywords = raw.keywords) })
     }
@@ -89,97 +87,45 @@ class QueryAnalyzer private[searchEngine] (
   private def isTypeParam(name: String): Boolean =
     name.length() == 1
 
-  //  private def toType(resolved: ResolvedQuery, variance: Variance = Covariant): TypeEntity = {
-  //    val ResolvedQuery(cls, args) = resolved
-  //    val tpeArgs = cls.typeParameters.zip(args).map {
-  //      case (tpeParam, arg) => toType(arg, variance * tpeParam.variance)
-  //    }
-  //    TypeEntity(cls.name, variance, tpeArgs)
-  //  }
-
-  /**
-   *
-   */
-  private def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
-    def uncurry(rq: ResolvedQuery, args: List[ResolvedQuery]): ResolvedQuery =
-      rq match {
-        case ResolvedQuery.Type(cls, functionArgs) if cls.isFunction =>
-          uncurry(functionArgs.last, args ::: functionArgs.init)
-        case _ =>
-          val typeParams = args.map(_ => TypeParameterEntity("A", Contravariant)) :+ TypeParameterEntity("R", Covariant)
-          // this is not a proper ClassEntity but it shouldn't matter as it gets elided
-          // in later processing steps
-          val function = ClassEntity(TypeEntity.Function.name(args.length), typeParams, Nil)
-          ResolvedQuery.Type(function, args :+ rq)
+  private def toType(resolved: ResolvedQuery): TypeEntity = {
+    def rec(resolved: ResolvedQuery, variance: Variance): TypeEntity =
+      resolved match {
+        case ResolvedQuery.Wildcard =>
+          TypeEntity.Unknown(variance)
+        case ResolvedQuery.Type(cls, args) =>
+          val tpeArgs = cls.typeParameters.zip(args).map {
+            case (tpeParam, arg) => rec(arg, variance * tpeParam.variance)
+          }
+          TypeEntity(cls.name, variance, tpeArgs)
       }
 
-    uncurry(resolved, Nil)
+    rec(resolved, Covariant)
   }
 
-  /**
-   * Flattens out a query to a list of types and their alternatives. Hence types at
-   * covariant positions are represented as a list `tpe :: subTypes` and types at
-   * contravariant positions as `tpe :: superTypes`.
-   */
-  private def flattenQuery(resolved: ResolvedQuery): Try[FlattenedQuery] =
+  private def getAlternatives(fingerprint: Fingerprint): Try[Fingerprint] =
     Try {
-      def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
-        rq match {
-          case ResolvedQuery.Wildcard =>
-            Nil
-          case ResolvedQuery.Type(cls, args) if depth == -1 && cls.isFunction =>
-            cls.typeParameters.zip(args).flatMap {
-              case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
-            }
-          case ResolvedQuery.Type(cls, args) =>
-            val argParts = cls.typeParameters.zip(args).flatMap {
-              case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
-            }
-            (variance, depth, cls) :: argParts
-        }
-
-      def withAlternatives(variance: Variance, depth: Int, cls: ClassEntity): List[FlattenedQuery.Type] = {
-        val alternativesWithDistance: List[(String, Int)] = variance match {
-          case Covariant =>
-            val subClasses = (findSubClasses(cls).get)
-              .map(subCls => (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1)).toList
-            subClasses :+ ((TypeEntity.Nothing.name, subClasses.size + 1))
-          case Contravariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
-          case Invariant     => Nil
-        }
-
-        ((cls.name, 0) :: alternativesWithDistance).map {
-          case (alt, distance) => FlattenedQuery.Type(variance, alt, distance, depth)
-        }
+      val alternatives = fingerprint.types.flatMap {
+        case Fingerprint.Type(Covariant, tpeName, depth, _) =>
+          (findSubClasses(tpeName).get)
+            .map(subCls => Fingerprint.Type(Covariant, subCls.name, depth, subCls.baseTypes.indexWhere(_.name == tpeName) + 1))
+        case Fingerprint.Type(Contravariant, tpeName, depth, _) =>
+          (findClassesBySuffix(tpeName).get).headOption.toList
+            .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => Fingerprint.Type(Covariant, baseCls.name, depth, idx + 1) })
+        case _ => Nil
       }
 
-      val types = flattenWithVarianceAndDepth(Covariant, -1, resolved)
-        .map((withAlternatives _).tupled)
-
-      FlattenedQuery(types)
+      fingerprint.copy(types = fingerprint.types ::: alternatives)
     }
 
-  private def toApiQuery(flattened: FlattenedQuery): APIQuery = {
-    val boostsPerType: Map[(Variance, String), List[Float]] =
-      flattened.types.flatten.foldLeft(Map[(Variance, String), List[Float]]()) {
-        (boostsPerType, tpe) =>
-          val key = (tpe.variance, tpe.typeName)
-          val boosts = boostsPerType.get(key).getOrElse(Nil)
+  private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
+    val tpes = fingerprint.typesWithOccurrenceIndex(Ordering[Float].on(fpt => boost(fpt))).map {
+      case (tpe, idx) => APIQuery.Type(tpe.variance, tpe.name, idx, boost(tpe))
+    }
 
-          boostsPerType + (key -> (boost(tpe) :: boosts))
-      }
-
-    val orderedBoostsPerType = boostsPerType.mapValues(_.sorted(Ordering[Float].reverse))
-
-    val types = for {
-      ((variance, tpe), distances) <- orderedBoostsPerType
-      (boost, idx) <- distances.zipWithIndex
-    } yield APIQuery.Type(variance, tpe, idx, boost)
-
-    APIQuery(Nil, types.toList.sortBy(-_.boost))
+    APIQuery(Nil, tpes.toList.sortBy(-_.boost))
   }
 
-  private def boost(tpe: FlattenedQuery.Type): Float =
+  private def boost(tpe: Fingerprint.Type): Float =
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
   private def distanceBoost(dist: Int): Float = (1d / (settings.distanceBoostGradient * dist + 1d)).toFloat
