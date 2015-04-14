@@ -38,38 +38,20 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
   }
 
   def fingerprint =
-    fingerprintTypes(tpe)
-      .map(tpe => s"${tpe.variance.prefix}${tpe.name}")
-      .groupBy(identity)
-      .flatMap { case (typeName, values) => values.zipWithIndex.map { case (_, idx) => s"${typeName}_${idx}" } }
-      .mkString(" ")
-
-  private def fingerprintTypes(tpe: TypeEntity): List[TypeEntity] = {
-    val args = tpe.args.flatMap(fingerprintTypes)
-
-    tpe match {
-      case TypeEntity.MemberAccess(_, _) | TypeEntity.MethodInvocation(_, _, _) =>
-        // don't include member access and method invocation
-        args
-      case _ =>
-        val paramOpt = typeParameters.find(_.name == tpe.name)
-        paramOpt.fold {
-          tpe :: args
-        } { param =>
-          if (tpe.variance == Contravariant)
-            tpe.copy(name = param.upperBound) :: args
-          else if (tpe.variance == Covariant)
-            tpe.copy(name = param.lowerBound) :: args
-          else
-            args
-        }
-    }
-  }
+    Fingerprint(tpe.normalize(typeParameters)
+      .flattened
+      .filter {
+        case TypeEntity.Unknown(_) => false
+        case _                     => true
+      }
+      .map(tpe => Fingerprint.Type(tpe.variance, tpe.name)))
 
   def withoutComment = copy(comment = "")
 }
 
 case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) {
+  import TypeEntity._
+
   override def toString() = {
     val argStr = args match {
       case Nil => ""
@@ -78,7 +60,44 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
     s"${variance.prefix}$name$argStr"
   }
 
-  def normalize(typeParams: List[TypeParameterEntity] = Nil) = ???
+  def flattened: List[TypeEntity] =
+    this :: args.flatMap(_.flattened)
+
+  def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity =
+    this match {
+      case MemberAccess(owner, member) =>
+        Function(owner :: Nil, member).normalize(typeParams)
+      case MethodInvocation(args, res, _) =>
+        Function(args, res).normalize(typeParams)
+      case Function(args1, Function(args2, res, _), v) =>
+        // uncurry function
+        Function(args1 ::: args2, res, v).normalize(typeParams)
+      case Function(Tuple(args, _) :: Nil, res, v) =>
+        // detuple function
+        Function(args, res, v).normalize(typeParams)
+      case Refinement(args, v) =>
+        val newArgs = args.flatMap {
+          case AnyRef(_) => None
+          case arg       => Some(arg.copy(args = arg.args.map(_.normalize(typeParams))))
+        }
+
+        newArgs match {
+          case arg :: Nil => arg
+          case args       => Refinement(args, v)
+        }
+      case tpe: TypeEntity =>
+        val normalizedArgs = tpe.args.map(_.normalize(typeParams))
+        typeParams.find(_.name == tpe.name).fold {
+          tpe.copy(args = normalizedArgs)
+        } { param =>
+          if (tpe.variance == Contravariant)
+            tpe.copy(name = param.upperBound, args = normalizedArgs)
+          else if (tpe.variance == Covariant)
+            tpe.copy(name = param.lowerBound, args = normalizedArgs)
+          else
+            Unknown(tpe.variance)
+        }
+    }
 }
 
 object TypeEntity {
@@ -121,7 +140,7 @@ object TypeEntity {
     }
 
     def unapply(tpe: TypeEntity) =
-      (!tpe.args.isEmpty && tpe.name == name(tpe.args.size)).option((tpe.args.init, tpe.args.last, tpe.variance))
+      (!tpe.args.isEmpty && tpe.name == name(tpe.args.size - 1)).option((tpe.args.init, tpe.args.last, tpe.variance))
   }
 
   object MemberAccess {

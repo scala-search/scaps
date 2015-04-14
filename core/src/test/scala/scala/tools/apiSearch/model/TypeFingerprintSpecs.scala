@@ -13,7 +13,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = 1
       }
       """)(
-      ("p.O.i", _.fingerprint should be("+scala.Int_0")))
+      ("p.O.i", _.fingerprint.toString should be("+scala.Int_0")))
   }
 
   it should "increse occurrence numbers on repeated types" in {
@@ -24,10 +24,29 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = (1, 2, 3)
       }
       """)(
-      ("p.O.i", _.fingerprint should (
+      ("p.O.i", _.fingerprint.toString should (
         include("+scala.Int_0") and
         include("+scala.Int_1") and
         include("+scala.Int_2"))))
+  }
+
+  it should "normalize member access" in {
+    val ts = extractAllTerms("""
+      package p
+
+      class C {
+        val i = 1
+      }
+
+      object O {
+        def m(c: C) = 1
+      }
+      """)
+
+    val i = ts.find(_.name == "p.C#i").get
+    val m = ts.find(_.name == "p.O.m").get
+
+    i.fingerprint should equal(m.fingerprint)
   }
 
   it should "handle variance correctly" in {
@@ -45,17 +64,17 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m(x: T[Int, Char]): T[Float, String] = ???
       }
       """)(
-      ("p.O.v", _.fingerprint should (
+      ("p.O.v", _.fingerprint.toString should (
         include("+scala.Int_0") and
         include("-scala.Char_0") and
         include("-scala.Float_0") and
         include("+java.lang.String_0"))),
-      ("p.O.m", _.fingerprint should (
+      ("p.O.m", _.fingerprint.toString should (
         include("+scala.Int_0") and
         include("-scala.Char_0") and
         include("-scala.Float_0") and
         include("+java.lang.String_0"))),
-      ("p.C#m", _.fingerprint should (
+      ("p.C#m", _.fingerprint.toString should (
         include("-p.C_0") and
         include("+scala.Int_0") and
         include("-scala.Char_0") and
@@ -71,7 +90,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val is = List(1)
       }
       """)(
-      ("p.O.is", _.fingerprint should (
+      ("p.O.is", _.fingerprint.toString should (
         include("+scala.collection.immutable.List_0") and
         include("+scala.Int_0"))))
   }
@@ -84,7 +103,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A <: scala.AnyVal](x: A): Unit
       }
       """)(
-      ("p.T#m", _.fingerprint should (
+      ("p.T#m", _.fingerprint.toString should (
         include("-scala.AnyVal_0") and
         not include ("-A_0"))))
   }
@@ -97,7 +116,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A >: scala.AnyVal]: A
       }
       """)(
-      ("p.T#m", _.fingerprint should (
+      ("p.T#m", _.fingerprint.toString should (
         include("+scala.AnyVal_0") and
         not include ("+A_0"))))
   }
@@ -110,7 +129,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A](x: A): Unit
       }
       """)(
-      ("p.T#m", _.fingerprint should (
+      ("p.T#m", _.fingerprint.toString should (
         include("-scala.Any_0"))))
   }
 
@@ -122,7 +141,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A]: A
       }
       """)(
-      ("p.T#m", _.fingerprint should (
+      ("p.T#m", _.fingerprint.toString should (
         include("+scala.Nothing_0"))))
   }
 
@@ -136,7 +155,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[M[X] <: Tr[X]](x: M[Int]): M[String] = ???
       }
       """)(
-      ("p.O.m", _.fingerprint should (
+      ("p.O.m", _.fingerprint.toString should (
         include("-p.Tr_0")
         and include("+scala.Nothing_0")
         and include("java.lang.String_0"))))
@@ -152,7 +171,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[Y, M[X] <: Tr[X]](x: M[Y]): M[Y] = ???
       }
       """)(
-      ("p.O.m", _.fingerprint should (
+      ("p.O.m", _.fingerprint.toString should (
         not include ("Y"))))
   }
 
@@ -164,9 +183,20 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[B <: AnyVal, C >: Int](x: Cl[B]): Cl[C]
       }
       """)(
-      ("p.Cl#m", _.fingerprint should (
+      ("p.Cl#m", _.fingerprint.toString should (
         include("-scala.Any_0") and
         include("-scala.AnyVal_0") and
         include("+scala.Int_0"))))
+  }
+
+  it should "treat objects implementing a single trait as an instance of this trait" in {
+    extractTerms("""
+      package p
+
+      trait T
+
+      object O extends T
+      """)(
+      ("p.O", _.fingerprint should be(Fingerprint(Fingerprint.Type(Covariant, "p.T") :: Nil))))
   }
 }

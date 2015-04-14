@@ -120,7 +120,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       doc.add(new TextField(field, value, Store.YES))
 
     add(fields.name, entity.name)
-    add(fields.fingerprint, entity.fingerprint)
+    add(fields.fingerprint, entity.fingerprint.toString())
     add(fields.doc, entity.comment)
     doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
 
