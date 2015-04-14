@@ -15,16 +15,19 @@ import scala.tools.apiSearch.searchEngine.SemanticError
 import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
-
 import scalaz.\/
 import scalaz.std.list.listInstance
 import scalaz.syntax.either.ToEitherOps
 import scalaz.syntax.traverse.ToTraverseOps
+import scala.tools.apiSearch.model.TermEntity
+import scala.tools.apiSearch.model.TypeParameterEntity
+import scala.tools.apiSearch.model.TypeParameterEntity
+import scala.tools.apiSearch.model.TypeParameterEntity
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
-  case class Class(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
-  case class TypeParam(name: String) extends ResolvedQuery
+  case object Wildcard extends ResolvedQuery
+  case class Type(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
 }
 
 private[queries] case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
@@ -70,11 +73,11 @@ class QueryAnalyzer private[searchEngine] (
       resolvedArgs.flatMap { resolvedArgs =>
         findClassesBySuffix(raw.name).get match {
           case Seq() if isTypeParam(raw.name) =>
-            ResolvedQuery.TypeParam(raw.name).right
+            ResolvedQuery.Wildcard.right
           case Seq() =>
             NameNotFound(raw.name).left
           case Seq(cls) if resolvedArgs.length == cls.typeParameters.length || raw.args.length == 0 =>
-            ResolvedQuery.Class(cls, resolvedArgs).right
+            ResolvedQuery.Type(cls, resolvedArgs).right
           case Seq(cls) =>
             UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length).left
           case candidates =>
@@ -86,20 +89,28 @@ class QueryAnalyzer private[searchEngine] (
   private def isTypeParam(name: String): Boolean =
     name.length() == 1
 
+  //  private def toType(resolved: ResolvedQuery, variance: Variance = Covariant): TypeEntity = {
+  //    val ResolvedQuery(cls, args) = resolved
+  //    val tpeArgs = cls.typeParameters.zip(args).map {
+  //      case (tpeParam, arg) => toType(arg, variance * tpeParam.variance)
+  //    }
+  //    TypeEntity(cls.name, variance, tpeArgs)
+  //  }
+
   /**
    *
    */
   private def normalizeFunctions(resolved: ResolvedQuery): ResolvedQuery = {
     def uncurry(rq: ResolvedQuery, args: List[ResolvedQuery]): ResolvedQuery =
       rq match {
-        case ResolvedQuery.Class(cls, functionArgs) if cls.isFunction =>
+        case ResolvedQuery.Type(cls, functionArgs) if cls.isFunction =>
           uncurry(functionArgs.last, args ::: functionArgs.init)
         case _ =>
           val typeParams = args.map(_ => TypeParameterEntity("A", Contravariant)) :+ TypeParameterEntity("R", Covariant)
           // this is not a proper ClassEntity but it shouldn't matter as it gets elided
           // in later processing steps
-          val function = ClassEntity(TypeEntity.functionType(args.length), typeParams, Nil)
-          ResolvedQuery.Class(function, args :+ rq)
+          val function = ClassEntity(TypeEntity.Function.name(args.length), typeParams, Nil)
+          ResolvedQuery.Type(function, args :+ rq)
       }
 
     uncurry(resolved, Nil)
@@ -114,16 +125,17 @@ class QueryAnalyzer private[searchEngine] (
     Try {
       def flattenWithVarianceAndDepth(variance: Variance, depth: Int, rq: ResolvedQuery): List[(Variance, Int, ClassEntity)] =
         rq match {
-          case ResolvedQuery.Class(cls, args) if depth == -1 && cls.isFunction =>
+          case ResolvedQuery.Wildcard =>
+            Nil
+          case ResolvedQuery.Type(cls, args) if depth == -1 && cls.isFunction =>
             cls.typeParameters.zip(args).flatMap {
               case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
             }
-          case ResolvedQuery.Class(cls, args) =>
+          case ResolvedQuery.Type(cls, args) =>
             val argParts = cls.typeParameters.zip(args).flatMap {
               case (param, arg) => flattenWithVarianceAndDepth(param.variance * variance, depth + 1, arg)
             }
             (variance, depth, cls) :: argParts
-          case ResolvedQuery.TypeParam(_) => Nil
         }
 
       def withAlternatives(variance: Variance, depth: Int, cls: ClassEntity): List[FlattenedQuery.Type] = {
@@ -131,7 +143,7 @@ class QueryAnalyzer private[searchEngine] (
           case Covariant =>
             val subClasses = (findSubClasses(cls).get)
               .map(subCls => (subCls.name, subCls.baseTypes.indexWhere(_.name == cls.name) + 1)).toList
-            subClasses :+ ((TypeEntity.bottomType, subClasses.size + 1))
+            subClasses :+ ((TypeEntity.Nothing.name, subClasses.size + 1))
           case Contravariant => cls.baseTypes.map(_.name).zipWithIndex.map { case (name, idx) => (name, idx + 1) }
           case Invariant     => Nil
         }

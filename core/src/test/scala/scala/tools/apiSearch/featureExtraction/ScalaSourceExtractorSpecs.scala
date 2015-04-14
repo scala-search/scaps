@@ -406,7 +406,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)(
       ("p.C", _.baseTypes should (
         contain(TypeEntity("p.T")) and
-        contain(TypeEntity.any))),
+        contain(TypeEntity.Any()))),
       ("p.D", _.baseTypes should (
         contain(TypeEntity("p.C")) and
         contain(TypeEntity("p.T")))),

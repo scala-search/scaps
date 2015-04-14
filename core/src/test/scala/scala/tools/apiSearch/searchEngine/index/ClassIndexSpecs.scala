@@ -87,12 +87,12 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       result should (contain(B) and not contain (A))
 
-      val anySubClasses = index.findSubClasses(ClassEntity(TypeEntity.any.name, Nil, Nil)).get
+      val anySubClasses = index.findSubClasses(ClassEntity(TypeEntity.Any.name, Nil, Nil)).get
 
       anySubClasses should contain allOf (A, B)
     }
   }
 
   def cls(name: String)(args: String*)(baseTypes: TypeEntity*) =
-    ClassEntity(name, args.map(TypeParameterEntity(_, Invariant)).toList, baseTypes.toList ++ List(TypeEntity.anyRef, TypeEntity.any))
+    ClassEntity(name, args.map(TypeParameterEntity(_, Invariant)).toList, baseTypes.toList ++ List(TypeEntity.AnyRef(), TypeEntity.Any()))
 }

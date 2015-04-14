@@ -76,7 +76,7 @@ trait EntityFactory {
       val ownerParams = typeParamsFromOwningTemplates(sym)
       val ownerArgs = ownerParams.map(p => TypeEntity(p.name, Contravariant * p.variance, Nil))
       (ownerParams ++ params,
-        TypeEntity.memberAccess(TypeEntity(qualifiedName(sym.owner, true), Contravariant, ownerArgs), memberType))
+        TypeEntity.MemberAccess(TypeEntity(qualifiedName(sym.owner, true), Contravariant, ownerArgs), memberType))
     } else {
       (params, memberType)
     }
@@ -145,7 +145,7 @@ trait EntityFactory {
       case params :: rest =>
         val paramTypes = params.map(p => createTypeEntity(p.tpe, Contravariant))
         val resultType = rec(rest, resultTpe.resultType)
-        TypeEntity.methodInvocation(paramTypes, resultType)
+        TypeEntity.MethodInvocation(paramTypes, resultType)
     }
 
     (typeParams, rec(sym.paramss, sym.tpe.resultType))
@@ -156,7 +156,7 @@ trait EntityFactory {
       createTypeEntity(parent, Covariant)
     }
 
-    (Nil, TypeEntity.refinement(Covariant, args))
+    (Nil, TypeEntity.Refinement(args))
   }
 
   private def createTypeParamEntity(typeSym: Symbol) =

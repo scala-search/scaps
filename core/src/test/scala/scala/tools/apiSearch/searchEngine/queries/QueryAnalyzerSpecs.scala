@@ -56,14 +56,6 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     res.fingerprint.mkString(" ") should include("p.A")
   }
 
-  it should "treat unknown names of length 1 as type parameters and exclude them from fingerprints" in {
-    val res = expectSuccess("x => y")
-
-    res.fingerprint.mkString(" ") should (
-      not include ("x") and
-      not include ("y"))
-  }
-
   it should "fail on unknown names" in {
     val res = expectFailure("Unknown")
 
@@ -87,7 +79,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   }
 
   it should "prefer names from the Scala standard library over other namespaces" in {
-    val res = expectSuccess("List[_]")
+    val res = expectSuccess("List")
 
     res.fingerprint.mkString(" ") should (
       include("scala.collection.immutable.List") and

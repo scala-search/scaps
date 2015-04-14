@@ -1,5 +1,7 @@
 package scala.tools.apiSearch.model
 
+import scalaz.syntax.std.boolean._
+
 sealed trait Entity {
   def name: String
 }
@@ -17,7 +19,7 @@ case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], 
     s"$name$params $bases"
   }
 
-  def isFunction = typeParameters.length > 0 && name == TypeEntity.functionType(typeParameters.length - 1)
+  def isFunction = typeParameters.length > 0 && name == TypeEntity.Function.name(typeParameters.length - 1)
 }
 
 case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String)
@@ -45,21 +47,22 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
   private def fingerprintTypes(tpe: TypeEntity): List[TypeEntity] = {
     val args = tpe.args.flatMap(fingerprintTypes)
 
-    // don't include member access and method invocation
-    if (tpe.isMemberAccess || tpe.isMethodInvocation)
-      args
-    else {
-      val paramOpt = typeParameters.find(_.name == tpe.name)
-      paramOpt.fold {
-        tpe :: args
-      } { param =>
-        if (tpe.variance == Contravariant)
-          tpe.copy(name = param.upperBound) :: args
-        else if (tpe.variance == Covariant)
-          tpe.copy(name = param.lowerBound) :: args
-        else
-          args
-      }
+    tpe match {
+      case TypeEntity.MemberAccess(_, _) | TypeEntity.MethodInvocation(_, _, _) =>
+        // don't include member access and method invocation
+        args
+      case _ =>
+        val paramOpt = typeParameters.find(_.name == tpe.name)
+        paramOpt.fold {
+          tpe :: args
+        } { param =>
+          if (tpe.variance == Contravariant)
+            tpe.copy(name = param.upperBound) :: args
+          else if (tpe.variance == Covariant)
+            tpe.copy(name = param.lowerBound) :: args
+          else
+            args
+        }
     }
   }
 
@@ -75,61 +78,80 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
     s"${variance.prefix}$name$argStr"
   }
 
-  def isMemberAccess = name == TypeEntity.memberAccessType
-  def isFunction = args.length > 0 && name == TypeEntity.functionType(args.length - 1)
-  def isMethodInvocation = args.length > 0 && name == TypeEntity.methodInvocationType(args.length - 1)
+  def normalize(typeParams: List[TypeParameterEntity] = Nil) = ???
 }
 
 object TypeEntity {
-  val topType = "scala.Any"
-  val bottomType = "scala.Nothing"
+  object Any extends PrimitiveType("scala.Any")
+  object AnyRef extends PrimitiveType("java.lang.Object")
+  object Int extends PrimitiveType("scala.Int")
+  object Nothing extends PrimitiveType("scala.Nothing")
 
-  def functionType(n: Int) = s"scala.Function$n"
-  def function(variance: Variance, paramTypes: List[TypeEntity], resultType: TypeEntity) = {
-    val typeArgs = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
-    TypeEntity(functionType(paramTypes.length), variance, typeArgs)
+  object Unknown extends PrimitiveType("<unknown>")
+
+  class PrimitiveType(val name: String) {
+    def apply(variance: Variance = Covariant) = TypeEntity(name, variance, Nil)
+
+    def unapply(tpe: TypeEntity): Option[Variance] =
+      (tpe.name == name && tpe.args.isEmpty).option(tpe.variance)
   }
 
-  def tupleType(n: Int) = s"scala.Tuple$n"
+  object Tuple extends VariantType("scala.Tuple")
+  object Refinement extends VariantType("<refinement", ">")
 
-  val memberAccessType = "<memberAccess>"
-  def memberAccess(owner: TypeEntity, member: TypeEntity): TypeEntity =
-    TypeEntity(memberAccessType, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
+  class VariantType(val tpePrefix: String, val tpeSuffix: String = "") {
+    def name(n: Int) = s"$tpePrefix$n$tpeSuffix"
 
-  def methodInvocationType(n: Int) = s"<methodInvocation$n>"
-  def methodInvocation(paramTypes: List[TypeEntity], resultType: TypeEntity) = {
-    val typeArgs = paramTypes.map(_.copy(variance = Contravariant)) :+ resultType.copy(variance = Covariant)
-    TypeEntity(methodInvocationType(paramTypes.length), Covariant, typeArgs)
+    def apply(args: List[TypeEntity], variance: Variance = Covariant) =
+      TypeEntity(name(args.size), variance, args.map(pt => pt.copy(variance = variance)))
+
+    def unapply(tpe: TypeEntity): Option[(List[TypeEntity], Variance)] =
+      (!tpe.args.isEmpty && tpe.name == name(tpe.args.size)).option((tpe.args, tpe.variance))
   }
 
-  val unknownType = "<unknown>"
-  val unknown = TypeEntity(unknownType, Covariant, Nil)
+  object Function extends FunctionLikeType("scala.Function")
+  object MethodInvocation extends FunctionLikeType("<methodInvocation", ">")
 
-  def refinementType(n: Int) = s"<refinement$n>"
-  def refinement(variance: Variance, args: List[TypeEntity]) = {
-    val typeArgs = args.map(pt => pt.copy(variance = variance))
-    TypeEntity(refinementType(typeArgs.length), variance, typeArgs)
+  class FunctionLikeType(val tpePrefix: String, val tpeSuffix: String = "") {
+    def name(n: Int) = s"$tpePrefix$n$tpeSuffix"
+
+    def apply(paramTypes: List[TypeEntity], resultType: TypeEntity, variance: Variance = Covariant) = {
+      val typeArgs = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
+      TypeEntity(name(paramTypes.length), variance, typeArgs)
+    }
+
+    def unapply(tpe: TypeEntity) =
+      (!tpe.args.isEmpty && tpe.name == name(tpe.args.size)).option((tpe.args.init, tpe.args.last, tpe.variance))
+  }
+
+  object MemberAccess {
+    val name = "<memberAccess>"
+
+    def apply(owner: TypeEntity, member: TypeEntity): TypeEntity =
+      TypeEntity(name, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
+
+    def unapply(tpe: TypeEntity) =
+      (tpe.args.size == 2 && tpe.name == name).option((tpe.args.head, tpe.args.tail.head))
   }
 
   def apply(name: String, args: List[TypeEntity] = Nil): TypeEntity =
     TypeEntity(name, Covariant, args)
-
-  val any = TypeEntity(topType)
-  val anyRef = TypeEntity("java.lang.Object")
-
-  val int = TypeEntity("scala.Int")
 }
 
-case class TypeParameterEntity(name: String, variance: Variance, lowerBound: String = TypeEntity.bottomType, upperBound: String = TypeEntity.topType) {
+case class TypeParameterEntity(
+  name: String,
+  variance: Variance,
+  lowerBound: String = TypeEntity.Nothing.name,
+  upperBound: String = TypeEntity.Any.name) {
   import TypeEntity._
 
   override def toString() = {
     val lbound =
-      if (lowerBound == bottomType) ""
+      if (lowerBound == Nothing.name) ""
       else s" >: $lowerBound"
 
     val ubound =
-      if (upperBound == topType) ""
+      if (upperBound == Any.name) ""
       else s" <: $upperBound"
 
     s"$name$lbound$ubound"
