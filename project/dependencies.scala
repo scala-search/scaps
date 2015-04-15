@@ -10,6 +10,8 @@ object Dependencies {
   val scalaz = "org.scalaz" %% "scalaz-core" % "7.1.1"
 
   val config = "com.typesafe" % "config" % "1.2.0"
+  val logging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+  val logback = "ch.qos.logback" % "logback-classic" % "1.1.3"
 
   val rng = "com.nicta" %% "rng" % "1.3.0"
 
@@ -23,6 +25,8 @@ object Dependencies {
     scalatest,
     scalaz,
     config,
+    logging,
+    logback,
     luceneCore,
     luceneAnalyzersCommon
   )

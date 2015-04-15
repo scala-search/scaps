@@ -1,7 +1,6 @@
 package scala.tools.apiSearch.searchEngine
 
 import java.io.File
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.tools.apiSearch.model.ClassEntity
@@ -12,10 +11,9 @@ import scala.tools.apiSearch.searchEngine.index.TermsIndex
 import scala.tools.apiSearch.searchEngine.queries.QueryAnalyzer
 import scala.tools.apiSearch.searchEngine.queries.QueryParser
 import scala.tools.apiSearch.settings.Settings
+import scala.tools.apiSearch.utils.Logging
 import scala.util.Try
-
 import org.apache.lucene.store.FSDirectory
-
 import scalaz.\/
 
 object SearchEngine {
@@ -53,7 +51,7 @@ object SearchEngine {
     }
 }
 
-class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, val classesIndex: ClassIndex) {
+class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, val classesIndex: ClassIndex) extends Logging {
   val analyzer = new QueryAnalyzer(
     settings.query,
     (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
@@ -75,6 +73,9 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
       parsed <- QueryParser(query)
       analyzed <- analyzer(parsed).get
       results <- termsIndex.find(analyzed).get
-    } yield results
+    } yield {
+      logger.info(s"""query "${query}" expanded to "${analyzed.fingerprint.mkString(" ")}" """)
+      results
+    }
   }
 }
