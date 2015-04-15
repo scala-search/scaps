@@ -13,7 +13,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = 1
       }
       """)(
-      ("p.O.i", _.fingerprint.toString should be("+scala.Int_0")))
+      ("p.O.i", _.fingerprint should be(fingerprint((Covariant, TypeEntity.Int.name, 0)))))
   }
 
   it should "increse occurrence numbers on repeated types" in {
@@ -222,6 +222,9 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
       object O extends T
       """)(
-      ("p.O", _.fingerprint.toString should be("+p.T_0")))
+      ("p.O", _.fingerprint should be(fingerprint((Covariant, "p.T", 0)))))
   }
+
+  def fingerprint(types: (Variance, String, Int)*) =
+    Fingerprint(types.toList.map { case (v, tpe, depth) => Fingerprint.Type(v, tpe, depth) })
 }

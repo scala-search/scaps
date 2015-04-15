@@ -119,7 +119,7 @@ class QueryAnalyzer private[searchEngine] (
     }
 
   private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
-    val tpes = fingerprint.typesWithOccurrenceIndex(Ordering[Float].on(fpt => boost(fpt))).map {
+    val tpes = fingerprint.typesWithOccurrenceIndex(Ordering[Float].on(fpt => -boost(fpt))).map {
       case (tpe, idx) => APIQuery.Type(tpe.variance, tpe.name, idx, boost(tpe))
     }
 
