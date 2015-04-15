@@ -64,9 +64,9 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
   def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity =
     this match {
       case MemberAccess(owner, member) =>
-        Function(owner :: Nil, member).normalize(typeParams)
+        Function(owner :: Nil, member.normalize(typeParams)).normalize(typeParams)
       case MethodInvocation(args, res, _) =>
-        Function(args, res).normalize(typeParams)
+        Function(args, res.normalize(typeParams)).normalize(typeParams)
       case Function(args1, Function(args2, res, _), v) =>
         // uncurry function
         Function(args1 ::: args2, res, v).normalize(typeParams)

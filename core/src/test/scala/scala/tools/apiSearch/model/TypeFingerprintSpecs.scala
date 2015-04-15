@@ -40,13 +40,38 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
       object O {
         def m(c: C) = 1
+        val f = (c: C) => 1
       }
       """)
 
     val i = ts.find(_.name == "p.C#i").get
     val m = ts.find(_.name == "p.O.m").get
+    val f = ts.find(_.name == "p.O.f").get
 
     i.fingerprint should equal(m.fingerprint)
+    i.fingerprint should equal(f.fingerprint)
+  }
+
+  it should "normalize method invocations" in {
+    val ts = extractAllTerms("""
+      package p
+
+      class C {
+        def m1(i: Int) = 1
+      }
+
+      object O {
+        def m2(c: C, i: Int) = 1
+        def m3(c: C)(i: Int) = 1
+      }
+      """)
+
+    val m1 = ts.find(_.name == "p.C#m1").get
+    val m2 = ts.find(_.name == "p.O.m2").get
+    val m3 = ts.find(_.name == "p.O.m3").get
+
+    m1.fingerprint should equal(m2.fingerprint)
+    m1.fingerprint should equal(m3.fingerprint)
   }
 
   it should "handle variance correctly" in {

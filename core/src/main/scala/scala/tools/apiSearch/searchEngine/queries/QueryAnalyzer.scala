@@ -14,21 +14,16 @@ import scala.tools.apiSearch.searchEngine.SemanticError
 import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
 import scala.tools.apiSearch.settings.QuerySettings
 import scala.util.Try
-
 import scalaz.{ \/ => \/ }
 import scalaz.std.list.listInstance
 import scalaz.syntax.either.ToEitherOps
 import scalaz.syntax.traverse.ToTraverseOps
+import scala.tools.apiSearch.model.Invariant
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
   case object Wildcard extends ResolvedQuery
   case class Type(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
-}
-
-private[queries] case class FlattenedQuery(types: List[List[FlattenedQuery.Type]])
-private[queries] object FlattenedQuery {
-  case class Type(variance: Variance, typeName: String, distance: Int, depth: Int)
 }
 
 /**
@@ -52,8 +47,7 @@ class QueryAnalyzer private[searchEngine] (
       resolveNames(raw.tpe).get.map(
         (toType _) andThen
           (_.normalize(Nil)) andThen
-          (tpe => Fingerprint(tpe.fingerprintTypes())) andThen
-          (fp => getAlternatives(fp).get) andThen
+          (tpe => Fingerprint(fingerprintWithAlternatives(tpe).get)) andThen
           (toApiQuery _) andThen
           { apiQuery => apiQuery.copy(keywords = raw.keywords) })
     }
@@ -102,19 +96,26 @@ class QueryAnalyzer private[searchEngine] (
     rec(resolved, Covariant)
   }
 
-  private def getAlternatives(fingerprint: Fingerprint): Try[Fingerprint] =
+  private def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int = 0): Try[List[Fingerprint.Type]] =
     Try {
-      val alternatives = fingerprint.types.flatMap {
-        case Fingerprint.Type(Covariant, tpeName, depth, _) =>
-          (findSubClasses(tpeName).get)
-            .map(subCls => Fingerprint.Type(Covariant, subCls.name, depth, subCls.baseTypes.indexWhere(_.name == tpeName) + 1))
-        case Fingerprint.Type(Contravariant, tpeName, depth, _) =>
-          (findClassesBySuffix(tpeName).get).headOption.toList
-            .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => Fingerprint.Type(Covariant, baseCls.name, depth, idx + 1) })
-        case _ => Nil
-      }
+      tpe match {
+        case TypeEntity.Unknown(_) =>
+          Nil
+        case tpe: TypeEntity =>
+          val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth, 0)
 
-      fingerprint.copy(types = fingerprint.types ::: alternatives)
+          val alternatives = tpe.variance match {
+            case Covariant =>
+              findSubClasses(tpe.name).get.toList
+                .map(subCls => thisFpt.copy(name = subCls.name, distance = subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
+            case Contravariant =>
+              findClassesBySuffix(tpe.name).get.headOption.toList
+                .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
+            case Invariant => Nil
+          }
+
+          thisFpt :: alternatives ::: tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1).get)
+      }
     }
 
   private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
