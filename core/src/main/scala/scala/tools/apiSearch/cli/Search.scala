@@ -31,6 +31,7 @@ object Search extends App {
       },
       results => results.take(10).foreach { term =>
         println(term.withoutComment)
+        println(term.tpe.normalize(term.typeParameters))
         println(term.fingerprint)
         println()
       })
