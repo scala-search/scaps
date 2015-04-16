@@ -157,10 +157,10 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     A.boost should be(1f +- 0.01f)
   }
 
-  it should "not omit the outermost function application" in {
+  it should "omit the outermost function application" in {
     val res = expectSuccess("A => B")
 
-    res.fingerprint.mkString(" ") should include("Function1")
+    res.fingerprint.mkString(" ") should not include ("Function1")
   }
 
   it should "normalize curried querries" in {

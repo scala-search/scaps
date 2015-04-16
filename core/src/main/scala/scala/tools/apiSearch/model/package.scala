@@ -57,45 +57,58 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
   def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =
     Fingerprint.Type(variance, name, depth) ::
       args.flatMap {
-        case TypeEntity.Unknown(_) => Nil
-        case tpe: TypeEntity       => tpe.fingerprintTypes(depth + 1)
+        case TypeEntity.Unknown(_) =>
+          Nil
+        case TypeEntity.Ignored(args, _) =>
+          args.flatMap(_.fingerprintTypes(depth + 1))
+        case tpe: TypeEntity =>
+          tpe.fingerprintTypes(depth + 1)
       }
 
-  def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity =
-    this match {
-      case MemberAccess(owner, member) =>
-        Function(owner :: Nil, member.normalize(typeParams)).normalize(typeParams)
-      case MethodInvocation(args, res, _) =>
-        Function(args, res.normalize(typeParams)).normalize(typeParams)
-      case Function(args1, Function(args2, res, _), v) =>
-        // uncurry function
-        Function(args1 ::: args2, res, v).normalize(typeParams)
-      case Function(Tuple(args, _) :: Nil, res, v) =>
-        // detuple function
-        Function(args, res, v).normalize(typeParams)
-      case Refinement(args, v) =>
-        val newArgs = args.flatMap {
-          case AnyRef(_) => None
-          case arg       => Some(arg.copy(args = arg.args.map(_.normalize(typeParams))))
-        }
+  def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity = {
+    def loop(tpe: TypeEntity): TypeEntity =
+      tpe match {
+        case MemberAccess(owner, member) =>
+          loop(Function(owner :: Nil, loop(member)))
+        case MethodInvocation(args, res, _) =>
+          loop(Function(args, loop(res)))
+        case Function(args1, Function(args2, res, _), v) =>
+          // uncurry function
+          loop(Function(args1 ::: args2, res, v))
+        case Function(Tuple(args, _) :: Nil, res, v) =>
+          // detuple function
+          loop(Function(args, res, v))
+        case Refinement(args, v) =>
+          val newArgs = args.flatMap {
+            case AnyRef(_) => None
+            case arg       => Some(arg.copy(args = arg.args.map(loop)))
+          }
 
-        newArgs match {
-          case arg :: Nil => arg
-          case args       => Refinement(args, v)
-        }
-      case tpe: TypeEntity =>
-        val normalizedArgs = tpe.args.map(_.normalize(typeParams))
-        typeParams.find(_.name == tpe.name).fold {
-          tpe.copy(args = normalizedArgs)
-        } { param =>
-          if (tpe.variance == Contravariant)
-            tpe.copy(name = param.upperBound, args = normalizedArgs)
-          else if (tpe.variance == Covariant)
-            tpe.copy(name = param.lowerBound, args = normalizedArgs)
-          else
-            Unknown(tpe.variance)
-        }
+          newArgs match {
+            case arg :: Nil => arg
+            case args       => Refinement(args, v)
+          }
+        case tpe: TypeEntity =>
+          val normalizedArgs = tpe.args.map(loop)
+          typeParams.find(_.name == tpe.name).fold {
+            tpe.copy(args = normalizedArgs)
+          } { param =>
+            if (tpe.variance == Contravariant)
+              tpe.copy(name = param.upperBound, args = normalizedArgs)
+            else if (tpe.variance == Covariant)
+              tpe.copy(name = param.lowerBound, args = normalizedArgs)
+            else
+              Unknown(tpe.variance)
+          }
+      }
+
+    loop(this) match {
+      case Function(args, res, v) =>
+        Ignored(args :+ res, v)
+      case tpe =>
+        tpe
     }
+  }
 }
 
 object TypeEntity {
@@ -149,6 +162,16 @@ object TypeEntity {
 
     def unapply(tpe: TypeEntity) =
       (tpe.args.size == 2 && tpe.name == name).option((tpe.args.head, tpe.args.tail.head))
+  }
+
+  object Ignored {
+    def name(n: Int) = s"<ignored$n>"
+
+    def apply(typeArgs: List[TypeEntity], variance: Variance = Covariant) =
+      TypeEntity(name(typeArgs.length), variance, typeArgs)
+
+    def unapply(tpe: TypeEntity) =
+      (tpe.name == name(tpe.args.length)).option((tpe.args, tpe.variance))
   }
 
   def apply(name: String, args: List[TypeEntity] = Nil): TypeEntity =

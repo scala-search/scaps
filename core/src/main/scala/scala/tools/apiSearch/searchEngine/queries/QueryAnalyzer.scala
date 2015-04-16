@@ -101,6 +101,8 @@ class QueryAnalyzer private[searchEngine] (
       tpe match {
         case TypeEntity.Unknown(_) =>
           Nil
+        case TypeEntity.Ignored(args, _) =>
+          args.flatMap(fingerprintWithAlternatives(_, depth + 1).get)
         case tpe: TypeEntity =>
           val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth, 0)
 
