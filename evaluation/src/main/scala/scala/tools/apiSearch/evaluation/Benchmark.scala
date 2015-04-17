@@ -26,7 +26,7 @@ object Benchmark extends App {
   val runName = args.lift(1).getOrElse("")
 
   val settings = Settings.fromApplicationConf
-  val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = true)
+  val evaluationSettings = EvaluationSettings.fromApplicationConf
 
   val engine = Common.initSearchEngine(settings, evaluationSettings)
 

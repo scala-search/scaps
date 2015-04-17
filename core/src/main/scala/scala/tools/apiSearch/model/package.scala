@@ -37,6 +37,17 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
     s"$c$name$params: $tpe"
   }
 
+  /**
+   * A unique description of the term including its name and type.
+   */
+  def signature: String = {
+    val params = typeParameters match {
+      case Nil => ""
+      case ps  => ps.mkString("[", ", ", "]")
+    }
+    s"$name$params: ${tpe.signature}"
+  }
+
   def fingerprint =
     Fingerprint(tpe.normalize(typeParameters).fingerprintTypes())
 
@@ -52,6 +63,14 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
       case as  => as.mkString("[", ", ", "]")
     }
     s"${variance.prefix}$name$argStr"
+  }
+
+  def signature: String = {
+    val argStr = args match {
+      case Nil => ""
+      case as  => as.map(_.signature).mkString("[", ", ", "]")
+    }
+    s"$name$argStr"
   }
 
   def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =

@@ -24,7 +24,7 @@ object Common {
     queriesWithRelevantDocs.map {
       case (query, relevantResults) =>
         engine.search(query).get.map(
-          results => QueryStats(query, results.map(_.withoutComment.toString()), relevantResults))
+          results => QueryStats(query, results.map(_.signature), relevantResults))
     }.sequenceU.map(Stats(_))
   }
 
