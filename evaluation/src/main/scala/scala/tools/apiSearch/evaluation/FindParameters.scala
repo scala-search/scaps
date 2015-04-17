@@ -26,6 +26,8 @@ object FindParameters extends App {
   val nameBoosts = Rng.oneof(0.2)
   val docBoosts = Rng.oneof(0.1)
 
+  val noConfigurations = 200
+
   val settings = Settings.fromApplicationConf
   val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = true)
 
@@ -34,8 +36,9 @@ object FindParameters extends App {
   using(new FileWriter(outputFile)) { writer =>
     writer.write("lengthNormWeight; distanceBoostGradient; depthBoostGradient; idfWeight; nameBoost; docBoost; MAP;\n")
 
-    generateConfs(200, Math.pow(42d, 42d).toLong, settings).foreach {
-      case settings =>
+    generateConfs(noConfigurations, Math.pow(42d, 42d).toLong, settings).zipWithIndex.foreach {
+      case (settings, idx) =>
+        println(s"test configuration ${idx} of $noConfigurations")
         println(settings)
         engine = Common.updateSearchEngine(engine, settings)
         Common.runQueries(engine, evaluationSettings.queries).fold(

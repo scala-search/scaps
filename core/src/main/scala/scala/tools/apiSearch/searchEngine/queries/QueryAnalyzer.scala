@@ -65,15 +65,17 @@ class QueryAnalyzer private[searchEngine] (
       resolvedArgs.flatMap { resolvedArgs =>
         findClassesBySuffix(raw.name).get match {
           case Seq() if isTypeParam(raw.name) =>
-            ResolvedQuery.Wildcard.right
+            \/.right(ResolvedQuery.Wildcard)
           case Seq() =>
-            NameNotFound(raw.name).left
-          case Seq(cls) if resolvedArgs.length == cls.typeParameters.length || raw.args.length == 0 =>
-            ResolvedQuery.Type(cls, resolvedArgs).right
+            \/.left(NameNotFound(raw.name))
+          case Seq(cls) if resolvedArgs.length == cls.typeParameters.length =>
+            \/.right(ResolvedQuery.Type(cls, resolvedArgs))
+          case Seq(cls) if raw.args.length == 0 =>
+            \/.right(ResolvedQuery.Type(cls, cls.typeParameters.map(_ => ResolvedQuery.Wildcard)))
           case Seq(cls) =>
-            UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length).left
+            \/.left(UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length))
           case candidates =>
-            NameAmbiguous(raw.name, candidates).left
+            \/.left(NameAmbiguous(raw.name, candidates))
         }
       }
     }
@@ -88,7 +90,14 @@ class QueryAnalyzer private[searchEngine] (
           TypeEntity.Unknown(variance)
         case ResolvedQuery.Type(cls, args) =>
           val tpeArgs = cls.typeParameters.zip(args).map {
-            case (tpeParam, arg) => rec(arg, variance * tpeParam.variance)
+            case (tpeParam, ResolvedQuery.Wildcard) =>
+              (variance * tpeParam.variance) match {
+                case Covariant     => TypeEntity(tpeParam.lowerBound, Covariant, Nil)
+                case Contravariant => TypeEntity(tpeParam.upperBound, Contravariant, Nil)
+                case Invariant     => TypeEntity.Unknown(Invariant)
+              }
+            case (tpeParam, arg) =>
+              rec(arg, variance * tpeParam.variance)
           }
           TypeEntity(cls.name, variance, tpeArgs)
       }
@@ -99,8 +108,6 @@ class QueryAnalyzer private[searchEngine] (
   private def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int = 0): Try[List[Fingerprint.Type]] =
     Try {
       tpe match {
-        case TypeEntity.Unknown(_) =>
-          Nil
         case TypeEntity.Ignored(args, _) =>
           args.flatMap(fingerprintWithAlternatives(_, depth + 1).get)
         case tpe: TypeEntity =>
@@ -113,7 +120,10 @@ class QueryAnalyzer private[searchEngine] (
             case Contravariant =>
               findClassesBySuffix(tpe.name).get.headOption.toList
                 .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
-            case Invariant => Nil
+            case Invariant if tpe.name != TypeEntity.Unknown.name =>
+              thisFpt.copy(name = TypeEntity.Unknown.name, distance = 1) :: Nil
+            case Invariant =>
+              Nil
           }
 
           thisFpt :: alternatives ::: tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1).get)

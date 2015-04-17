@@ -75,8 +75,6 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
 
   def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =
     this match {
-      case TypeEntity.Unknown(_) =>
-        Nil
       case TypeEntity.Ignored(args, _) =>
         args.flatMap(_.fingerprintTypes(depth + 1))
       case tpe =>
