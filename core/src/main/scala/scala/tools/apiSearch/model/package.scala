@@ -55,15 +55,14 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
   }
 
   def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =
-    Fingerprint.Type(variance, name, depth) ::
-      args.flatMap {
-        case TypeEntity.Unknown(_) =>
-          Nil
-        case TypeEntity.Ignored(args, _) =>
-          args.flatMap(_.fingerprintTypes(depth + 1))
-        case tpe: TypeEntity =>
-          tpe.fingerprintTypes(depth + 1)
-      }
+    this match {
+      case TypeEntity.Unknown(_) =>
+        Nil
+      case TypeEntity.Ignored(args, _) =>
+        args.flatMap(_.fingerprintTypes(depth + 1))
+      case tpe =>
+        Fingerprint.Type(tpe.variance, tpe.name, depth) :: tpe.args.flatMap(_.fingerprintTypes(depth + 1))
+    }
 
   def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity = {
     def loop(tpe: TypeEntity): TypeEntity =

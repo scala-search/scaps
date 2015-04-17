@@ -12,12 +12,21 @@ case class Fingerprint(types: List[Fingerprint.Type]) {
     typesWithOccurrenceIndex(Ordering[Int].on(-_.depth))
       .map {
         case (tpe, idx) => {
-          val depthdist = if (tpe.distance == 0) s"${tpe.depth}"
-          else s"(${tpe.depth}, ${tpe.distance})"
+          val depthdist =
+            if (tpe.distance == 0) s"${tpe.depth}"
+            else s"(${tpe.depth}, ${tpe.distance})"
           s"${tpe.variance.prefix}${tpe.name}_${idx}^$depthdist"
         }
       }
       .mkString(" ")
+
+  def bagOfTypes =
+    typesWithOccurrenceIndex(Ordering[Int].on(-_.depth))
+      .map {
+        case (tpe, idx) => {
+          s"${tpe.variance.prefix}${tpe.name}_${idx}"
+        }
+      }
 }
 
 object Fingerprint {
