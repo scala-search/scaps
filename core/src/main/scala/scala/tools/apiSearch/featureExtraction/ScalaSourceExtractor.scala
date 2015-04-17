@@ -6,8 +6,9 @@ import scala.tools.apiSearch.model.Entity
 import scala.tools.nsc.interactive.Global
 import scala.util.Failure
 import scala.util.Success
+import scala.tools.apiSearch.utils.Logging
 
-class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
+class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logging {
   import compiler._
 
   def apply(sourceFile: SourceFile): Seq[Entity] =
@@ -26,7 +27,13 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory {
         }
 
         classes.flatMap { cls =>
-          scala.util.Try(extractEntities(cls, getDocComment _)).getOrElse(Nil)
+          try {
+            extractEntities(cls, getDocComment _)
+          } catch {
+            case t: Throwable =>
+              logger.info(s"error during extraction of ${cls.name}", t)
+              Nil
+          }
         }
       }
     }.getOrElse(Nil).distinct

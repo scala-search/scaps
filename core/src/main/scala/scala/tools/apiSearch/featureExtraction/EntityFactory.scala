@@ -8,7 +8,7 @@ trait EntityFactory {
 
   import compiler._
 
-  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[Entity] = {
+  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[Entity] =
     if (isClassOfInterest(classSym)) {
       val cls = createClassEntity(classSym)
 
@@ -39,7 +39,6 @@ trait EntityFactory {
     } else {
       Nil
     }
-  }
 
   def createClassEntity(sym: Symbol): ClassEntity = {
     val baseTypes = sym.tpe.baseTypeSeq.toList.tail
@@ -122,7 +121,11 @@ trait EntityFactory {
 
   private def createTypeEntity(tpe: Type, variance: Variance): TypeEntity = {
     def getVariance(idx: Int) = {
-      val nscVariance = tpe.typeSymbol.typeParams(idx).variance
+      val nscVariance =
+        if (tpe.typeSymbol.isTypeParameter && tpe.bounds.hi.typeSymbol.typeParams.isDefinedAt(idx))
+          tpe.bounds.hi.typeSymbol.typeParams(idx).variance
+        else
+          tpe.typeSymbol.typeParams(idx).variance
       if (nscVariance.isPositive)
         variance
       else if (nscVariance.isContravariant)

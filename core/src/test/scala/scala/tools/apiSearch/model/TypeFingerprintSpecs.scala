@@ -174,7 +174,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
     extractTerms("""
       package p
 
-      trait Tr[X] {}
+      trait Tr[A]
 
       object O {
         def m[M[X] <: Tr[X]](x: M[Int]): M[String] = ???
@@ -184,6 +184,21 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("-p.Tr_0")
         and include("+scala.Nothing_0")
         and include("java.lang.String_0"))))
+  }
+
+  it should "use variance of bounds of higher kinded type parameters" in {
+    extractTerms("""
+      package p
+
+      trait Tr[+A]
+
+      object O {
+        def m[M[X] <: Tr[X]](x: M[Int]): M[Float] = ???
+      }
+      """)(
+      ("p.O.m", _.fingerprint.toString should (
+        include("-scala.Int_0")
+        and include("+scala.Float_0"))))
   }
 
   it should "substitute all type parameters" in {
