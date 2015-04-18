@@ -31,9 +31,12 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
+import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
+import org.apache.lucene.util.BytesRef
+import org.apache.lucene.util.SmallFloat
 
-import scalaz.\/
+import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
@@ -62,18 +65,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     val default = new DefaultSimilarity
 
     override def get(field: String) = field match {
-      case fields.fingerprint => new DefaultSimilarity {
-        // Reduce influence of IDF in order to cope with missing reflection
-        // of type hierarchies in doc frequencies
-        override def idf(a: Long, b: Long) =
-          settings.query.idfWeight.toFloat * (super.idf(a, b) - 1f) + 1f
-
-        // default length norm is `boost * (1/sqrt(length))` but we use a steeper function
-        // because fingerprints are relatively short documents
-        override def lengthNorm(state: FieldInvertState): Float =
-          state.getBoost * (1f / Math.sqrt(settings.index.lengthNormWeight * state.getLength).toFloat)
-      }
-      case _ => default
+      case fields.fingerprint => new FingerprintSimilarity(settings)
+      case _                  => default
     }
   }
 
@@ -142,5 +135,26 @@ object TermsIndex {
     val fingerprint = "fingerprint"
     val doc = "doc"
     val entity = "entity"
+  }
+
+  class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {
+    val delegate = new DefaultSimilarity
+
+    // Reduce influence of IDF in order to cope with missing reflection
+    // of type hierarchies in doc frequencies
+    override def idf(docFreq: Long, numDocs: Long) =
+      settings.query.idfWeight.toFloat * (delegate.idf(docFreq, numDocs) - 1f) + 1f
+
+    // Override decoding to represent shorter documents with higher precision
+    override def decodeNormValue(b: Long): Float = SmallFloat.byteToFloat(b.toByte, 6, 2)
+    override def encodeNormValue(f: Float): Long = SmallFloat.floatToByte(f, 6, 1)
+
+    // delegate remaining methods to default similarity
+    override def lengthNorm(state: FieldInvertState): Float = delegate.lengthNorm(state)
+    override def scorePayload(doc: Int, start: Int, end: Int, payload: BytesRef): Float = delegate.scorePayload(doc, start, end, payload)
+    override def sloppyFreq(distance: Int): Float = delegate.sloppyFreq(distance)
+    override def tf(freq: Float): Float = delegate.tf(freq)
+    override def queryNorm(sumOfSquaredWeights: Float): Float = delegate.queryNorm(sumOfSquaredWeights)
+    override def coord(overlap: Int, maxOverlap: Int): Float = delegate.coord(overlap, maxOverlap)
   }
 }
