@@ -34,7 +34,6 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
-import org.apache.lucene.util.SmallFloat
 
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
@@ -146,11 +145,14 @@ object TermsIndex {
       settings.query.idfWeight.toFloat * (delegate.idf(docFreq, numDocs) - 1f) + 1f
 
     // Override decoding to represent shorter documents with higher precision
-    override def decodeNormValue(b: Long): Float = SmallFloat.byteToFloat(b.toByte, 6, 2)
-    override def encodeNormValue(f: Float): Long = SmallFloat.floatToByte(f, 6, 1)
+    val prec = Long.MaxValue.toFloat
+    override def decodeNormValue(b: Long): Float = (b.toFloat) / prec
+    override def encodeNormValue(f: Float): Long = (f * prec).toLong
+
+    override def lengthNorm(state: FieldInvertState): Float =
+      settings.index.lengthNormWeight.toFloat * (delegate.lengthNorm(state) - 1f) + 1f
 
     // delegate remaining methods to default similarity
-    override def lengthNorm(state: FieldInvertState): Float = delegate.lengthNorm(state)
     override def scorePayload(doc: Int, start: Int, end: Int, payload: BytesRef): Float = delegate.scorePayload(doc, start, end, payload)
     override def sloppyFreq(distance: Int): Float = delegate.sloppyFreq(distance)
     override def tf(freq: Float): Float = delegate.tf(freq)

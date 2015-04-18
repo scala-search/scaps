@@ -10,9 +10,9 @@ class FingerprintSimilaritySpecs extends FlatSpec with Matchers {
   val sim = new TermsIndex.FingerprintSimilarity(settings)
 
   "fingerprint similarity length norm" should "yield distinct values for small lengths" in {
-    (1 to 20).foldLeft(Long.MaxValue) { (previousNorm, length) =>
+    (1 to 20).foldLeft(Float.MaxValue) { (previousNorm, length) =>
       val state = new FieldInvertState("fingerprint", 0, length, 0, 0, 1)
-      val norm = sim.computeNorm(state)
+      val norm = sim.decodeNormValue(sim.computeNorm(state))
 
       withClue(s"with length $length: ") { norm should be < (previousNorm) }
 
