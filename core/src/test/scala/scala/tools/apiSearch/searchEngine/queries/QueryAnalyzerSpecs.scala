@@ -115,7 +115,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("p.D"))
   }
 
-  ignore should "use the bottom type as a sub class of every type" in {
+  it should "use the bottom type as a sub class of every type" in {
     val res = expectSuccess("_ => A")
 
     res.fingerprint.mkString(" ") should (

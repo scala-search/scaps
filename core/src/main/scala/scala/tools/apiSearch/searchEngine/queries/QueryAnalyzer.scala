@@ -19,6 +19,7 @@ import scalaz.std.list.listInstance
 import scalaz.syntax.either.ToEitherOps
 import scalaz.syntax.traverse.ToTraverseOps
 import scala.tools.apiSearch.model.Invariant
+import scala.tools.apiSearch.model.ClassEntity
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -115,8 +116,10 @@ class QueryAnalyzer private[searchEngine] (
 
           val alternatives = tpe.variance match {
             case Covariant =>
-              findSubClasses(tpe.name).get.toList
+              val subTypes = findSubClasses(tpe.name).get.toList
                 .map(subCls => thisFpt.copy(name = subCls.name, distance = subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
+
+              subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name, distance = (0 :: subTypes.map(_.distance)).max + 1)
             case Contravariant =>
               findClassesBySuffix(tpe.name).get.headOption.toList
                 .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
