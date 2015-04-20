@@ -20,6 +20,7 @@ class QueryParserSpecs extends FlatSpec with Matchers {
 
   it should "fail on empty argument lists" in {
     failParse("List[]")
+    ()
   }
 
   it should "parse namespaces" in {
@@ -68,6 +69,7 @@ class QueryParserSpecs extends FlatSpec with Matchers {
     failParse("()")
     failParse("A => ()")
     failParse("(())")
+    ()
   }
 
   it should "allow empty argument lists" in {

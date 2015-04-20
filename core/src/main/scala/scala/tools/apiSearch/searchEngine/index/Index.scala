@@ -32,7 +32,7 @@ trait Index[E] {
   def addEntities(entities: Seq[E]): Try[Unit] =
     withWriter { writer =>
       val docs = entities.map(toDocument)
-      Try(writer.addDocuments(docs.asJava))
+      writer.addDocuments(docs.asJava)
     }
 
   private[index] def search(query: Query, maxResults: Int = Int.MaxValue): Try[Seq[E]] =

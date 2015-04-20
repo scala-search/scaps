@@ -1,9 +1,8 @@
 package scala.tools.apiSearch.featureExtraction
 
 import scala.tools.nsc.doc.ScaladocGlobalTrait
-import scala.tools.nsc.reporters.ConsoleReporter
-import scala.util.Try
 import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.reporters.ConsoleReporter
 
 /**
  * Provides an instance of the Scala presentation compiler

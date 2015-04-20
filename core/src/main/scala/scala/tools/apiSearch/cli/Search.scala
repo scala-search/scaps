@@ -1,15 +1,13 @@
 package scala.tools.apiSearch.cli
 
 import scala.io.Source
-import scala.tools.apiSearch.searchEngine.SearchEngine
-import scala.tools.apiSearch.searchEngine.queries.QueryAnalyzer
-import scala.tools.apiSearch.searchEngine.queries.QueryParser
-import scala.tools.apiSearch.settings.Settings
-import scala.tools.apiSearch.searchEngine.SyntaxError
-import scala.tools.apiSearch.searchEngine.NameNotFound
 import scala.tools.apiSearch.searchEngine.NameAmbiguous
-import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
+import scala.tools.apiSearch.searchEngine.NameNotFound
+import scala.tools.apiSearch.searchEngine.SearchEngine
+import scala.tools.apiSearch.searchEngine.SyntaxError
 import scala.tools.apiSearch.searchEngine.TooUnspecific
+import scala.tools.apiSearch.searchEngine.UnexpectedNumberOfTypeArgs
+import scala.tools.apiSearch.settings.Settings
 
 object Search extends App {
   val engine = SearchEngine(Settings.fromApplicationConf).get

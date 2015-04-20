@@ -3,7 +3,6 @@ package scala.tools.apiSearch.searchEngine.index
 import scala.tools.apiSearch.model.ClassEntity
 import scala.tools.apiSearch.model.TypeEntity
 import scala.tools.apiSearch.settings.Settings
-import scala.tools.apiSearch.utils.printval
 import scala.util.Try
 
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -66,8 +65,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       q.add(new TermQuery(new Term(fields.baseClass, perm.signature)), Occur.SHOULD)
     }
 
-    println(q)
-    printval("res", search(q))
+    search(q)
   }
 
   def allClasses(): Try[Seq[ClassEntity]] =

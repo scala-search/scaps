@@ -14,5 +14,6 @@ object Commons {
       "-Xlint",
       "-feature",
       "-deprecation",
+      "-Ywarn-value-discard",
       "-Xfatal-warnings"))
 }

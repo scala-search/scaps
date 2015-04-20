@@ -18,6 +18,8 @@ class FingerprintSimilaritySpecs extends FlatSpec with Matchers {
 
       norm
     }
+
+    ()
   }
 
   it should "yield 1.0 for length 1" in {

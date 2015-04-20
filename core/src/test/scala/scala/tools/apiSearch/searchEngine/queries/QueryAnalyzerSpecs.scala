@@ -76,6 +76,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
   it should "succeed when using no type arguments" in {
     expectSuccess("List")
+    ()
   }
 
   it should "prefer names from the Scala standard library over other namespaces" in {
