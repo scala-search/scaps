@@ -1,3 +1,7 @@
+lazy val root = (project in file("."))
+  .aggregate(core, evaluation)
+  .settings(Commons.settings: _*)
+
 lazy val core = (project in file("core"))
   .settings(Commons.settings: _*)
   .settings(libraryDependencies ++= Dependencies.coreDependencies)
