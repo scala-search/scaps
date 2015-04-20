@@ -36,7 +36,7 @@ private[queries] object ResolvedQuery {
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
   findClassesBySuffix: (String) => Try[Seq[ClassEntity]],
-  findSubClasses: (String) => Try[Seq[ClassEntity]]) {
+  findSubClasses: (TypeEntity) => Try[Seq[ClassEntity]]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
@@ -116,7 +116,7 @@ class QueryAnalyzer private[searchEngine] (
 
           val alternatives = tpe.variance match {
             case Covariant =>
-              val subTypes = findSubClasses(tpe.name).get.toList
+              val subTypes = findSubClasses(tpe).get.toList
                 .map(subCls => thisFpt.copy(name = subCls.name, distance = subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
 
               subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name, distance = (0 :: subTypes.map(_.distance)).max + 1)

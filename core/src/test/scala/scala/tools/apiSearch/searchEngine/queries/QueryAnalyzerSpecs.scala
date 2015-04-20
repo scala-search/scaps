@@ -213,8 +213,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     val findSubClasses = toMultiMap(for {
       cls <- classEntities
       base <- cls.baseTypes
-      baseCls <- classEntities.filter(_.name == base.name)
-    } yield (baseCls.name, cls))
+    } yield (base, cls))
 
     new QueryAnalyzer(Settings.fromApplicationConf.query, findClassesBySuffix, findSubClasses)
   }

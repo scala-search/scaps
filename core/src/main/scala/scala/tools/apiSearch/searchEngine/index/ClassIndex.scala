@@ -1,11 +1,12 @@
 package scala.tools.apiSearch.searchEngine.index
 
-import scala.collection.JavaConverters._
 import scala.tools.apiSearch.model.ClassEntity
+import scala.tools.apiSearch.model.TypeEntity
 import scala.tools.apiSearch.settings.Settings
+import scala.tools.apiSearch.utils.printval
 import scala.util.Try
 
-import org.apache.lucene.analysis.core.WhitespaceAnalyzer
+import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.document.StoredField
@@ -25,7 +26,7 @@ import org.apache.lucene.store.Directory
 class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEntity] {
   import ClassIndex._
 
-  val analyzer = new WhitespaceAnalyzer
+  val analyzer = new KeywordAnalyzer
 
   override def addEntities(entities: Seq[ClassEntity]): Try[Unit] =
     withWriter { writer =>
@@ -46,11 +47,28 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     search(query)
   }
 
-  def findSubClasses(clsName: String): Try[Seq[ClassEntity]] =
-    search(new TermQuery(new Term(fields.baseClass, clsName)))
+  def findSubClasses(tpe: TypeEntity): Try[Seq[ClassEntity]] = {
+    def partialTypes(tpe: TypeEntity): List[TypeEntity] = {
+      def argPerms(args: List[TypeEntity]): List[List[TypeEntity]] = args match {
+        case Nil => List(Nil)
+        case a :: as =>
+          for {
+            aPerm <- TypeEntity("_") :: partialTypes(a)
+            asPerm <- argPerms(as)
+          } yield aPerm :: asPerm
+      }
 
-  def findSubClasses(cls: ClassEntity): Try[Seq[ClassEntity]] =
-    search(new TermQuery(new Term(fields.baseClass, cls.name)))
+      argPerms(tpe.args).map(perm => tpe.copy(args = perm))
+    }
+
+    val q = new BooleanQuery
+    for (perm <- partialTypes(tpe)) {
+      q.add(new TermQuery(new Term(fields.baseClass, perm.signature)), Occur.SHOULD)
+    }
+
+    println(q)
+    printval("res", search(q))
+  }
 
   def allClasses(): Try[Seq[ClassEntity]] =
     search(new MatchAllDocsQuery)
@@ -63,7 +81,8 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       doc.add(new TextField(fields.suffix, suffix, Field.Store.NO))
     }
     for (baseClass <- entity.baseTypes) {
-      doc.add(new TextField(fields.baseClass, baseClass.name, Field.Store.NO))
+      val withWildcards = baseClass.renameTypeParams(entity.typeParameters, _ => "_")
+      doc.add(new TextField(fields.baseClass, withWildcards.signature, Field.Store.YES))
     }
     doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
 

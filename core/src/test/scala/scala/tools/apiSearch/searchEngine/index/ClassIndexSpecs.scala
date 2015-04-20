@@ -74,7 +74,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "retrieve subclasses" in {
     withClassIndex("""
-      package scala.tools.apiSearch.searchEngine.index
+      package p
 
       trait A
 
@@ -83,13 +83,35 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       val A = cls("p.A")()()
       val B = cls("p.B")()(TypeEntity(A.name))
 
-      val result = index.findSubClasses(A).get
+      val result = index.findSubClasses(TypeEntity("p.A")).get
 
       result should (contain(B) and not contain (A))
 
-      val anySubClasses = index.findSubClasses(ClassEntity(TypeEntity.Any.name, Nil, Nil)).get
+      val anySubClasses = index.findSubClasses(TypeEntity.Any()).get
 
       anySubClasses should contain allOf (A, B)
+    }
+  }
+
+  it should "consider type arguments when retrieving subclasses" in {
+    withClassIndex("""
+      package p
+
+      trait A[T]
+
+      trait B extends A[Int]
+      trait C extends B
+      trait D extends A[String]
+      """) { index =>
+      index.findSubClasses(TypeEntity("p.A", List(TypeEntity.Int()))).get.map(_.name) should (
+        contain("p.B") and
+        contain("p.C") and
+        not contain ("p.D"))
+
+      index.findSubClasses(TypeEntity("p.A", List(TypeEntity.String()))).get.map(_.name) should (
+        not contain ("p.B") and
+        not contain ("p.C") and
+        contain("p.D"))
     }
   }
 

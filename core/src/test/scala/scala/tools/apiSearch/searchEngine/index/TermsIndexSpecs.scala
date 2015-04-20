@@ -15,7 +15,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val v = 1
       }
       """) { index =>
-      index.findTermsByName("p.O.v").get should contain(TermEntity("p.O.v", Nil, TypeEntity.Int(), ""))
+      index.findTermsByName("p.o.v").get should contain(TermEntity("p.O.v", Nil, TypeEntity.Int(), ""))
     }
   }
 
@@ -29,7 +29,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val value = TermEntity("pkg.Obj.value", Nil, TypeEntity.Int(), "")
       index.findTermsByName("value").get should contain(value)
-      index.findTermsByName("Obj").get should contain(value)
+      index.findTermsByName("obj").get should contain(value)
       index.findTermsByName("pkg").get should contain(value)
     }
   }
@@ -44,23 +44,8 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val value = TermEntity("somePkg.AnotherObj.myValue", Nil, TypeEntity.Int(), "")
       index.findTermsByName("value").get should contain(value)
-      index.findTermsByName("Another").get should contain(value)
+      index.findTermsByName("another").get should contain(value)
       index.findTermsByName("pkg").get should contain(value)
-    }
-  }
-
-  it should "ignore cases in names" in {
-    withTermIndex("""
-      package scala.tools.apiSearch.searchEngine.index
-
-      object O{
-        val vAlUe = 1
-      }
-      """) { index =>
-      val value = TermEntity("p.O.vAlUe", Nil, TypeEntity.Int(), "")
-      index.findTermsByName("value").get should contain(value)
-      index.findTermsByName("VALUE").get should contain(value)
-      index.findTermsByName("VALue").get should contain(value)
     }
   }
 }

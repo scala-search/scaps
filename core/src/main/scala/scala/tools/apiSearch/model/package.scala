@@ -73,6 +73,15 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
     s"$name$argStr"
   }
 
+  def transform(f: TypeEntity => TypeEntity): TypeEntity =
+    f(this.copy(args = args.map(_.transform(f))))
+
+  def renameTypeParams(typeParams: List[TypeParameterEntity], getName: String => String): TypeEntity =
+    transform { tpe =>
+      if (typeParams.exists(_.name == tpe.name)) tpe.copy(name = getName(name))
+      else tpe
+    }
+
   def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =
     this match {
       case TypeEntity.Ignored(args, _) =>
@@ -131,6 +140,7 @@ object TypeEntity {
   object Any extends PrimitiveType("scala.Any")
   object AnyRef extends PrimitiveType("java.lang.Object")
   object Int extends PrimitiveType("scala.Int")
+  object String extends PrimitiveType("java.lang.String")
   object Nothing extends PrimitiveType("scala.Nothing")
 
   object Unknown extends PrimitiveType("<unknown>")

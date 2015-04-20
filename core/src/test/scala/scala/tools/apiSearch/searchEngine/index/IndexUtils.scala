@@ -20,7 +20,7 @@ trait IndexUtils extends ExtractionUtils {
     withDir { dir =>
       val index = new TermsIndex(dir, settings)
       f(index)
-    }
+    }.get
 
   def withTermIndex(sources: String*)(f: TermsIndex => Unit): Unit =
     withTermIndex { index =>
@@ -33,7 +33,7 @@ trait IndexUtils extends ExtractionUtils {
     withDir { dir =>
       val index = new ClassIndex(dir, settings)
       f(index)
-    }
+    }.get
 
   def withClassIndex(sources: String*)(f: ClassIndex => Unit): Unit =
     withClassIndex { index =>
