@@ -19,6 +19,15 @@ object Dependencies {
   val luceneCore = "org.apache.lucene" % "lucene-core" % luceneVersion
   val luceneAnalyzersCommon = "org.apache.lucene" % "lucene-analyzers-common" % luceneVersion
 
+  val akkaVersion = "2.3.9"
+  val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
+  val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
+
+  val sprayVersion = "1.3.3"
+  val sprayCan = "io.spray" %% "spray-can" % sprayVersion
+  val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
+  val sprayJson = "io.spray" %% "spray-json" % "1.3.1"
+
   val coreDependencies = Seq(
     scalaCompiler,
     scalaPickling,
@@ -34,5 +43,10 @@ object Dependencies {
     scalatest,
     rng)
 
-  val sbtPluginDependencies = Seq()
+  val webserviceDependencies = Seq(
+    akkaActor,
+    akkaSlf4j,
+    sprayCan,
+    sprayRouting,
+    sprayJson)
 }

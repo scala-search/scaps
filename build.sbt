@@ -37,4 +37,11 @@ lazy val sbtPlug = (project in file("sbtPlugin"))
     name := "api-search-sbt",
     scalaVersion := "2.10.5",
     sbtPlugin := true,
-    libraryDependencies ++= Dependencies.sbtPluginDependencies)
+    libraryDependencies += "net.databinder.dispatch" %% "dispatch-core" % "0.11.2")
+
+lazy val webservice = (project in file("webservice"))
+  .dependsOn(core)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "api-search-webservice",
+    libraryDependencies ++= Dependencies.webserviceDependencies)

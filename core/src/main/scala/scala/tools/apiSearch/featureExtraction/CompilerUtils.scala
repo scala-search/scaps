@@ -9,6 +9,18 @@ import scala.tools.nsc.reporters.ConsoleReporter
  */
 object CompilerUtils {
   def withCompiler[A](classpath: List[String] = Nil)(fn: Global => A): A = {
+    val compiler = createCompiler(classpath)
+
+    compiler.ask(() => new compiler.Run)
+
+    val res = fn(compiler)
+
+    compiler.askShutdown()
+
+    res
+  }
+
+  def createCompiler(classpath: List[String]): Global = {
     val settings = new scala.tools.nsc.Settings(msg => throw sys.error(msg))
 
     val scalaLibClassPath =
@@ -22,15 +34,7 @@ object CompilerUtils {
 
     val reporter = new ConsoleReporter(settings)
 
-    val compiler = new scala.tools.nsc.interactive.Global(settings, reporter) with ScaladocGlobalTrait /* tells compiler to keep doc comment internally */
-
-    compiler.ask(() => new compiler.Run)
-
-    val res = fn(compiler)
-
-    compiler.askShutdown()
-
-    res
+    new scala.tools.nsc.interactive.Global(settings, reporter) with ScaladocGlobalTrait /* tells compiler to keep doc comment internally */
   }
 
   def scalaLibRef =
