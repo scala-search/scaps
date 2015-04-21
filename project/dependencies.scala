@@ -19,7 +19,7 @@ object Dependencies {
   val luceneCore = "org.apache.lucene" % "lucene-core" % luceneVersion
   val luceneAnalyzersCommon = "org.apache.lucene" % "lucene-analyzers-common" % luceneVersion
 
-  val coreDependencies: Seq[ModuleID] = Seq(
+  val coreDependencies = Seq(
     scalaCompiler,
     scalaPickling,
     scalatest,
@@ -28,10 +28,11 @@ object Dependencies {
     logging,
     logback,
     luceneCore,
-    luceneAnalyzersCommon
-  )
+    luceneAnalyzersCommon)
 
-  val evaluationDependencies: Seq[ModuleID] = Seq(
+  val evaluationDependencies = Seq(
     scalatest,
     rng)
+
+  val sbtPluginDependencies = Seq()
 }
