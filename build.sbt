@@ -12,7 +12,7 @@ lazy val commonSettings = Seq(
       "-Xfatal-warnings"))
 
 lazy val root = (project in file("."))
-  .aggregate(core, evaluation, sbtPlug)
+  .aggregate(core, evaluation, sbtPlug, webservice)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)

@@ -26,7 +26,8 @@ object Dependencies {
   val sprayVersion = "1.3.3"
   val sprayCan = "io.spray" %% "spray-can" % sprayVersion
   val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
-  val sprayJson = "io.spray" %% "spray-json" % "1.3.1"
+
+  val uPickle = "com.lihaoyi" %% "upickle" % "0.2.6"
 
   val coreDependencies = Seq(
     scalaCompiler,
@@ -48,5 +49,5 @@ object Dependencies {
     akkaSlf4j,
     sprayCan,
     sprayRouting,
-    sprayJson)
+    uPickle)
 }

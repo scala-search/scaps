@@ -15,7 +15,7 @@ import akka.actor.FSM
 import akka.actor.Props
 import akka.event.Logging
 
-case class Index(filePath: String, classpath: List[String])
+case class Index(sourceFile: String, classpath: List[String])
 case object GetQueue
 case object Done
 
@@ -37,7 +37,7 @@ class IndexActor extends FSM[State, List[Index]] {
 
   when(Active) {
     case Event(i: Index, queue) =>
-      logger.info(s"defer processing of ${i.filePath}")
+      logger.info(s"defer processing of ${i.sourceFile}")
       stay using (queue :+ i)
     case Event(Done, Nil) =>
       goto(Idle)
