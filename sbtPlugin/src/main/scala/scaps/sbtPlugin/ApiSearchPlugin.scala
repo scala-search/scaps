@@ -6,6 +6,8 @@ import dispatch._
 import dispatch.Defaults._
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scaps.webapi.ScapsApi
+import autowire._
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -40,25 +42,7 @@ object ApiSearchPlugin extends AutoPlugin {
       val service = host(apiSearchHost.value)
 
       sourceFiles.foreach { sourceFile =>
-        val body = s"""
-            {
-              "sourceFile": "${sourceFile}",
-              "classpath": ${classpath.map(s => "\"" + s + "\"").mkString("[", ",", "]")}
-            }
-            """
-        val req = (service / "index").POST
-          .setContentType("application/json", "UTF-8")
-          .<<(body)
-
-        logger.info(s"Requested index for $body")
-
-        val resp = Http(req).map { r =>
-          logger.info(s"Response: ${r.getStatusCode} - ${r.getResponseBody}")
-        }
-
-        resp.onFailure {
-          case f: Throwable => logger.info(s"Request failed with $f")
-        }
+        val resp = DispatchClient[ScapsApi].index(sourceFile, classpath).call()
 
         Await.ready(resp, 5.seconds)
       }

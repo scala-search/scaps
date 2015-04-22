@@ -28,6 +28,7 @@ object Dependencies {
   val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
 
   val uPickle = "com.lihaoyi" %% "upickle" % "0.2.6"
+  val autowire = "com.lihaoyi" %% "autowire" % "0.2.5"
 
   val coreDependencies = Seq(
     scalaCompiler,
@@ -49,5 +50,6 @@ object Dependencies {
     akkaSlf4j,
     sprayCan,
     sprayRouting,
-    uPickle)
+    uPickle,
+    autowire)
 }

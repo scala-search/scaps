@@ -15,7 +15,7 @@ import akka.actor.FSM
 import akka.actor.Props
 import akka.event.Logging
 
-case class Index(sourceFile: String, classpath: List[String])
+case class Index(sourceFile: String, classpath: Seq[String])
 case object GetQueue
 case object Done
 
@@ -59,7 +59,7 @@ class IndexWorkerActor extends Actor {
   def receive = {
     case Index(file, classpath) =>
       Try {
-        CompilerUtils.withCompiler(classpath) { compiler =>
+        CompilerUtils.withCompiler(classpath.toList) { compiler =>
           val extractor = new JarExtractor(compiler)
           val searchEngine = SearchEngine(Settings.fromApplicationConf).get
 
