@@ -9,18 +9,24 @@ import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp
 import upickle._
 import spray.http.StatusCodes
+import spray.http.HttpEntity
+import spray.http.MediaTypes
+import scalatags.Text
 
 object Main extends App with SimpleRoutingApp {
   implicit val system = ActorSystem("api-search-system")
   implicit val _ = system.dispatcher
-  implicit val timeout = Timeout(10.seconds)
 
   val apiImpl = new ScapsApiImpl(system)
 
   startServer(interface = "localhost", port = 8080) {
     pathSingleSlash {
       get {
-        complete { StatusCodes.Accepted }
+        complete {
+          for {
+            status <- apiImpl.getStatus()
+          } yield render(Pages.index(status))
+        }
       }
     } ~
       path("api" / Segments) { path =>
@@ -34,6 +40,9 @@ object Main extends App with SimpleRoutingApp {
         }
       }
   }
+
+  def render(html: Text.TypedTag[String]): HttpEntity =
+    HttpEntity(MediaTypes.`text/html`, html.render)
 }
 
 object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {

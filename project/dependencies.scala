@@ -30,6 +30,8 @@ object Dependencies {
   val uPickle = "com.lihaoyi" %% "upickle" % "0.2.6"
   val autowire = "com.lihaoyi" %% "autowire" % "0.2.5"
 
+  val scalatags = "com.lihaoyi" %% "scalatags" % "0.5.1"
+
   val coreDependencies = Seq(
     scalaCompiler,
     scalaPickling,
@@ -51,5 +53,6 @@ object Dependencies {
     sprayCan,
     sprayRouting,
     uPickle,
-    autowire)
+    autowire,
+    scalatags)
 }

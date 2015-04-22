@@ -46,5 +46,11 @@ object ApiSearchPlugin extends AutoPlugin {
 
         Await.ready(resp, 5.seconds)
       }
+
+      Await.ready(DispatchClient[ScapsApi].getStatus().call().map { status =>
+        logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")
+      }, 5.seconds)
+
+      ()
     })
 }

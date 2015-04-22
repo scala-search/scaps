@@ -32,23 +32,23 @@ class IndexActor extends FSM[State, List[Index]] {
   when(Idle) {
     case Event(i: Index, Nil) =>
       worker ! i
-      goto(Active)
+      goto(Active) using (i :: Nil)
   }
 
   when(Active) {
     case Event(i: Index, queue) =>
       logger.info(s"defer processing of ${i.sourceFile}")
       stay using (queue :+ i)
-    case Event(Done, Nil) =>
-      goto(Idle)
+    case Event(Done, head :: Nil) =>
+      goto(Idle) using (Nil)
     case Event(Done, queue) =>
-      worker ! queue.head
+      worker ! queue.tail.head
       stay using (queue.tail)
   }
 
   whenUnhandled {
     case Event(GetQueue, queue) =>
-      sender ! queue
+      sender ! queue.map(_.sourceFile)
       stay
   }
 }
