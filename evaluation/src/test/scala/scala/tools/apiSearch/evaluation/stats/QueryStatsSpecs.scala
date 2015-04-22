@@ -1,4 +1,4 @@
-package scala.tools.apiSearch.evaluation.stats
+package scaps.evaluation.stats
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
@@ -21,7 +21,7 @@ class QueryStatsSpecs extends FreeSpec with Matchers {
         avep(results, Set(1)) should be(1d)
       }
 
-      "when seconds result is relevant" in {
+      "when second result is relevant" in {
         avep(results, Set(2)) should be(0.5d)
       }
 
