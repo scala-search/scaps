@@ -2,12 +2,12 @@ package scaps.sbtPlugin
 
 import sbt.{ url => sbtUrl, _ }
 import sbt.Keys._
-import dispatch._
-import dispatch.Defaults._
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scaps.webapi.ScapsApi
 import autowire._
+import scala.concurrent.Future
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -23,6 +23,7 @@ object ApiSearchPlugin extends AutoPlugin {
     apiSearchHost := "localhost:8080",
     apiSearchIndex := {
       val logger = streams.value.log
+      val scaps = new DispatchClient(apiSearchHost.value)[ScapsApi]
 
       val deps = libraryDependencies.value.map(_.name)
 
@@ -39,17 +40,14 @@ object ApiSearchPlugin extends AutoPlugin {
         case Attributed(f) => f.getAbsolutePath
       }
 
-      val service = host(apiSearchHost.value)
-
-      sourceFiles.foreach { sourceFile =>
-        val resp = DispatchClient[ScapsApi].index(sourceFile, classpath).call()
-
-        Await.ready(resp, 5.seconds)
+      val f = for {
+        _ <- Future.sequence(sourceFiles.map { sourceFile => scaps.index(sourceFile, classpath).call() })
+        status <- scaps.getStatus().call()
+      } yield {
+        logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")
       }
 
-      Await.ready(DispatchClient[ScapsApi].getStatus().call().map { status =>
-        logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")
-      }, 5.seconds)
+      Await.ready(f, 5.seconds)
 
       ()
     })

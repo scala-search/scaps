@@ -12,40 +12,20 @@ import spray.http.StatusCodes
 import spray.http.HttpEntity
 import spray.http.MediaTypes
 import scalatags.Text
+import akka.actor.Props
+import akka.io.IO
+import spray.can.Http
+import akka.actor.Actor
+import akka.pattern.ask
+import akka.actor.ActorRef
+import akka.actor.Terminated
 
-object Main extends App with SimpleRoutingApp {
+object Main extends App {
   implicit val system = ActorSystem("api-search-system")
-  implicit val _ = system.dispatcher
+  implicit val executionContext = system.dispatcher
+  implicit val timeout = Timeout(1.second)
 
-  val apiImpl = new ScapsApiImpl(system)
+  val service = system.actorOf(Props[ScapsServiceActor], "scapsService")
 
-  startServer(interface = "localhost", port = 8080) {
-    pathSingleSlash {
-      get {
-        complete {
-          for {
-            status <- apiImpl.getStatus()
-          } yield render(Pages.index(status))
-        }
-      }
-    } ~
-      path("api" / Segments) { path =>
-        post {
-          extract(_.request.entity.asString) { e =>
-            complete {
-              Router.route[ScapsApi](apiImpl)(
-                autowire.Core.Request(path, upickle.read[Map[String, String]](e)))
-            }
-          }
-        }
-      }
-  }
-
-  def render(html: Text.TypedTag[String]): HttpEntity =
-    HttpEntity(MediaTypes.`text/html`, html.render)
-}
-
-object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {
-  def read[Result: upickle.Reader](p: String) = upickle.read[Result](p)
-  def write[Result: upickle.Writer](r: Result) = upickle.write(r)
+  IO(Http) ! Http.Bind(service, "localhost", port = 8080)
 }

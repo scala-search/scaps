@@ -231,7 +231,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
   it should "treat objects implementing a single trait as an instance of this trait" in {
     extractTerms("""
-      package scaps.model
+      package p
 
       trait T
 

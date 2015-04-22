@@ -95,7 +95,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "consider type arguments when retrieving subclasses" in {
     withClassIndex("""
-      package scaps.searchEngine.index
+      package p
 
       trait A[T]
 

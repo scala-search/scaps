@@ -36,7 +36,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "tokenize names on case changes" in {
     withTermIndex("""
-      package scaps.searchEngine.index
+      package somePkg
 
       object AnotherObj{
         val myValue = 1
