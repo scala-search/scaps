@@ -22,22 +22,24 @@ trait ScapsService extends HttpService {
   val apiImpl = new Scaps(actorRefFactory)
 
   def route =
-    pathSingleSlash {
-      get {
-        complete {
-          for {
-            status <- apiImpl.getStatus()
-          } yield render(Pages.index(status))
+    path("api" / Segments) { path =>
+      post {
+        extract(_.request.entity.asString) { e =>
+          complete {
+            Router.route[ScapsApi](apiImpl)(
+              autowire.Core.Request(path, upickle.read[Map[String, String]](e)))
+          }
         }
       }
     } ~
-      path("api" / Segments) { path =>
-        post {
-          extract(_.request.entity.asString) { e =>
-            complete {
-              Router.route[ScapsApi](apiImpl)(
-                autowire.Core.Request(path, upickle.read[Map[String, String]](e)))
-            }
+      pathPrefix("css") { get { getFromResourceDirectory("css") } } ~
+      pathPrefix("js") { get { getFromResourceDirectory("js") } } ~
+      pathSingleSlash {
+        get {
+          complete {
+            for {
+              status <- apiImpl.getStatus()
+            } yield render(Pages.index(status))
           }
         }
       }
