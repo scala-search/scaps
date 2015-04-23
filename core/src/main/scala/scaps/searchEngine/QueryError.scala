@@ -5,7 +5,6 @@ import scaps.model.ClassEntity
 sealed trait QueryError
 
 case class SyntaxError(msg: String) extends QueryError
-case class SystemError(msg: String) extends QueryError
 
 sealed trait SemanticError extends QueryError
 case class NameNotFound(name: String) extends SemanticError

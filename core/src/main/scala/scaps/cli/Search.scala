@@ -6,7 +6,6 @@ import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
 import scaps.searchEngine.SyntaxError
-import scaps.searchEngine.SystemError
 import scaps.searchEngine.TooUnspecific
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
@@ -18,8 +17,6 @@ object Search extends App {
     engine.search(query).get.fold(
       error => error match {
         case SyntaxError(msg) =>
-          println(msg)
-        case SystemError(msg) =>
           println(msg)
         case NameNotFound(name) =>
           println(s"Type ${name} not found")

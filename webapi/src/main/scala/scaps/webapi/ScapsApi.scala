@@ -10,5 +10,5 @@ trait ScapsApi {
 
   def getStatus(): Future[IndexStatus]
 
-  def search(query: String): Future[Seq[SearchResult]]
+  def search(query: String): Future[Either[String, Seq[SearchResult]]]
 }

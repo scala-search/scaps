@@ -32,6 +32,8 @@ object Dependencies {
 
   val scalatags = "com.lihaoyi" %% "scalatags" % "0.5.1"
 
+  val dispatch = "net.databinder.dispatch" %% "dispatch-core" % "0.11.2"
+
   val coreDependencies = Seq(
     scalaCompiler,
     scalaPickling,
@@ -47,8 +49,7 @@ object Dependencies {
     scalatest,
     rng)
 
-  val webapiDependencies = Seq(
-    scalaz)
+  val webapiDependencies = Seq()
 
   val webserviceDependencies = Seq(
     akkaActor,
@@ -58,4 +59,9 @@ object Dependencies {
     uPickle,
     autowire,
     scalatags)
+
+  val sbtPluginDependencies = Seq(
+    dispatch,
+    autowire,
+    uPickle)
 }

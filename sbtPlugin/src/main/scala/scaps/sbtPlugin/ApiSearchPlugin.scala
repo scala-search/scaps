@@ -2,12 +2,14 @@ package scaps.sbtPlugin
 
 import sbt.{ url => sbtUrl, _ }
 import sbt.Keys._
+import sbt.complete.DefaultParsers.spaceDelimited
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scaps.webapi.ScapsApi
 import autowire._
 import scala.concurrent.Future
+import scaps.webapi.SearchResult
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -15,6 +17,7 @@ object ApiSearchPlugin extends AutoPlugin {
   object autoImport {
     lazy val apiSearchHost = SettingKey[String]("apiSearchHost", "Hostname of the Scala API Search service.")
     lazy val apiSearchIndex = TaskKey[Unit]("apiSearchIndex", "Requests indexing this project.")
+    lazy val api = InputKey[Unit]("api")
   }
 
   import autoImport._
@@ -47,8 +50,27 @@ object ApiSearchPlugin extends AutoPlugin {
         logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")
       }
 
-      Await.ready(f, 5.seconds)
+      Await.result(f, 5.seconds)
+    },
+    api := {
+      val logger = streams.value.log
+      val query = spaceDelimited("<query>").parsed
 
-      ()
+      def writeln(s: String) = {
+        println(s"[apiSearch] $s\n")
+      }
+
+      val scaps = new DispatchClient(apiSearchHost.value)[ScapsApi]
+
+      val f = scaps.search(query.mkString(" ")).call().map {
+        case Left(error) =>
+          writeln(error)
+        case Right(results) =>
+          results.foreach { result =>
+            writeln(result.signature)
+          }
+      }
+
+      Await.result(f, 5.seconds)
     })
 }

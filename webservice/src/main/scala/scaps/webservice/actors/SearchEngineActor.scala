@@ -16,27 +16,18 @@ import akka.actor.actorRef2Scala
 import scala.concurrent.Future
 import akka.actor.ActorRef
 import scalaz.\/
-import scaps.searchEngine.SystemError
-
-case class Index(sourceFile: String, classpath: Seq[String])
-case class Search(query: String)
-
-case object GetQueue
-case class Indexed(job: Index)
-
-object SearchEngineActor {
-  case object Initialize
-}
+import scaps.webapi.SearchResult
 
 /**
  * Manages the state of an instance of the search engine.
  */
 class SearchEngineActor extends Actor {
-  import SearchEngineActor._
+  import SearchEngineProtocol._
   import context._
 
   val logger = Logging(context.system, this)
 
+  private case object Initialize
   self ! Initialize
 
   def receive = initializing
@@ -54,7 +45,10 @@ class SearchEngineActor extends Actor {
     def ready(): Receive = {
       case i: Index =>
         // delay first indexing job to ensure all search tasks have been completed
-        system.scheduler.scheduleOnce(2.seconds, indexWorker, i)
+        system.scheduler.scheduleOnce(2.seconds) {
+          searchEngine.deleteIndexes()
+          indexWorker ! i
+        }
         become(indexing(i :: Nil))
       case s: Search =>
         searcher.tell(s, sender)
@@ -75,7 +69,7 @@ class SearchEngineActor extends Actor {
       case Indexed(j) =>
         throw new IllegalStateException()
       case Search(_) =>
-        sender ! \/.left(SystemError(s"Cannot search while index is being built. ${queue.size} documents left."))
+        sender ! \/.left(s"Cannot search while index is being built. ${queue.size} documents left.")
       case GetQueue =>
         sender ! queue.map(_.sourceFile)
     }
@@ -88,6 +82,7 @@ class SearchEngineActor extends Actor {
  * Indexes source files.
  */
 class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
+  import SearchEngineProtocol._
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val logger = Logging(context.system, this)
@@ -112,8 +107,24 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
 }
 
 class Searcher(searchEngine: SearchEngine) extends Actor {
+  import SearchEngineProtocol._
+  import scaps.searchEngine._
+
   def receive = {
     case Search(q) =>
-      sender ! searchEngine.search(q).get
+      sender ! searchEngine.search(q).get.map {
+        case terms => terms.take(10).map(term => SearchResult(term.name, term.signature))
+      }.leftMap {
+        case SyntaxError(msg) =>
+          msg
+        case NameNotFound(name) =>
+          s"Type ${name} not found"
+        case NameAmbiguous(name, candidates) =>
+          s"Type ${name} is ambiguous. Possible candidates: ${candidates.map(_.name).mkString(", ")}"
+        case UnexpectedNumberOfTypeArgs(raw, n) =>
+          s"$raw has wrong number of arguments ($n expected)"
+        case TooUnspecific() =>
+          s"Query too unspecific consider using wildcards '_' instead of 'Any' types"
+      }
   }
 }
