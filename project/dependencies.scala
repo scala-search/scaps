@@ -27,10 +27,13 @@ object Dependencies {
   val sprayCan = "io.spray" %% "spray-can" % sprayVersion
   val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
 
-  val uPickle = "com.lihaoyi" %% "upickle" % "0.2.6"
-  val autowire = "com.lihaoyi" %% "autowire" % "0.2.5"
+  val upickleVersion = "0.2.6"
+  val upickle = "com.lihaoyi" %% "upickle" % upickleVersion
+  val autowireVersion = "0.2.5"
+  val autowire = "com.lihaoyi" %% "autowire" % autowireVersion
 
-  val scalatags = "com.lihaoyi" %% "scalatags" % "0.5.1"
+  val scalatagsVersion = "0.5.1"
+  val scalatags = "com.lihaoyi" %% "scalatags" % scalatagsVersion
 
   val dispatch = "net.databinder.dispatch" %% "dispatch-core" % "0.11.2"
 
@@ -56,12 +59,12 @@ object Dependencies {
     akkaSlf4j,
     sprayCan,
     sprayRouting,
-    uPickle,
+    upickle,
     autowire,
     scalatags)
 
   val sbtPluginDependencies = Seq(
     dispatch,
     autowire,
-    uPickle)
+    upickle)
 }

@@ -9,6 +9,7 @@ import spray.http.MediaTypes
 import spray.http.HttpEntity
 import scaps.webapi.ScapsApi
 import akka.io.Tcp.Bound
+import scaps.webservice.ui.HtmlPages
 
 class ScapsServiceActor extends Actor with ScapsService {
   def actorRefFactory = context
@@ -32,20 +33,16 @@ trait ScapsService extends HttpService {
         }
       }
     } ~
-      pathPrefix("css") { get { getFromResourceDirectory("css") } } ~
-      pathPrefix("js") { get { getFromResourceDirectory("js") } } ~
       pathSingleSlash {
         get {
           complete {
             for {
               status <- apiImpl.getStatus()
-            } yield render(Pages.index(status))
+            } yield HttpEntity(MediaTypes.`text/html`, HtmlPages.index(status).toString())
           }
         }
-      }
-
-  def render(html: Text.TypedTag[_]): HttpEntity =
-    HttpEntity(MediaTypes.`text/html`, html.toString)
+      } ~
+      get { getFromResourceDirectory("") }
 }
 
 object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {

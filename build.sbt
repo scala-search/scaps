@@ -12,7 +12,7 @@ lazy val commonSettings = Seq(
       "-Xfatal-warnings"))
 
 lazy val root = (project in file("."))
-  .aggregate(core, evaluation, sbtPlug, webservice, webapi_2_10, webapi_2_11)
+  .aggregate(core, evaluation, sbtPlug, webserviceJVM, webserviceJS, webapi_2_10, webapi_2_11, webapiJS)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)
@@ -40,12 +40,24 @@ lazy val sbtPlug = (project in file("sbtPlugin"))
     sbtPlugin := true,
     libraryDependencies ++= Dependencies.sbtPluginDependencies)
 
-lazy val webservice = (project in file("webservice"))
-  .dependsOn(webapi_2_11, core)
+lazy val webservice = (crossProject in file("webservice"))
+  .dependsOn(webapi_2_11_cross)
+  .jvmConfigure(_.dependsOn(core))
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-webservice",
+    name := "api-search-webservice")
+  .jvmSettings(
     libraryDependencies ++= Dependencies.webserviceDependencies)
+  .jsSettings(
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "upickle" % Dependencies.upickleVersion,
+      "com.lihaoyi" %%% "autowire" % Dependencies.autowireVersion,
+      "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion,
+      "org.scala-js" %%% "scalajs-dom" % "0.8.0"))
+
+lazy val webserviceJVM = webservice.jvm
+  .settings((resources in Compile) += (fastOptJS in (webserviceJS, Compile)).value.data)
+lazy val webserviceJS = webservice.js
 
 def webapiSettings = 
   commonSettings ++ Seq(
@@ -53,12 +65,16 @@ def webapiSettings =
     libraryDependencies ++= Dependencies.webapiDependencies,
     target := baseDirectory.value / s"target-${scalaVersion.value}")
 
-lazy val webapi_2_10 = (project in file("webapi"))
+lazy val webapi_2_10_cross = (crossProject in file("webapi"))
   .settings(webapiSettings: _*)
   .settings(
     scalaVersion := Commons.sbtPluginScalaVersion)
 
-lazy val webapi_2_11 = (project in file("webapi"))
+lazy val webapi_2_11_cross = (crossProject in file("webapi"))
   .settings(webapiSettings: _*)
   .settings(
     scalaVersion := Commons.targetedScalaVersion)
+
+lazy val webapi_2_10 = webapi_2_10_cross.jvm
+lazy val webapi_2_11 = webapi_2_11_cross.jvm
+lazy val webapiJS = webapi_2_11_cross.js
