@@ -22,56 +22,71 @@ case class Index(sourceFile: String, classpath: Seq[String])
 case class Search(query: String)
 
 case object GetQueue
-case class Done(job: Index)
+case class Indexed(job: Index)
 
 object SearchEngineActor {
-  sealed trait State
-  case object Idle extends State
-  case object Active extends State
+  case object Initialize
 }
 
-class SearchEngineActor extends FSM[SearchEngineActor.State, List[Index]] {
+/**
+ * Manages the state of an instance of the search engine.
+ */
+class SearchEngineActor extends Actor {
   import SearchEngineActor._
+  import context._
 
   val logger = Logging(context.system, this)
 
-  val searchEngine = SearchEngine(Settings.fromApplicationConf).get
-  val worker = context.actorOf(Props(classOf[IndexWorkerActor], searchEngine), "indexWorker")
+  self ! Initialize
 
-  startWith(Idle, Nil)
+  def receive = initializing
 
-  when(Idle) {
-    case Event(i: Index, Nil) =>
-      worker ! i
-      goto(Active) using (i :: Nil)
-    case Event(Search(query), Nil) =>
-      sender ! searchEngine.search(query)
-      stay
+  def initializing: Receive = {
+    case Initialize =>
+      val searchEngine = SearchEngine(Settings.fromApplicationConf).get
+      become(initialized(searchEngine))
   }
 
-  when(Active) {
-    case Event(i: Index, queue) =>
-      logger.info(s"defer processing of ${i.sourceFile}")
-      stay using (queue :+ i)
-    case Event(Done(j), head :: Nil) if j == head =>
-      goto(Idle) using (Nil)
-    case Event(Done(j), head :: queue) if j == head =>
-      worker ! queue.head
-      stay using (queue)
-    case Event(Search, queue) =>
-      sender ! \/.left(SystemError(s"Cannot search while index is being built. ${queue.size} documents left"))
-      stay
-  }
+  def initialized(searchEngine: SearchEngine): Receive = {
+    val searcher = actorOf(Props(classOf[Searcher], searchEngine), "searcher")
+    val indexWorker = actorOf(Props(classOf[IndexWorkerActor], searchEngine), "index-worker")
 
-  whenUnhandled {
-    case Event(GetQueue, queue) =>
-      sender ! queue.map(_.sourceFile)
-      stay
-  }
+    def ready(): Receive = {
+      case i: Index =>
+        // delay first indexing job to ensure all search tasks have been completed
+        system.scheduler.scheduleOnce(2.seconds, indexWorker, i)
+        become(indexing(i :: Nil))
+      case s: Search =>
+        searcher.tell(s, sender)
+      case GetQueue =>
+        sender ! Nil
+    }
 
-  initialize()
+    def indexing(queue: List[Index]): Receive = {
+      case i: Index =>
+        become(indexing(queue :+ i))
+      case Indexed(j) if j == queue.head =>
+        if (queue.tail.isEmpty) {
+          become(ready())
+        } else {
+          indexWorker ! queue.tail.head
+          become(indexing(queue.tail))
+        }
+      case Indexed(j) =>
+        throw new IllegalStateException()
+      case Search(_) =>
+        sender ! \/.left(SystemError(s"Cannot search while index is being built. ${queue.size} documents left."))
+      case GetQueue =>
+        sender ! queue.map(_.sourceFile)
+    }
+
+    ready()
+  }
 }
 
+/**
+ * Indexes source files.
+ */
 class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -91,7 +106,14 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
         Await.ready(f, 1.hour)
 
         logger.info(s"${sourceFile} has been indexed successfully")
-        requestor ! Done(i)
+        requestor ! Indexed(i)
       }
+  }
+}
+
+class Searcher(searchEngine: SearchEngine) extends Actor {
+  def receive = {
+    case Search(q) =>
+      sender ! searchEngine.search(q).get
   }
 }

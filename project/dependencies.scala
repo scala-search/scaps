@@ -47,6 +47,9 @@ object Dependencies {
     scalatest,
     rng)
 
+  val webapiDependencies = Seq(
+    scalaz)
+
   val webserviceDependencies = Seq(
     akkaActor,
     akkaSlf4j,

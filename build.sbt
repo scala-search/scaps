@@ -53,6 +53,7 @@ lazy val webservice = (project in file("webservice"))
 def webapiSettings = 
   commonSettings ++ Seq(
     name := "api-search-webapi",
+    libraryDependencies ++= Dependencies.webapiDependencies,
     target := baseDirectory.value / s"target-${scalaVersion.value}")
 
 lazy val webapi_2_10 = (project in file("webapi"))

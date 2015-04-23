@@ -19,7 +19,7 @@ class ScapsServiceActor extends Actor with ScapsService {
 trait ScapsService extends HttpService {
   implicit val _ = actorRefFactory.dispatcher
 
-  val apiImpl = new ScapsApiImpl(actorRefFactory)
+  val apiImpl = new Scaps(actorRefFactory)
 
   def route =
     pathSingleSlash {

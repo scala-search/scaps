@@ -15,7 +15,7 @@ import scaps.webservice.actors.Index
 import scaps.webservice.actors.SearchEngineActor
 import akka.actor.ActorRefFactory
 
-class ScapsApiImpl(context: ActorRefFactory) extends ScapsApi {
+class Scaps(context: ActorRefFactory) extends ScapsApi {
   val searchEngine = context.actorOf(Props[SearchEngineActor], "searchEngine")
 
   implicit val _ = context.dispatcher
