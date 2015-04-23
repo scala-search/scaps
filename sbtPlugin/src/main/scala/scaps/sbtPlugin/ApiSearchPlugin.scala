@@ -57,20 +57,20 @@ object ApiSearchPlugin extends AutoPlugin {
       val query = spaceDelimited("<query>").parsed
 
       def writeln(s: String) = {
-        println(s"[apiSearch] $s\n")
+        println(s"[apiSearch] $s")
       }
 
       val scaps = new DispatchClient(apiSearchHost.value)[ScapsApi]
 
-      val f = scaps.search(query.mkString(" ")).call().map {
+      val msgs = Await.result(scaps.search(query.mkString(" ")).call().map {
         case Left(error) =>
-          writeln(error)
+          error :: Nil
         case Right(results) =>
-          results.foreach { result =>
-            writeln(result.signature)
-          }
-      }
+          results.take(3).map(_.signature)
+      }, 5.seconds)
 
-      Await.result(f, 5.seconds)
+      msgs.foreach(writeln)
+
+      ()
     })
 }
