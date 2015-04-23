@@ -57,7 +57,7 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
     (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
     classesIndex.findSubClasses _)
 
-  def deleteIndexes() = for {
+  def deleteIndexes(): Try[Unit] = for {
     _ <- termsIndex.delete()
     _ <- classesIndex.delete()
   } yield ()

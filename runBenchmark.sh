@@ -1,1 +1,1 @@
-sbt 'evaluation/run-main scala.tools.apiSearch.evaluation.Benchmark'
+sbt 'evaluation/run-main scaps.evaluation.Benchmark'

@@ -1,1 +1,1 @@
-sbt 'evaluation/run-main scala.tools.apiSearch.evaluation.FindParameters'
+sbt 'evaluation/run-main scaps.evaluation.FindParameters'
