@@ -9,7 +9,8 @@ import spray.http.MediaTypes
 import spray.http.HttpEntity
 import scaps.webapi.ScapsApi
 import akka.io.Tcp.Bound
-import scaps.webservice.ui.HtmlPages
+import scaps.webservice.ui.Pages
+import spray.http.Uri
 
 class ScapsServiceActor extends Actor with ScapsService {
   def actorRefFactory = context
@@ -35,14 +36,31 @@ trait ScapsService extends HttpService {
     } ~
       pathSingleSlash {
         get {
-          complete {
-            for {
-              status <- apiImpl.getStatus()
-            } yield HttpEntity(MediaTypes.`text/html`, HtmlPages.index(status).toString())
-          }
+          parameter('q) { query =>
+            if (query.isEmpty())
+              reject
+            else
+              complete {
+                for {
+                  result <- apiImpl.search(query)
+                  page = HtmlPages.skeleton(result.fold(HtmlPages.error(_), HtmlPages.results(_)), query)
+                } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+              }
+          } ~
+            complete {
+              for {
+                status <- apiImpl.getStatus()
+                page = HtmlPages.skeleton(HtmlPages.main(status))
+              } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+            }
         }
       } ~
       get { getFromResourceDirectory("") }
+}
+
+object HtmlPages extends Pages(scalatags.Text) {
+  def encodeUri(path: String, params: Map[String, String]): String =
+    (Uri(path) withQuery params).toString()
 }
 
 object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {
