@@ -1,6 +1,6 @@
 package scaps.searchEngine
 
-import scaps.model.Variance
+import scaps.webapi.Variance
 
 case class APIQuery(keywords: List[String], types: List[APIQuery.Type]) {
   def fingerprint: List[String] =

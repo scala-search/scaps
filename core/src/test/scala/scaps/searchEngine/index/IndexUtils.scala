@@ -1,8 +1,8 @@
 package scaps.searchEngine.index
 
 import scaps.featureExtraction.ExtractionUtils
-import scaps.model.ClassEntity
-import scaps.model.TermEntity
+import scaps.webapi.ClassEntity
+import scaps.webapi.TermEntity
 import scaps.settings.Settings
 import scaps.utils.using
 

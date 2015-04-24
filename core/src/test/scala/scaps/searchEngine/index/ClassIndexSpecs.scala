@@ -1,6 +1,6 @@
 package scaps.searchEngine.index
 
-import scaps.model._
+import scaps.webapi._
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers

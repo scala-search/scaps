@@ -3,7 +3,7 @@ package scaps.searchEngine.index
 import java.io.Reader
 
 import scala.collection.JavaConversions.mapAsJavaMap
-import scaps.model.TermEntity
+import scaps.webapi.TermEntity
 import scaps.searchEngine.APIQuery
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific

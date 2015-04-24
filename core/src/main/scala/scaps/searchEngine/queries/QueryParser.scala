@@ -1,6 +1,6 @@
 package scaps.searchEngine.queries
 
-import scaps.model.TypeEntity
+import scaps.webapi.TypeEntity
 import scaps.searchEngine.SyntaxError
 import scala.util.parsing.combinator.RegexParsers
 

@@ -18,6 +18,7 @@ lazy val root = (project in file("."))
     publishArtifact := false)
 
 lazy val core = (project in file("core"))
+  .dependsOn(webapi_2_11)
   .settings(commonSettings: _*)
   .settings(
     name := "api-search-core",

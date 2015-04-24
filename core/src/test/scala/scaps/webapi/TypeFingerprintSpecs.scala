@@ -1,4 +1,4 @@
-package scaps.model
+package scaps.webapi
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec

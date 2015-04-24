@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
-import scaps.model.TermEntity
-import scaps.model.ClassEntity
+import scaps.webapi.TermEntity
+import scaps.webapi.ClassEntity
 
 /**
  * Collection of helper methods for (de-)serialisation of entities.

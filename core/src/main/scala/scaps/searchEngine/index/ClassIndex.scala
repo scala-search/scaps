@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
-import scaps.model.ClassEntity
-import scaps.model.TypeEntity
+import scaps.webapi.ClassEntity
+import scaps.webapi.TypeEntity
 import scaps.settings.Settings
 import scala.util.Try
 

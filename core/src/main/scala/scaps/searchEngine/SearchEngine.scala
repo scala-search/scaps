@@ -3,9 +3,9 @@ package scaps.searchEngine
 import java.io.File
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scaps.model.ClassEntity
-import scaps.model.Entity
-import scaps.model.TermEntity
+import scaps.webapi.ClassEntity
+import scaps.webapi.Entity
+import scaps.webapi.TermEntity
 import scaps.searchEngine.index.ClassIndex
 import scaps.searchEngine.index.TermsIndex
 import scaps.searchEngine.queries.QueryAnalyzer

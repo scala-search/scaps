@@ -1,6 +1,6 @@
 package scaps.searchEngine
 
-import scaps.model.ClassEntity
+import scaps.webapi.ClassEntity
 
 sealed trait QueryError
 

@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
-import scaps.model.TermEntity
-import scaps.model.TypeEntity
+import scaps.webapi.TermEntity
+import scaps.webapi.TypeEntity
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers

@@ -1,4 +1,4 @@
-package scaps.model
+package scaps.webapi
 
 case class Fingerprint(types: List[Fingerprint.Type]) {
   import Fingerprint._

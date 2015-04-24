@@ -1,6 +1,4 @@
-package scaps.model
-
-import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
+package scaps.webapi
 
 sealed trait Entity {
   def name: String
@@ -149,7 +147,10 @@ object TypeEntity {
     def apply(variance: Variance = Covariant) = TypeEntity(name, variance, Nil)
 
     def unapply(tpe: TypeEntity): Option[Variance] =
-      (tpe.name == name && tpe.args.isEmpty).option(tpe.variance)
+      if (tpe.name == name && tpe.args.isEmpty)
+        Some(tpe.variance)
+      else
+        None
   }
 
   object Tuple extends VariantType("scala.Tuple")
@@ -162,7 +163,10 @@ object TypeEntity {
       TypeEntity(name(args.size), variance, args.map(pt => pt.copy(variance = variance)))
 
     def unapply(tpe: TypeEntity): Option[(List[TypeEntity], Variance)] =
-      (!tpe.args.isEmpty && tpe.name == name(tpe.args.size)).option((tpe.args, tpe.variance))
+      if (!tpe.args.isEmpty && tpe.name == name(tpe.args.size))
+        Some((tpe.args, tpe.variance))
+      else
+        None
   }
 
   object Function extends FunctionLikeType("scala.Function")
@@ -177,7 +181,10 @@ object TypeEntity {
     }
 
     def unapply(tpe: TypeEntity) =
-      (!tpe.args.isEmpty && tpe.name == name(tpe.args.size - 1)).option((tpe.args.init, tpe.args.last, tpe.variance))
+      if (!tpe.args.isEmpty && tpe.name == name(tpe.args.size - 1))
+        Some((tpe.args.init, tpe.args.last, tpe.variance))
+      else
+        None
   }
 
   object MemberAccess {
@@ -187,7 +194,10 @@ object TypeEntity {
       TypeEntity(name, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
 
     def unapply(tpe: TypeEntity) =
-      (tpe.args.size == 2 && tpe.name == name).option((tpe.args.head, tpe.args.tail.head))
+      if (tpe.args.size == 2 && tpe.name == name)
+        Some((tpe.args.head, tpe.args.tail.head))
+      else
+        None
   }
 
   object Ignored {
@@ -197,7 +207,10 @@ object TypeEntity {
       TypeEntity(name(typeArgs.length), variance, typeArgs)
 
     def unapply(tpe: TypeEntity) =
-      (tpe.name == name(tpe.args.length)).option((tpe.args, tpe.variance))
+      if (tpe.name == name(tpe.args.length))
+        Some((tpe.args, tpe.variance))
+      else
+        None
   }
 
   def apply(name: String, args: List[TypeEntity] = Nil): TypeEntity =

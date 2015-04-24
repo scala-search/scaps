@@ -1,12 +1,12 @@
 package scaps.searchEngine.queries
 
 import scala.Ordering
-import scaps.model.ClassEntity
-import scaps.model.Contravariant
-import scaps.model.Covariant
-import scaps.model.Fingerprint
-import scaps.model.TypeEntity
-import scaps.model.Variance
+import scaps.webapi.ClassEntity
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.Fingerprint
+import scaps.webapi.TypeEntity
+import scaps.webapi.Variance
 import scaps.searchEngine.APIQuery
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
@@ -18,8 +18,8 @@ import scalaz.{ \/ => \/ }
 import scalaz.std.list.listInstance
 import scalaz.syntax.either.ToEitherOps
 import scalaz.syntax.traverse.ToTraverseOps
-import scaps.model.Invariant
-import scaps.model.ClassEntity
+import scaps.webapi.Invariant
+import scaps.webapi.ClassEntity
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
