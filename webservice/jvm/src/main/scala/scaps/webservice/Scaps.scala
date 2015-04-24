@@ -9,11 +9,11 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scaps.webapi.IndexStatus
 import scaps.webapi.ScapsApi
-import scaps.webapi.SearchResult
 import scaps.webservice.actors.SearchEngineProtocol
 import scaps.webservice.actors.SearchEngineActor
 import akka.actor.ActorRefFactory
 import scalaz.\/
+import scaps.webapi.TermEntity
 
 class Scaps(context: ActorRefFactory) extends ScapsApi {
   import SearchEngineProtocol._
@@ -32,8 +32,8 @@ class Scaps(context: ActorRefFactory) extends ScapsApi {
       queue <- (searchEngine ? GetQueue).mapTo[List[String]]
     } yield IndexStatus(queue)
 
-  def search(query: String): Future[Either[String, Seq[SearchResult]]] =
+  def search(query: String): Future[Either[String, Seq[TermEntity]]] =
     for {
-      result <- (searchEngine ? Search(query)).mapTo[String \/ Seq[SearchResult]]
+      result <- (searchEngine ? Search(query)).mapTo[String \/ Seq[TermEntity]]
     } yield result.toEither
 }

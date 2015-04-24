@@ -11,8 +11,6 @@ import autowire._
 import scalatags.JsDom.all._
 import scaps.webapi.IndexStatus
 import scaps.webapi.ScapsApi
-import scaps.webapi.SearchResult
-import scaps.webapi.SearchResult
 import scalatags.JsDom
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.raw.PopStateEvent

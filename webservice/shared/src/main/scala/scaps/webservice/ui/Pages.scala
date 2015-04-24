@@ -4,7 +4,7 @@ package scaps.webservice.ui
 import scalatags.generic.Bundle
 import scalatags.generic.TypedTag
 import scaps.webapi.IndexStatus
-import scaps.webapi.SearchResult
+import scaps.webapi.TermEntity
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT]) extends Helpers[Builder, Output, FragT] {
   import bundle._
@@ -67,7 +67,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-warning")(msg)
 
-  def results(results: Seq[SearchResult]) =
+  def results(results: Seq[TermEntity]) =
     ul(results.map { result => li(result.signature) })
 }
 

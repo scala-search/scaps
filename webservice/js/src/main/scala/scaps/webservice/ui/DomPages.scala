@@ -2,7 +2,6 @@ package scaps.webservice.ui
 
 import scalatags.JsDom.all._
 import scaps.webapi.IndexStatus
-import scaps.webapi.SearchResult
 import scala.scalajs.js
 
 object DomPages extends Pages(scalatags.JsDom) {

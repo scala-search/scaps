@@ -81,9 +81,9 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       trait B extends A
       """) { index =>
       val A = cls("p.A")()()
-      val B = cls("p.B")()(TypeEntity(A.name))
+      val B = cls("p.B")()(tpe(A.name))
 
-      val result = index.findSubClasses(TypeEntity("p.A")).get
+      val result = index.findSubClasses(tpe("p.A")).get
 
       result should (contain(B) and not contain (A))
 
@@ -103,17 +103,20 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       trait C extends B
       trait D extends A[String]
       """) { index =>
-      index.findSubClasses(TypeEntity("p.A", List(TypeEntity.Int()))).get.map(_.name) should (
+      index.findSubClasses(tpe("p.A", List(TypeEntity.Int()))).get.map(_.name) should (
         contain("p.B") and
         contain("p.C") and
         not contain ("p.D"))
 
-      index.findSubClasses(TypeEntity("p.A", List(TypeEntity.String()))).get.map(_.name) should (
+      index.findSubClasses(tpe("p.A", List(TypeEntity.String()))).get.map(_.name) should (
         not contain ("p.B") and
         not contain ("p.C") and
         contain("p.D"))
     }
   }
+
+  def tpe(name: String, args: List[TypeEntity] = Nil) =
+    TypeEntity(name, Covariant, args)
 
   def cls(name: String)(args: String*)(baseTypes: TypeEntity*) =
     ClassEntity(name, args.map(TypeParameterEntity(_, Invariant)).toList, baseTypes.toList ++ List(TypeEntity.AnyRef(), TypeEntity.Any()))

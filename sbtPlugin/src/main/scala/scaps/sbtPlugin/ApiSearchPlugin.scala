@@ -9,7 +9,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scaps.webapi.ScapsApi
 import autowire._
 import scala.concurrent.Future
-import scaps.webapi.SearchResult
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements

@@ -212,9 +212,6 @@ object TypeEntity {
       else
         None
   }
-
-  def apply(name: String, args: List[TypeEntity] = Nil): TypeEntity =
-    TypeEntity(name, Covariant, args)
 }
 
 case class TypeParameterEntity(
@@ -235,8 +232,6 @@ case class TypeParameterEntity(
 
     s"$name$lbound$ubound"
   }
-
-  def m[T >: Nothing <: Any]: T = ???
 }
 
 sealed trait Variance {

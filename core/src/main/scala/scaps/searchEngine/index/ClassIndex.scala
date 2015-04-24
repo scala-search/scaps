@@ -4,7 +4,6 @@ import scaps.webapi.ClassEntity
 import scaps.webapi.TypeEntity
 import scaps.settings.Settings
 import scala.util.Try
-
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
@@ -16,6 +15,7 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
+import scaps.webapi.Covariant
 
 /**
  * Persists class entities and provides lookup for classes by name.
@@ -52,7 +52,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
         case Nil => List(Nil)
         case a :: as =>
           for {
-            aPerm <- TypeEntity("_") :: partialTypes(a)
+            aPerm <- TypeEntity("_", Covariant, Nil) :: partialTypes(a)
             asPerm <- argPerms(as)
           } yield aPerm :: asPerm
       }

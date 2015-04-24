@@ -16,7 +16,6 @@ import akka.actor.actorRef2Scala
 import scala.concurrent.Future
 import akka.actor.ActorRef
 import scalaz.\/
-import scaps.webapi.SearchResult
 
 /**
  * Manages the state of an instance of the search engine.
@@ -113,7 +112,7 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
   def receive = {
     case Search(q) =>
       sender ! searchEngine.search(q).get.map {
-        case terms => terms.take(10).map(term => SearchResult(term.name, term.signature))
+        case terms => terms.take(10)
       }.leftMap {
         case SyntaxError(msg) =>
           msg

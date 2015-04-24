@@ -52,7 +52,8 @@ object Dependencies {
     scalatest,
     rng)
 
-  val webapiDependencies = Seq()
+  val webapiDependencies = Seq(
+    upickle)
 
   val webserviceDependencies = Seq(
     akkaActor,
