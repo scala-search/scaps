@@ -12,7 +12,4 @@ object DomPages extends Pages(scalatags.JsDom) {
       case (key, value) => s"${encode(key)}=${encode(value)}"
     }.mkString("?", "&", "")
   }
-
-  def connectionError() =
-    div(cls := "alert alert-error")("The server is currently unreachable. Please try again later.")
 }

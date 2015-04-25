@@ -43,7 +43,7 @@ trait ScapsService extends HttpService {
               complete {
                 for {
                   result <- apiImpl.search(query)
-                  page = HtmlPages.skeleton(result.fold(HtmlPages.error(_), HtmlPages.results(_)), query)
+                  page = HtmlPages.skeleton(result.fold(HtmlPages.queryError(_), HtmlPages.results(_)), query)
                 } yield HttpEntity(MediaTypes.`text/html`, page.toString())
               }
           } ~

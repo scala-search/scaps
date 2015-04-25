@@ -116,15 +116,15 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       add(fields.fingerprint, tpe)
     }
     add(fields.doc, entity.comment)
-    doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
+    doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
     doc
   }
 
   override def toEntity(doc: Document): TermEntity = {
-    val bytes = doc.getBinaryValues(fields.entity).flatMap(_.bytes)
+    val json = doc.getValues(fields.entity)(0)
 
-    Serialization.unpickleTerm(bytes)
+    upickle.read[TermEntity](json)
   }
 }
 

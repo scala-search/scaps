@@ -47,11 +47,11 @@ object Main {
       scaps.getStatus().call().map(DomPages.main(_))
     } else {
       scaps.search(query).call().map {
-        case Left(msg)      => DomPages.error(msg)
+        case Left(msg)      => DomPages.queryError(msg)
         case Right(results) => DomPages.results(results)
       }
     }.recover {
-      case AjaxException(_) => DomPages.connectionError()
+      case AjaxException(_) => DomPages.error("The server is currently unreachable. Please try again later.")
     }
 
     content.foreach(replaceContent(container, _))

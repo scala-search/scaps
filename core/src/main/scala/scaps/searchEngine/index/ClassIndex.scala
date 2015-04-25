@@ -82,7 +82,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       val withWildcards = baseClass.renameTypeParams(entity.typeParameters, _ => "_")
       doc.add(new TextField(fields.baseClass, withWildcards.signature, Field.Store.YES))
     }
-    doc.add(new StoredField(fields.entity, Serialization.pickle(entity)))
+    doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
     doc
   }
@@ -97,9 +97,9 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
   }
 
   override def toEntity(doc: Document): ClassEntity = {
-    val bytes = doc.getBinaryValues(fields.entity).flatMap(_.bytes)
+    val json = doc.getValues(fields.entity)(0)
 
-    Serialization.unpickleClass(bytes)
+    upickle.read[ClassEntity](json)
   }
 }
 

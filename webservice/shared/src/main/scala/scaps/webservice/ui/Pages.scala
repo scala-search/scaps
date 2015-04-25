@@ -5,6 +5,9 @@ import scalatags.generic.Bundle
 import scalatags.generic.TypedTag
 import scaps.webapi.IndexStatus
 import scaps.webapi.TermEntity
+import scaps.webapi.TypeEntity
+import scaps.webapi.TypeEntity.MemberAccess
+import scaps.webapi.TypeParameterEntity
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT]) extends Helpers[Builder, Output, FragT] {
   import bundle._
@@ -27,9 +30,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         meta(httpEquiv := "X-UA-Compatible", content := "IE=edge"),
         meta(name := "viewport", content := "width=device-width, initial-scale=1"),
         title(pageTitle),
-        javascript("api-search-webservice-fastopt.js"),
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
-        stylesheet("css/scaps.css")),
+        stylesheet("css/scaps.css"),
+        javascript("api-search-webservice-fastopt.js")),
       body(onload := boot)(
         nav(cls := "navbar navbar-inverse navbar-fixed-top")(
           div(cls := "container")(
@@ -38,7 +41,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
                 span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
                 input(tpe := "search", name := "q", id := searchFieldId, value := query,
                   autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
-        div(cls := "container", id := resultContainerId)(mods)))
+        div(cls := "container")(
+          div(cls := "row")(
+            div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods)))))
 
   def main(status: IndexStatus) = {
     def example(query: String, desc: String) = {
@@ -64,11 +69,63 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           ul(for { sourceFile <- status.workQueue } yield li(sourceFile))))
   }
 
-  def error(msg: String) =
+  def queryError(msg: String) =
     div(cls := "alert alert-warning")(msg)
 
+  def error(msg: String) =
+    div(cls := "alert alert-danger")(msg)
+
   def results(results: Seq[TermEntity]) =
-    ul(results.map { result => li(result.signature) })
+    dl(results.map(result(_)))
+
+  def result(term: TermEntity) = {
+    def typeName(t: TypeEntity) =
+      if (term.typeParameters.exists(_.name == t.name))
+        em(cls := "type-parameter")(t.name)
+      else
+        em(a(attrs.title := t.name)(t.shortName))
+
+    def tpe(t: TypeEntity): Modifier = t match {
+      case TypeEntity.Function(params, res, _) =>
+        val paramTypes =
+          if (params.length <= 1) span(params.map(tpe(_)))
+          else span("(", intersperse[Modifier](params.map(tpe(_)), ", "), ")")
+        span(paramTypes, " => ", tpe(res))
+      case TypeEntity.Tuple(tpes, _) =>
+        span("(", intersperse[Modifier](tpes.map(tpe(_)), ", "), ")")
+      case TypeEntity.Refinement(tpes, _) =>
+        span(intersperse[Modifier](tpes.map(tpe(_)), " with "))
+      case t @ TypeEntity(_, _, args) =>
+        val typeArgs =
+          if (args.isEmpty) span()
+          else span("[", intersperse[Modifier](args.map(tpe(_)), ", "), "]")
+        span(typeName(t), typeArgs)
+    }
+
+    def signature(t: TypeEntity): Modifier = t match {
+      case TypeEntity.MethodInvocation(args, res, _) =>
+        span("(", intersperse[Modifier](args.map(tpe(_)), ", "), ")", signature(res))
+      case t =>
+        span(": ", tpe(t))
+    }
+
+    def typeParams(ps: List[TypeParameterEntity]) =
+      if (ps.isEmpty) span()
+      else span("[", intersperse[Modifier](ps.map(p => em(cls := "type-parameter")(p.toString)), ", "), "]")
+
+    Seq(
+      dt(code(term.tpe match {
+        case TypeEntity.MemberAccess(owner, member) =>
+          val memberTypeParams = term.typeParameters
+            .filterNot(p => owner.toList.exists(_.name == p.name))
+
+          span(tpe(owner), ".", strong(term.shortName), typeParams(memberTypeParams), signature(member))
+        case t =>
+          span(strong(term.name), typeParams(term.typeParameters), signature(t))
+      })),
+      dd(div(term.comment),
+        div(cls := "label label-default")("scala-library"), " ", term.name))
+  }
 }
 
 trait Helpers[Builder, Output <: FragT, FragT] {
@@ -81,4 +138,7 @@ trait Helpers[Builder, Output <: FragT, FragT] {
 
   def javascript(path: String) =
     script(src := path)
+
+  def intersperse[T](ts: Seq[T], t: T): Seq[T] =
+    ts.flatMap(e => Seq(e, t)).dropRight(1)
 }

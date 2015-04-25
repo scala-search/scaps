@@ -3,11 +3,11 @@ import Keys._
 
 object Dependencies {
   val scalaCompiler = "org.scala-lang" % "scala-compiler" % Commons.targetedScalaVersion
-  val scalaPickling = "org.scala-lang" %% "scala-pickling" % "0.9.1"
 
   val scalatest = "org.scalatest" %% "scalatest" % "2.2.1" % "test"
 
-  val scalaz = "org.scalaz" %% "scalaz-core" % "7.1.1"
+  val scalazVersion = "7.1.1"
+  val scalaz = "org.scalaz" %% "scalaz-core" % scalazVersion
 
   val config = "com.typesafe" % "config" % "1.2.0"
   val logging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
@@ -39,7 +39,7 @@ object Dependencies {
 
   val coreDependencies = Seq(
     scalaCompiler,
-    scalaPickling,
+    upickle,
     scalatest,
     scalaz,
     config,

@@ -1,1 +1,7 @@
 body { padding-top: 70px; }
+
+dt { padding-top: 20px; }
+
+.type-parameter{
+  color: #999999;
+}

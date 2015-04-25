@@ -2,9 +2,12 @@ package scaps.webapi
 
 sealed trait Entity {
   def name: String
+
+  def shortName: String =
+    name.split(Array('.', '#')).last
 }
 
-case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity])
+case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity], comment: String = "")
   extends Entity {
 
   override def toString() = {
@@ -55,6 +58,9 @@ case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], t
 case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) {
   import TypeEntity._
 
+  def shortName: String =
+    name.split(Array('.', '#')).last
+
   override def toString() = {
     val argStr = args match {
       case Nil => ""
@@ -70,6 +76,8 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
     }
     s"$name$argStr"
   }
+
+  def toList: List[TypeEntity] = this :: args.flatMap(_.toList)
 
   def transform(f: TypeEntity => TypeEntity): TypeEntity =
     f(this.copy(args = args.map(_.transform(f))))
