@@ -35,6 +35,9 @@ object Dependencies {
   val scalatagsVersion = "0.5.1"
   val scalatags = "com.lihaoyi" %% "scalatags" % scalatagsVersion
 
+  val utestVersion = "0.3.1"
+  val utest = "com.lihaoyi" %% "utest" % utestVersion
+
   val dispatch = "net.databinder.dispatch" %% "dispatch-core" % "0.11.2"
 
   val coreDependencies = Seq(
