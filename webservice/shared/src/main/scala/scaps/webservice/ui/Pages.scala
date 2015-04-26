@@ -9,7 +9,10 @@ import scaps.webapi.TypeEntity
 import scaps.webapi.TypeEntity.MemberAccess
 import scaps.webapi.TypeParameterEntity
 
-abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT]) extends Helpers[Builder, Output, FragT] {
+abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])
+  extends Helpers[Builder, Output, FragT]
+  with ScapsStyles[Builder, Output, FragT] {
+
   import bundle._
   import bundle.all._
   import bundle.tags2.title
@@ -31,9 +34,10 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         meta(name := "viewport", content := "width=device-width, initial-scale=1"),
         title(pageTitle),
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
-        stylesheet("css/scaps.css"),
+        stylesheet("scaps.css"),
         javascript("api-search-webservice-fastopt.js")),
-      body(onload := boot)(
+
+      body(ScapsStyle.world, onload := boot)(
         nav(cls := "navbar navbar-inverse navbar-fixed-top")(
           div(cls := "container")(
             form(cls := "navbar-form navbar-left", method := "get", role := "search")(
@@ -41,6 +45,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
                 span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
                 input(tpe := "search", name := "q", id := searchFieldId, value := query,
                   autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
+
         div(cls := "container")(
           div(cls := "row")(
             div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods)))))
@@ -81,7 +86,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def result(term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
-        em(cls := "type-parameter")(t.name)
+        em(ScapsStyle.typeParameter)(t.name)
       else
         em(a(attrs.title := t.name)(t.shortName))
 
@@ -111,7 +116,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     def typeParams(ps: List[TypeParameterEntity]) =
       if (ps.isEmpty) span()
-      else span("[", intersperse[Modifier](ps.map(p => em(cls := "type-parameter")(p.toString)), ", "), "]")
+      else span("[", intersperse[Modifier](ps.map(p => em(ScapsStyle.typeParameter)(p.toString)), ", "), "]")
 
     Seq(
       dt(code(term.tpe match {
