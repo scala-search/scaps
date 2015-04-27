@@ -63,12 +63,12 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
               type signatures and keywords in your search queries."""),
         p("""Some examples you might want to try:"""),
         ul(
-          example("max: Int", "An integer value with `max` in it's name or documentation"),
-          example("max: (Int, Int) => Int", "A function taking two ints and returning Int"),
-          example("max: Int => Int => Int", "Same query as above but in curried form"),
-          example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings"),
-          example("List[A] => (A => Boolean) => List[A]", "A generic query which uses a type parameter `A`"),
-          example("List => (_ => Boolean) => List", "The identical query as above but with omitted type params")))
+          example("max: Int", "An integer value with `max` in it's name or doc comment."),
+          example("max: (Int, Int) => Int", "A function taking two ints and returning Int."),
+          example("max: Int => Int => Int", "Same query as above but in curried form."),
+          example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings."),
+          example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consiting of a single character are treated as type parameters."),
+          example("List => Int => Option", "The identical query as above but with omitted type parameters.")))
       else
         div(cls := "alert alert-info")(s"building index with ${status.workQueue.size} documents remaining:",
           ul(for { sourceFile <- status.workQueue } yield li(sourceFile))))

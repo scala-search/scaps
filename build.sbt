@@ -1,8 +1,11 @@
+lazy val utestFramework = new TestFramework("utest.runner.Framework")
+
 lazy val commonSettings = Seq(
     organization := "ch.hsr",
     scalaVersion := Commons.targetedScalaVersion,
     version := Commons.appVersion,
     resolvers += Opts.resolver.mavenLocalFile,
+    testFrameworks += utestFramework,
     scalacOptions ++= Seq(
       "-encoding", "UTF8",
       "-Xlint",
@@ -26,12 +29,16 @@ def webapiSettings =
 lazy val webapi_2_10_cross = (crossProject in file("webapi"))
   .settings(webapiSettings: _*)
   .settings(
-    scalaVersion := Commons.sbtPluginScalaVersion)
+    scalaVersion := Commons.sbtPluginScalaVersion,
+    // do not run tests for 2.10 because some test dependencies wont resolve
+    test := {})
 
 lazy val webapi_2_11_cross = (crossProject in file("webapi"))
   .settings(webapiSettings: _*)
   .settings(
-    scalaVersion := Commons.targetedScalaVersion)
+    scalaVersion := Commons.targetedScalaVersion,
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"))
 
 lazy val webapi_2_10 = webapi_2_10_cross.jvm
 lazy val webapi_2_11 = webapi_2_11_cross.jvm
@@ -65,8 +72,7 @@ lazy val webservice = (crossProject in file("webservice"))
       "com.lihaoyi" %%% "upickle" % Dependencies.upickleVersion,
       "com.lihaoyi" %%% "autowire" % Dependencies.autowireVersion,
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion,
-      "org.scala-js" %%% "scalajs-dom" % "0.8.0",
-      "com.lihaoyi" %%% "utest" % Dependencies.utestVersion))
+      "org.scala-js" %%% "scalajs-dom" % "0.8.0"))
 
 lazy val webserviceJVM = webservice.jvm
   .settings((resources in Compile) += (fastOptJS in (webserviceJS, Compile)).value.data)

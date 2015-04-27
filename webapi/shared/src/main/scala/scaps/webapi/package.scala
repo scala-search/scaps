@@ -4,7 +4,8 @@ sealed trait Entity {
   def name: String
 
   def shortName: String =
-    name.split(Array('.', '#')).last
+    // workaround because of isses with String.split(Array) in Scala JS
+    name.split('.').flatMap(_.split('#')).last
 }
 
 case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity], comment: String = "")
