@@ -9,13 +9,14 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scaps.webapi.IndexStatus
 import scaps.webapi.ScapsApi
+import scaps.webapi.ScapsControlApi
 import scaps.webservice.actors.SearchEngineProtocol
 import scaps.webservice.actors.SearchEngineActor
 import akka.actor.ActorRefFactory
 import scalaz.\/
 import scaps.webapi.TermEntity
 
-class Scaps(context: ActorRefFactory) extends ScapsApi {
+class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import SearchEngineProtocol._
 
   val searchEngine = context.actorOf(Props[SearchEngineActor], "searchEngine")
@@ -23,8 +24,8 @@ class Scaps(context: ActorRefFactory) extends ScapsApi {
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
 
-  def index(sourceFile: String, classpath: Seq[String]): Unit = {
-    searchEngine ! Index(sourceFile, classpath)
+  def index(artifactPath: String, classpath: Seq[String]): Unit = {
+    searchEngine ! Index(artifactPath, classpath)
   }
 
   def getStatus(): Future[IndexStatus] =

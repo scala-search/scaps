@@ -7,6 +7,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scaps.webapi.ScapsApi
+import scaps.webapi.ScapsControlApi
 import autowire._
 import scala.concurrent.Future
 
@@ -15,17 +16,19 @@ object ApiSearchPlugin extends AutoPlugin {
 
   object autoImport {
     lazy val apiSearchHost = SettingKey[String]("apiSearchHost", "Hostname of the Scala API Search service.")
+    lazy val apiSearchControlHost = SettingKey[String]("apiSearchControlHost", "Hostname of the Scala API Search control service.")
     lazy val apiSearchIndex = TaskKey[Unit]("apiSearchIndex", "Requests indexing this project.")
-    lazy val api = InputKey[Unit]("api")
+    lazy val api = InputKey[Unit]("api", "Use Scaps to search for terms and functions in the indexed libraries.")
   }
 
   import autoImport._
 
   override lazy val projectSettings = Seq(
     apiSearchHost := "localhost:8080",
+    apiSearchControlHost := "localhost:8081",
     apiSearchIndex := {
       val logger = streams.value.log
-      val scaps = new DispatchClient(apiSearchHost.value)[ScapsApi]
+      val scapsControl = controlClient(apiSearchControlHost.value)
 
       val deps = libraryDependencies.value.map(_.name)
 
@@ -43,8 +46,8 @@ object ApiSearchPlugin extends AutoPlugin {
       }
 
       val f = for {
-        _ <- Future.sequence(sourceFiles.map { sourceFile => scaps.index(sourceFile, classpath).call() })
-        status <- scaps.getStatus().call()
+        _ <- Future.sequence(sourceFiles.map { sourceFile => scapsControl.index(sourceFile, classpath).call() })
+        status <- scapsControl.getStatus().call()
       } yield {
         logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")
       }
@@ -59,7 +62,7 @@ object ApiSearchPlugin extends AutoPlugin {
         println(s"[apiSearch] $s")
       }
 
-      val scaps = new DispatchClient(apiSearchHost.value)[ScapsApi]
+      val scaps = scapsClient(apiSearchHost.value)
 
       val msgs = Await.result(scaps.search(query.mkString(" ")).call().map {
         case Left(error) =>
@@ -72,4 +75,10 @@ object ApiSearchPlugin extends AutoPlugin {
 
       ()
     })
+
+  def scapsClient(host: String) =
+    new DispatchClient(host)[ScapsApi]
+
+  def controlClient(host: String) =
+    new DispatchClient(host)[ScapsControlApi]
 }

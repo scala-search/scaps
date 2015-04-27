@@ -25,7 +25,11 @@ object Main extends App {
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(1.second)
 
-  val service = system.actorOf(Props[ScapsServiceActor], "scapsService")
+  val scaps = new Scaps(system)
+
+  val service = system.actorOf(Props(classOf[ScapsServiceActor], scaps), "scapsService")
+  val controlService = system.actorOf(Props(classOf[ScapsControlServiceActor], scaps), "scapsControlService")
 
   IO(Http) ! Http.Bind(service, "localhost", port = 8080)
+  IO(Http) ! Http.Bind(controlService, "localhost", port = 8081)
 }

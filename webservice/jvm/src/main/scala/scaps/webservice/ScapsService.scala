@@ -12,7 +12,7 @@ import akka.io.Tcp.Bound
 import scaps.webservice.ui.Pages
 import spray.http.Uri
 
-class ScapsServiceActor extends Actor with ScapsService {
+class ScapsServiceActor(val apiImpl: Scaps) extends Actor with ScapsService {
   def actorRefFactory = context
 
   def receive = runRoute(route)
@@ -21,7 +21,7 @@ class ScapsServiceActor extends Actor with ScapsService {
 trait ScapsService extends HttpService {
   implicit val _ = actorRefFactory.dispatcher
 
-  val apiImpl = new Scaps(actorRefFactory)
+  val apiImpl: ScapsApi
 
   def route =
     path("api" / Segments) { path =>
