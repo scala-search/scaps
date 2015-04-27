@@ -2,7 +2,7 @@ package scaps.webapi
 
 import scala.concurrent.Future
 
-case class IndexStatus(workQueue: Seq[String])
+case class IndexStatus(workQueue: Seq[Module])
 
 /**
  * The main API exposed to search engine users.
@@ -20,7 +20,7 @@ trait ScapsApi extends CommonApi {
  * The exposed methods may destroy the index or will take a long time to process.
  */
 trait ScapsControlApi extends CommonApi {
-  def index(artifactPath: String, classpath: Seq[String]): Unit
+  def index(module: Module, artifactPath: String, classpath: Seq[String]): Unit
 }
 
 /**

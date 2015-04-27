@@ -10,6 +10,7 @@ import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import autowire._
 import scala.concurrent.Future
+import scaps.webapi.Module
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -34,19 +35,19 @@ object ApiSearchPlugin extends AutoPlugin {
 
       val modules = updateClassifiers.value.configuration(Compile.name).get.modules
 
-      val sourceFiles = modules.flatMap(_.artifacts).filter {
-        case (Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.contains(name) =>
+      val sourceFiles = modules.flatMap(m => m.artifacts.map(a => (m.module, a._1, a._2))).filter {
+        case (_, Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.contains(name) =>
           true
         case _ =>
           false
-      }.map { case (a, f) => f.getAbsolutePath() }.distinct
+      }.map { case (m, a, f) => (Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
 
       val classpath = (fullClasspath in Compile).value.map {
         case Attributed(f) => f.getAbsolutePath
       }
 
       val f = for {
-        _ <- Future.sequence(sourceFiles.map { sourceFile => scapsControl.index(sourceFile, classpath).call() })
+        _ <- Future.sequence(sourceFiles.map { case (module, file) => scapsControl.index(module, file, classpath).call() })
         status <- scapsControl.getStatus().call()
       } yield {
         logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")

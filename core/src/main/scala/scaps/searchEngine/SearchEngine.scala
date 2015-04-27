@@ -15,6 +15,7 @@ import scaps.utils.Logging
 import scala.util.Try
 import org.apache.lucene.store.FSDirectory
 import scalaz.\/
+import scaps.webapi.Module
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -62,9 +63,9 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
     _ <- classesIndex.delete()
   } yield ()
 
-  def indexEntities(entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] = {
-    val f1 = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t }) }
-    val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }
+  def indexEntities(module: Module, entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] = {
+    val f1 = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t.copy(module = module) }) }
+    val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c.copy(module = module) }) }
     Future.sequence(f1 :: f2 :: Nil).map(_.foreach(_.get))
   }
 

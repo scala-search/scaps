@@ -8,7 +8,12 @@ sealed trait Entity {
     name.split('.').flatMap(_.split('#')).last
 }
 
-case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], baseTypes: List[TypeEntity], comment: String = "")
+case class ClassEntity(
+  name: String,
+  typeParameters: List[TypeParameterEntity],
+  baseTypes: List[TypeEntity],
+  comment: String = "",
+  module: Module = Module.Unknown)
   extends Entity {
 
   override def toString() = {
@@ -24,7 +29,12 @@ case class ClassEntity(name: String, typeParameters: List[TypeParameterEntity], 
   def isFunction = typeParameters.length > 0 && name == TypeEntity.Function.name(typeParameters.length - 1)
 }
 
-case class TermEntity(name: String, typeParameters: List[TypeParameterEntity], tpe: TypeEntity, comment: String)
+case class TermEntity(
+  name: String,
+  typeParameters: List[TypeParameterEntity],
+  tpe: TypeEntity,
+  comment: String,
+  module: Module = Module.Unknown)
   extends Entity {
 
   override def toString() = {
@@ -262,4 +272,13 @@ case object Contravariant extends Variance {
   val prefix = "-"
   val flip = Covariant
   def *(other: Variance) = other.flip
+}
+
+case class Module(organization: String, name: String, revision: String) {
+  def moduleId = s"$organization:$name:$revision"
+  def isSnapshot = revision.endsWith("SNAPSHOT")
+}
+
+object Module {
+  val Unknown = Module("unknown", "unknown", "0.1.0-SNAPSHOT")
 }

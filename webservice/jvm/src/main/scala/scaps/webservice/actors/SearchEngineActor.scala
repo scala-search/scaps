@@ -68,9 +68,9 @@ class SearchEngineActor extends Actor {
       case Indexed(j) =>
         throw new IllegalStateException()
       case Search(_) =>
-        sender ! \/.left(s"Cannot search while index is being built. ${queue.size} documents left.")
+        sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetQueue =>
-        sender ! queue.map(_.sourceFile)
+        sender ! queue.map(_.module)
     }
 
     ready()
@@ -87,19 +87,19 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
   val logger = Logging(context.system, this)
 
   def receive = {
-    case i @ Index(sourceFile, classpath) =>
+    case i @ Index(module, sourceFile, classpath) =>
       val requestor = sender
 
       CompilerUtils.withCompiler(classpath.toList) { compiler =>
         val extractor = new JarExtractor(compiler)
 
-        logger.info(s"start indexing ${sourceFile}")
+        logger.info(s"start indexing ${module.moduleId} (${sourceFile})")
 
-        val f = searchEngine.indexEntities(extractor(new File(sourceFile)))
+        val f = searchEngine.indexEntities(module, extractor(new File(sourceFile)))
 
         Await.ready(f, 1.hour)
 
-        logger.info(s"${sourceFile} has been indexed successfully")
+        logger.info(s"${module.moduleId} has been indexed successfully")
         requestor ! Indexed(i)
       }
   }

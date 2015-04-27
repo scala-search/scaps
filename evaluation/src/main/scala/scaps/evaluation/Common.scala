@@ -1,7 +1,6 @@
 package scaps.evaluation
 
 import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -14,10 +13,10 @@ import scaps.featureExtraction.JarExtractor
 import scaps.searchEngine.QueryError
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
-
 import scalaz.\/
 import scalaz.std.list.listInstance
 import scalaz.syntax.traverse.ToTraverseOps
+import scaps.webapi.Module
 
 object Common {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
@@ -60,7 +59,7 @@ object Common {
             (project.url #> jar).!!
           }
 
-          Await.result(engine.indexEntities(extractor(jar)), 1.hour)
+          Await.result(engine.indexEntities(Module.Unknown, extractor(jar)), 1.hour)
         }
       }
     }
@@ -78,7 +77,7 @@ object Common {
             e.deleteIndexes().get
             e
           }
-          _ <- newEngine.indexEntities(entities.toStream)
+          _ <- newEngine.indexEntities(Module.Unknown, entities.toStream)
         } yield (newEngine), 1.hour)
     } else {
       SearchEngine(newSettings).get

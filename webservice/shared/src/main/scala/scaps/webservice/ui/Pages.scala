@@ -70,8 +70,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consiting of a single character are treated as type parameters."),
           example("List => Int => Option", "The identical query as above but with omitted type parameters.")))
       else
-        div(cls := "alert alert-info")(s"building index with ${status.workQueue.size} documents remaining:",
-          ul(for { sourceFile <- status.workQueue } yield li(sourceFile))))
+        div(cls := "alert alert-info")(s"building index with ${status.workQueue.size} modules remaining:",
+          ul(for { module <- status.workQueue } yield li(module.moduleId))))
   }
 
   def queryError(msg: String) =
@@ -129,7 +129,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           span(strong(term.name), typeParams(term.typeParameters), signature(t))
       })),
       dd(div(term.comment),
-        div(cls := "label label-default")("scala-library"), " ", term.name))
+        div(cls := "label label-default")(term.module.name), " ", term.name))
   }
 }
 
