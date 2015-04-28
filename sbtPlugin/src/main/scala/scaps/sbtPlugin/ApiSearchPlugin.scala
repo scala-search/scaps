@@ -34,13 +34,10 @@ object ApiSearchPlugin extends AutoPlugin {
     scapsHost := "localhost:8080",
     scapsControlHost := "localhost:8081",
     scaps := {
+      val log = streams.value.log
       val query = spaceDelimited("<query>").parsed
 
       val scaps = scapsClient(scapsHost.value, streams.value.log)
-
-      def writeln(s: String) = {
-        println(s"[apiSearch] $s")
-      }
 
       val msgs = Await.result(scaps.search(query.mkString(" ")).call().map {
         case Left(error) =>
@@ -49,7 +46,7 @@ object ApiSearchPlugin extends AutoPlugin {
           results.take(3).map(_.signature)
       }, 5.seconds)
 
-      msgs.foreach(writeln)
+      msgs.foreach(log.info(_))
 
       ()
     },
@@ -57,16 +54,17 @@ object ApiSearchPlugin extends AutoPlugin {
       val log = streams.value.log
       val scaps = scapsClient(scapsHost.value, log)
 
-      val f = for { status <- scaps.getStatus().call() } yield {
-        log.info(s"Scaps Work Queue:")
-        for { module <- status.workQueue } {
-          log.info(s"  ${module.moduleId}")
-        }
+      val status = Await.result(scaps.getStatus().call(), 5.seconds)
+
+      log.info(s"Scaps Work Queue:")
+      for { module <- status.workQueue } {
+        log.info(s"  ${module.moduleId}")
       }
 
-      Await.ready(f, 5.seconds)
-
-      ()
+      log.info(s"Scaps Indexed Modules:")
+      for { module <- status.indexedModules } {
+        log.info(s"  ${module.moduleId}")
+      }
     },
     scapsModules := {
       val deps = libraryDependencies.value.collect {

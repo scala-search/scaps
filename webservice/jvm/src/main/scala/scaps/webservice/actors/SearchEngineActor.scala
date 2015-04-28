@@ -52,7 +52,6 @@ class SearchEngineActor extends Actor {
       case i: Index =>
         // delay first indexing job to ensure all search tasks have been completed
         system.scheduler.scheduleOnce(2.seconds) {
-          searchEngine.deleteIndexes()
           indexWorker ! i
         }
         become(indexing(i :: Nil, indexedModules))
@@ -84,20 +83,20 @@ class SearchEngineActor extends Actor {
         sender ! IndexStatus(queue.map(_.module), indexedModules)
     }
 
+    def rewriteUnenforcedIndexJob(i: Index, indexedModules: List[Module]) =
+      if (i.forceReindex)
+        throw new IllegalArgumentException
+      else {
+        if (!indexedModules.contains(i.module)) {
+          logger.debug(s"Rewrite index job $i with forceReindex=true")
+          self.tell(i.copy(forceReindex = true), sender)
+        } else {
+          logger.debug(s"Drop index job $i")
+        }
+      }
+
     ready(indexedModules)
   }
-
-  def rewriteUnenforcedIndexJob(i: Index, indexedModules: List[Module]) =
-    if (i.forceReindex)
-      throw new IllegalArgumentException
-    else {
-      if (!indexedModules.contains(i.module)) {
-        logger.debug(s"Rewrite index job $i with forceReindex=true")
-        self.tell(i.copy(forceReindex = true), sender)
-      } else {
-        logger.debug(s"Drop index job $i")
-      }
-    }
 }
 
 /**
