@@ -49,7 +49,7 @@ object Common {
       CompilerUtils.withCompiler(classPaths) { compiler =>
         val extractor = new JarExtractor(compiler)
 
-        engine.deleteIndexes().get
+        engine.resetIndexes().get
 
         evaluationSettings.projects.foreach { project =>
           val jar = new File(evaluationSettings.downloadDir, project.name)
@@ -74,7 +74,7 @@ object Common {
           entities <- Future { engine.termsIndex.allTerms().get ++ engine.classesIndex.allClasses().get }
           newEngine = {
             val e = SearchEngine(newSettings).get
-            e.deleteIndexes().get
+            e.resetIndexes().get
             e
           }
           _ <- newEngine.indexEntities(Module.Unknown, entities.toStream)

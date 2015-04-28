@@ -14,11 +14,10 @@ import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import scaps.webapi.TermEntity
 import scaps.webservice.actors.SearchEngineActor
-import scaps.webservice.actors.SearchEngineProtocol.Index
-import scaps.webservice.actors.SearchEngineProtocol.GetStatus
-import scaps.webservice.actors.SearchEngineProtocol.Search
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
+  import scaps.webservice.actors.SearchEngineProtocol._
+
   val searchEngine = context.actorOf(Props[SearchEngineActor], "searchEngine")
 
   implicit val _ = context.dispatcher
@@ -26,6 +25,10 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
 
   def index(module: Module, artifactPath: String, classpath: Seq[String], forceReindex: Boolean): Unit = {
     searchEngine ! Index(module, artifactPath, classpath, forceReindex)
+  }
+
+  def resetIndexes(): Unit = {
+    searchEngine ! Reset
   }
 
   def getStatus(): Future[IndexStatus] =

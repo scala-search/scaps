@@ -59,6 +59,9 @@ class SearchEngineActor extends Actor {
         searcher.tell(s, sender)
       case GetStatus =>
         sender ! IndexStatus(Nil, indexedModules)
+      case Reset =>
+        become(resetting())
+        self ! Reset
     }
 
     def indexing(queue: List[Index], indexedModules: List[Module]): Receive = {
@@ -81,6 +84,14 @@ class SearchEngineActor extends Actor {
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetStatus =>
         sender ! IndexStatus(queue.map(_.module), indexedModules)
+      case Reset =>
+        become(resetting())
+    }
+
+    def resetting(): Receive = {
+      case _ =>
+        searchEngine.resetIndexes().get
+        become(ready(Nil))
     }
 
     def rewriteUnenforcedIndexJob(i: Index, indexedModules: List[Module]) =

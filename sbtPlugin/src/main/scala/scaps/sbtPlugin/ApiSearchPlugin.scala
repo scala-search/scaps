@@ -26,6 +26,7 @@ object ApiSearchPlugin extends AutoPlugin {
     lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
     lazy val scapsModules = TaskKey[Seq[(Module, String)]]("scapsModules", "Modules that will be indexed.")
     lazy val scapsIndex = InputKey[Unit]("scapsIndex", "Requests indexing this project.")
+    lazy val scapsReset = TaskKey[Unit]("scapsReset")
   }
 
   import autoImport._
@@ -37,9 +38,7 @@ object ApiSearchPlugin extends AutoPlugin {
       val log = streams.value.log
       val query = spaceDelimited("<query>").parsed
 
-      val scaps = scapsClient(scapsHost.value, streams.value.log)
-
-      val msgs = Await.result(scaps.search(query.mkString(" ")).call().map {
+      val msgs = Await.result(scapsClient.value.search(query.mkString(" ")).call().map {
         case Left(error) =>
           error :: Nil
         case Right(results) =>
@@ -52,9 +51,8 @@ object ApiSearchPlugin extends AutoPlugin {
     },
     scapsStatus := {
       val log = streams.value.log
-      val scaps = scapsClient(scapsHost.value, log)
 
-      val status = Await.result(scaps.getStatus().call(), 5.seconds)
+      val status = Await.result(scapsClient.value.getStatus().call(), 5.seconds)
 
       log.info(s"Scaps Work Queue:")
       for { module <- status.workQueue } {
@@ -83,28 +81,31 @@ object ApiSearchPlugin extends AutoPlugin {
     scapsIndex := {
       val forceReindex = indexSettingsParser.parsed.getOrElse(false)
 
-      val scapsControl = controlClient(scapsControlHost.value, streams.value.log)
-
       val classpath = (fullClasspath in Compile).value.map {
         case Attributed(f) => f.getAbsolutePath
       }
 
       val f = Future.sequence(
-        scapsModules.value.map { case (module, file) => scapsControl.index(module, file, classpath, forceReindex).call() })
+        scapsModules.value.map {
+          case (module, file) => controlClient.value.index(module, file, classpath, forceReindex).call()
+        })
 
       Await.result(f, 5.seconds)
 
       ()
+    },
+    scapsReset := {
+      Await.result(controlClient.value.resetIndexes().call(), 5.seconds)
     })
 
-  def scapsClient(host: String, log: sbt.Logger) = {
-    StaticLoggerBinder.sbtLogger = log
-    new DispatchClient(host, ScapsApi.apiPath)[ScapsApi]
+  val scapsClient = Def.task {
+    StaticLoggerBinder.sbtLogger = streams.value.log
+    new DispatchClient(scapsHost.value, ScapsApi.apiPath)[ScapsApi]
   }
 
-  def controlClient(host: String, log: sbt.Logger) = {
-    StaticLoggerBinder.sbtLogger = log
-    new DispatchClient(host, ScapsControlApi.apiPath)[ScapsControlApi]
+  val controlClient = Def.task {
+    StaticLoggerBinder.sbtLogger = streams.value.log
+    new DispatchClient(scapsControlHost.value, ScapsControlApi.apiPath)[ScapsControlApi]
   }
 
   val indexSettingsParser: Parser[Option[Boolean]] = boolOpt("force-reindex").?

@@ -70,28 +70,24 @@ class SearchEngine private (
     (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
     classesIndex.findSubClasses _)
 
-  def deleteIndexes(): Try[Unit] = for {
-    _ <- termsIndex.delete()
-    _ <- classesIndex.delete()
-    _ <- moduleIndex.delete()
-  } yield ()
+  def indexEntities(module: Module, entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] =
+    Future {
+      termsIndex.deleteEntitiesIn(module).get
+    }.flatMap { _ =>
+      def updateModule(t: TermEntity) =
+        if (module == Module.Unknown)
+          t
+        else
+          t.copy(module = module)
 
-  def indexEntities(module: Module, entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] = {
-    termsIndex.deleteEntitiesIn(module).get
-
-    def updateModule(t: TermEntity) =
-      if (module == Module.Unknown)
-        t
-      else
-        t.copy(module = module)
-
-    val f1 = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => updateModule(t) }) }
-    val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }
-    Future.sequence(f1 :: f2 :: Nil).map { results =>
-      results.foreach(_.get)
-      moduleIndex.addEntities(Seq(module)).get
+      Future.sequence(List(
+        Future { termsIndex.addEntities(entities.collect { case t: TermEntity => updateModule(t) }) },
+        Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }))
+        .map { results =>
+          results.foreach(_.get)
+          moduleIndex.addEntities(Seq(module)).get
+        }
     }
-  }
 
   def search(query: String): Try[QueryError \/ Seq[TermEntity]] = Try {
     for {
@@ -106,4 +102,13 @@ class SearchEngine private (
 
   def indexedModules(): Try[Seq[Module]] =
     moduleIndex.allModules()
+
+  def resetIndexes(): Try[Unit] = for {
+    _ <- termsIndex.delete()
+    _ <- classesIndex.delete()
+    _ <- moduleIndex.delete()
+    _ <- termsIndex.init()
+    _ <- classesIndex.init()
+    _ <- moduleIndex.init()
+  } yield ()
 }

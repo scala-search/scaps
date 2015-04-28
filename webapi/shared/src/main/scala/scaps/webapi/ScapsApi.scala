@@ -19,12 +19,17 @@ object ScapsApi {
 }
 
 /**
- * A control API which access may be limited to local requests.
+ * A control API which access may be limited to local users.
  *
  * The exposed methods may destroy the index or will take a long time to process.
  */
 trait ScapsControlApi extends CommonApi {
   def index(module: Module, artifactPath: String, classpath: Seq[String], forceReindex: Boolean): Unit
+
+  /**
+   * Reinitializes the search engine with an empty index.
+   */
+  def resetIndexes(): Unit
 }
 
 object ScapsControlApi {
