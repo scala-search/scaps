@@ -12,8 +12,7 @@ case class ClassEntity(
   name: String,
   typeParameters: List[TypeParameterEntity],
   baseTypes: List[TypeEntity],
-  comment: String = "",
-  module: Module = Module.Unknown)
+  comment: String = "")
   extends Entity {
 
   override def toString() = {

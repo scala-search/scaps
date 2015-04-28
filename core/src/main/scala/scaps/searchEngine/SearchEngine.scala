@@ -78,10 +78,9 @@ class SearchEngine private (
 
   def indexEntities(module: Module, entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] = {
     termsIndex.deleteEntitiesIn(module).get
-    classesIndex.deleteEntitiesIn(module).get
 
     val f1 = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t.copy(module = module) }) }
-    val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c.copy(module = module) }) }
+    val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }
     Future.sequence(f1 :: f2 :: Nil).map { results =>
       results.foreach(_.get)
       moduleIndex.addEntities(Seq(module)).get

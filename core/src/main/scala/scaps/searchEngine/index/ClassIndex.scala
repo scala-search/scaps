@@ -16,7 +16,6 @@ import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
 import scaps.webapi.Covariant
-import scaps.webapi.Module
 
 /**
  * Persists class entities and provides lookup for classes by name.
@@ -27,12 +26,6 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
   import ClassIndex._
 
   val analyzer = new KeywordAnalyzer
-
-  def deleteEntitiesIn(module: Module): Try[Unit] = {
-    withWriter { writer =>
-      writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
-    }
-  }
 
   override def addEntities(entities: Seq[ClassEntity]): Try[Unit] =
     withWriter { writer =>
@@ -82,7 +75,6 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     val doc = new Document
 
     doc.add(new TextField(fields.name, entity.name, Field.Store.YES))
-    doc.add(new TextField(fields.moduleId, entity.module.moduleId, Field.Store.YES))
     for (suffix <- suffixes(entity.name)) {
       doc.add(new TextField(fields.suffix, suffix, Field.Store.NO))
     }
@@ -117,6 +109,5 @@ object ClassIndex {
     val suffix = "suffix"
     val baseClass = "baseClass"
     val entity = "entity"
-    val moduleId = "moduleId"
   }
 }
