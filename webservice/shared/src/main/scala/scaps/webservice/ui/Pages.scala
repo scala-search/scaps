@@ -26,7 +26,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   val boot = s"$main.main(document.getElementById('$searchFieldId'), document.getElementById('$resultContainerId'))"
   val pageTitle = "Scaps: Scala API Search"
 
-  def skeleton(mods: Modifier, query: String = "") =
+  def skeleton(status: IndexStatus, mods: Modifier, query: String = "") =
     html(lang := "en")(
       head(
         meta(charset := "utf-8"),
@@ -45,6 +45,13 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
                 span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
                 input(tpe := "search", name := "q", id := searchFieldId, value := query,
                   autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
+        nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
+          div(cls := "container")(
+            ul(
+              status.indexedModules.flatMap { m =>
+                Seq[Modifier](li(cls := "label label-default")(m.name, " ", span(cls := "glyphicon glyphicon-minus")()), " ")
+              },
+              li(cls := "label label-default")(span(cls := "glyphicon glyphicon-plus")(), " ")))),
 
         div(cls := "container")(
           div(cls := "row")(

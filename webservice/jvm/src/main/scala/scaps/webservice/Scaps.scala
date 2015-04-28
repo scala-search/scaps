@@ -2,24 +2,23 @@ package scaps.webservice
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import akka.actor.ActorSystem
+import akka.actor.ActorRefFactory
 import akka.actor.Props
 import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
+import scalaz.{ \/ => \/ }
 import scaps.webapi.IndexStatus
+import scaps.webapi.Module
 import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
-import scaps.webservice.actors.SearchEngineProtocol
-import scaps.webservice.actors.SearchEngineActor
-import akka.actor.ActorRefFactory
-import scalaz.\/
 import scaps.webapi.TermEntity
-import scaps.webapi.Module
+import scaps.webservice.actors.SearchEngineActor
+import scaps.webservice.actors.SearchEngineProtocol.Index
+import scaps.webservice.actors.SearchEngineProtocol.GetStatus
+import scaps.webservice.actors.SearchEngineProtocol.Search
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
-  import SearchEngineProtocol._
-
   val searchEngine = context.actorOf(Props[SearchEngineActor], "searchEngine")
 
   implicit val _ = context.dispatcher
@@ -30,9 +29,7 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   }
 
   def getStatus(): Future[IndexStatus] =
-    for {
-      queue <- (searchEngine ? GetQueue).mapTo[List[Module]]
-    } yield IndexStatus(queue)
+    (searchEngine ? GetStatus).mapTo[IndexStatus]
 
   def search(query: String): Future[Either[String, Seq[TermEntity]]] =
     for {

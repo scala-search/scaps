@@ -1,7 +1,6 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConversions.mapAsJavaMap
 import scaps.webapi.TermEntity
 import scaps.searchEngine.APIQuery
@@ -9,7 +8,6 @@ import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.LowerCaseFilter
@@ -34,9 +32,10 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
-
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
+import scaps.webapi.Module
+import org.apache.lucene.analysis.core.KeywordAnalyzer
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -44,6 +43,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
   override val analyzer =
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
       fields.fingerprint -> new WhitespaceAnalyzer,
+      fields.moduleId -> new KeywordAnalyzer,
       fields.name -> new Analyzer {
         override def createComponents(fieldName: String, reader: Reader) = {
           val tokenizer = new WhitespaceTokenizer(reader)
@@ -73,6 +73,11 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     Try {
       toLuceneQuery(query).map(
         lq => search(lq, settings.query.maxResults).get)
+    }
+
+  def deleteEntitiesIn(module: Module): Try[Unit] =
+    withWriter { writer =>
+      writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
 
   private def toLuceneQuery(query: APIQuery): ProcessingError \/ Query = {
@@ -112,6 +117,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       doc.add(new TextField(field, value, Store.YES))
 
     add(fields.name, entity.name)
+    add(fields.moduleId, entity.module.moduleId)
     entity.fingerprint.bagOfTypes.foreach { tpe =>
       add(fields.fingerprint, tpe)
     }
@@ -134,6 +140,7 @@ object TermsIndex {
     val fingerprint = "fingerprint"
     val doc = "doc"
     val entity = "entity"
+    val moduleId = "moduleId"
   }
 
   class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {

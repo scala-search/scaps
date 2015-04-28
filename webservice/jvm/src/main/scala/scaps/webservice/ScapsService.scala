@@ -42,15 +42,16 @@ trait ScapsService extends HttpService {
             else
               complete {
                 for {
+                  status <- apiImpl.getStatus()
                   result <- apiImpl.search(query)
-                  page = HtmlPages.skeleton(result.fold(HtmlPages.queryError(_), HtmlPages.results(_)), query)
+                  page = HtmlPages.skeleton(status, result.fold(HtmlPages.queryError(_), HtmlPages.results(_)), query)
                 } yield HttpEntity(MediaTypes.`text/html`, page.toString())
               }
           } ~
             complete {
               for {
                 status <- apiImpl.getStatus()
-                page = HtmlPages.skeleton(HtmlPages.main(status))
+                page = HtmlPages.skeleton(status, HtmlPages.main(status))
               } yield HttpEntity(MediaTypes.`text/html`, page.toString())
             }
         }

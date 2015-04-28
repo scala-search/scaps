@@ -16,6 +16,7 @@ import scala.util.Try
 import org.apache.lucene.store.FSDirectory
 import scalaz.\/
 import scaps.webapi.Module
+import scaps.searchEngine.index.ModuleIndex
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -26,7 +27,8 @@ object SearchEngine {
 
     new SearchEngine(settings,
       new TermsIndex(createDir(settings.index.termsDir), settings),
-      new ClassIndex(createDir(settings.index.classesDir), settings))
+      new ClassIndex(createDir(settings.index.classesDir), settings),
+      new ModuleIndex(createDir(settings.index.modulesDir)))
   }
 
   /**
@@ -52,7 +54,12 @@ object SearchEngine {
     }
 }
 
-class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, val classesIndex: ClassIndex) extends Logging {
+class SearchEngine private (
+  val settings: Settings,
+  val termsIndex: TermsIndex,
+  val classesIndex: ClassIndex,
+  val moduleIndex: ModuleIndex) extends Logging {
+
   val analyzer = new QueryAnalyzer(
     settings.query,
     (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
@@ -61,12 +68,19 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
   def deleteIndexes(): Try[Unit] = for {
     _ <- termsIndex.delete()
     _ <- classesIndex.delete()
+    _ <- moduleIndex.delete()
   } yield ()
 
   def indexEntities(module: Module, entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] = {
+    termsIndex.deleteEntitiesIn(module).get
+    classesIndex.deleteEntitiesIn(module).get
+
     val f1 = Future { termsIndex.addEntities(entities.collect { case t: TermEntity => t.copy(module = module) }) }
     val f2 = Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c.copy(module = module) }) }
-    Future.sequence(f1 :: f2 :: Nil).map(_.foreach(_.get))
+    Future.sequence(f1 :: f2 :: Nil).map { results =>
+      results.foreach(_.get)
+      moduleIndex.addEntities(Seq(module)).get
+    }
   }
 
   def search(query: String): Try[QueryError \/ Seq[TermEntity]] = Try {
@@ -79,4 +93,7 @@ class SearchEngine private (val settings: Settings, val termsIndex: TermsIndex, 
       results
     }
   }
+
+  def indexedModules(): Try[Seq[Module]] =
+    moduleIndex.allModules()
 }

@@ -31,6 +31,7 @@ object Settings {
 case class IndexSettings(
   classesDir: File,
   termsDir: File,
+  modulesDir: File,
   lengthNormWeight: Double) {
 
   import Settings._
@@ -42,6 +43,7 @@ object IndexSettings {
     IndexSettings(
       new File(conf.getString("classes-dir")),
       new File(conf.getString("terms-dir")),
+      new File(conf.getString("modules-dir")),
       conf.getDouble("length-norm-weight"))
 }
 

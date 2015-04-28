@@ -3,7 +3,6 @@ package scaps.searchEngine.index
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scaps.utils.using
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.index.DirectoryReader

@@ -16,6 +16,8 @@ import akka.actor.actorRef2Scala
 import scala.concurrent.Future
 import akka.actor.ActorRef
 import scalaz.\/
+import java.util.concurrent.TimeoutException
+import scaps.webapi.IndexStatus
 
 /**
  * Manages the state of an instance of the search engine.
@@ -51,26 +53,30 @@ class SearchEngineActor extends Actor {
         become(indexing(i :: Nil))
       case s: Search =>
         searcher.tell(s, sender)
-      case GetQueue =>
-        sender ! Nil
+      case GetStatus =>
+        searchEngine.indexedModules().foreach { modules =>
+          sender ! IndexStatus(Nil, modules)
+        }
     }
 
     def indexing(queue: List[Index]): Receive = {
       case i: Index =>
         become(indexing(queue :+ i))
-      case Indexed(j) if j == queue.head =>
+      case Indexed(j, _) if j == queue.head =>
         if (queue.tail.isEmpty) {
           become(ready())
         } else {
           indexWorker ! queue.tail.head
           become(indexing(queue.tail))
         }
-      case Indexed(j) =>
+      case Indexed(j, _) =>
         throw new IllegalStateException()
       case Search(_) =>
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
-      case GetQueue =>
-        sender ! queue.map(_.module)
+      case GetStatus =>
+        searchEngine.indexedModules().foreach { modules =>
+          sender ! IndexStatus(queue.map(_.module), modules)
+        }
     }
 
     ready()
@@ -97,10 +103,17 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
 
         val f = searchEngine.indexEntities(module, extractor(new File(sourceFile)))
 
-        Await.ready(f, 1.hour)
+        val error = try {
+          Await.ready(f, 1.hour)
+          logger.info(s"${module.moduleId} has been indexed successfully")
+          None
+        } catch {
+          case e: TimeoutException =>
+            logger.error(s"Indexing ${module.moduleId} timed out")
+            Some(e)
+        }
 
-        logger.info(s"${module.moduleId} has been indexed successfully")
-        requestor ! Indexed(i)
+        requestor ! Indexed(i, error)
       }
   }
 }
