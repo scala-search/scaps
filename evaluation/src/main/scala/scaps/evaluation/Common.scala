@@ -59,7 +59,7 @@ object Common {
             (project.url #> jar).!!
           }
 
-          Await.result(engine.indexEntities(Module.Unknown, extractor(jar)), 1.hour)
+          Await.result(engine.indexEntities(Module("", project.name, ""), extractor(jar)), 1.hour)
         }
       }
     }
