@@ -24,8 +24,8 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
 
-  def index(module: Module, artifactPath: String, classpath: Seq[String]): Unit = {
-    searchEngine ! Index(module, artifactPath, classpath)
+  def index(module: Module, artifactPath: String, classpath: Seq[String], forceReindex: Boolean): Unit = {
+    searchEngine ! Index(module, artifactPath, classpath, forceReindex)
   }
 
   def getStatus(): Future[IndexStatus] =

@@ -21,6 +21,10 @@ trait Index[E] {
 
   private[index] val similarity: Similarity = new DefaultSimilarity
 
+  def init() = {
+    withWriter(_ => ())
+  }
+
   def delete(): Try[Unit] = Try {
     dir.listAll().foreach(dir.deleteFile(_))
   }

@@ -25,11 +25,16 @@ object SearchEngine {
       FSDirectory.open(path)
     }
 
-    new SearchEngine(settings,
-      new TermsIndex(createDir(settings.index.termsDir), settings),
-      new ClassIndex(createDir(settings.index.classesDir), settings),
-      new ModuleIndex(createDir(settings.index.modulesDir)))
-  }
+    val terms = new TermsIndex(createDir(settings.index.termsDir), settings)
+    val classes = new ClassIndex(createDir(settings.index.classesDir), settings)
+    val modules = new ModuleIndex(createDir(settings.index.modulesDir))
+
+    for {
+      _ <- terms.init()
+      _ <- classes.init()
+      _ <- modules.init()
+    } yield new SearchEngine(settings, terms, classes, modules)
+  }.flatten
 
   /**
    * Names from the `scala` root package are favored over other names and all names in

@@ -18,6 +18,7 @@ import akka.actor.ActorRef
 import scalaz.\/
 import java.util.concurrent.TimeoutException
 import scaps.webapi.IndexStatus
+import scaps.webapi.Module
 
 /**
  * Manages the state of an instance of the search engine.
@@ -36,51 +37,67 @@ class SearchEngineActor extends Actor {
   def initializing: Receive = {
     case Initialize =>
       val searchEngine = SearchEngine(Settings.fromApplicationConf).get
-      become(initialized(searchEngine))
+      searchEngine.indexedModules().map { indexedModules =>
+        become(initialized(searchEngine, indexedModules.toList))
+      }.get
   }
 
-  def initialized(searchEngine: SearchEngine): Receive = {
+  def initialized(searchEngine: SearchEngine, indexedModules: List[Module]): Receive = {
     val searcher = actorOf(Props(classOf[Searcher], searchEngine), "searcher")
     val indexWorker = actorOf(Props(classOf[IndexWorkerActor], searchEngine), "index-worker")
 
-    def ready(): Receive = {
+    def ready(indexedModules: List[Module]): Receive = {
+      case i: Index if i.forceReindex == false =>
+        rewriteUnenforcedIndexJob(i, indexedModules)
       case i: Index =>
         // delay first indexing job to ensure all search tasks have been completed
         system.scheduler.scheduleOnce(2.seconds) {
           searchEngine.deleteIndexes()
           indexWorker ! i
         }
-        become(indexing(i :: Nil))
+        become(indexing(i :: Nil, indexedModules))
       case s: Search =>
         searcher.tell(s, sender)
       case GetStatus =>
-        searchEngine.indexedModules().foreach { modules =>
-          sender ! IndexStatus(Nil, modules)
-        }
+        sender ! IndexStatus(Nil, indexedModules)
     }
 
-    def indexing(queue: List[Index]): Receive = {
+    def indexing(queue: List[Index], indexedModules: List[Module]): Receive = {
+      case i: Index if i.forceReindex == false =>
+        rewriteUnenforcedIndexJob(i, queue.map(_.module) ++ indexedModules)
       case i: Index =>
-        become(indexing(queue :+ i))
+        become(indexing(queue :+ i, indexedModules))
       case Indexed(j, _) if j == queue.head =>
         if (queue.tail.isEmpty) {
-          become(ready())
+          searchEngine.indexedModules().map { indexedModules =>
+            become(ready(indexedModules.toList))
+          }.get
         } else {
           indexWorker ! queue.tail.head
-          become(indexing(queue.tail))
+          become(indexing(queue.tail, j.module :: indexedModules))
         }
       case Indexed(j, _) =>
         throw new IllegalStateException()
       case Search(_) =>
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetStatus =>
-        searchEngine.indexedModules().foreach { modules =>
-          sender ! IndexStatus(queue.map(_.module), modules)
-        }
+        sender ! IndexStatus(queue.map(_.module), indexedModules)
     }
 
-    ready()
+    ready(indexedModules)
   }
+
+  def rewriteUnenforcedIndexJob(i: Index, indexedModules: List[Module]) =
+    if (i.forceReindex)
+      throw new IllegalArgumentException
+    else {
+      if (!indexedModules.contains(i.module)) {
+        logger.debug(s"Rewrite index job $i with forceReindex=true")
+        self.tell(i.copy(forceReindex = true), sender)
+      } else {
+        logger.debug(s"Drop index job $i")
+      }
+    }
 }
 
 /**
@@ -93,7 +110,7 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
   val logger = Logging(context.system, this)
 
   def receive = {
-    case i @ Index(module, sourceFile, classpath) =>
+    case i @ Index(module, sourceFile, classpath, _) =>
       val requestor = sender
 
       CompilerUtils.withCompiler(classpath.toList) { compiler =>

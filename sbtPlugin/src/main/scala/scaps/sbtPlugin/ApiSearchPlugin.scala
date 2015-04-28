@@ -12,6 +12,7 @@ import scaps.webapi.Module
 import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import org.slf4j.impl.StaticLoggerBinder
+import sbt.complete.Parser
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -24,7 +25,7 @@ object ApiSearchPlugin extends AutoPlugin {
 
     lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
     lazy val scapsModules = TaskKey[Seq[(Module, String)]]("scapsModules", "Modules that will be indexed.")
-    lazy val scapsIndex = TaskKey[Unit]("scapsIndex", "Requests indexing this project.")
+    lazy val scapsIndex = InputKey[Unit]("scapsIndex", "Requests indexing this project.")
   }
 
   import autoImport._
@@ -56,12 +57,16 @@ object ApiSearchPlugin extends AutoPlugin {
       val log = streams.value.log
       val scaps = scapsClient(scapsHost.value, log)
 
-      for { status <- scaps.getStatus().call() } {
+      val f = for { status <- scaps.getStatus().call() } yield {
         log.info(s"Scaps Work Queue:")
         for { module <- status.workQueue } {
           log.info(s"  ${module.moduleId}")
         }
       }
+
+      Await.ready(f, 5.seconds)
+
+      ()
     },
     scapsModules := {
       val deps = libraryDependencies.value.collect {
@@ -78,6 +83,8 @@ object ApiSearchPlugin extends AutoPlugin {
       }.map { case (m, a, f) => (Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
     },
     scapsIndex := {
+      val forceReindex = indexSettingsParser.parsed.getOrElse(false)
+
       val scapsControl = controlClient(scapsControlHost.value, streams.value.log)
 
       val classpath = (fullClasspath in Compile).value.map {
@@ -85,11 +92,10 @@ object ApiSearchPlugin extends AutoPlugin {
       }
 
       val f = Future.sequence(
-        scapsModules.value.map { case (module, file) => scapsControl.index(module, file, classpath).call() })
+        scapsModules.value.map { case (module, file) => scapsControl.index(module, file, classpath, forceReindex).call() })
 
       Await.result(f, 5.seconds)
 
-      scapsStatus.result
       ()
     })
 
@@ -101,5 +107,15 @@ object ApiSearchPlugin extends AutoPlugin {
   def controlClient(host: String, log: sbt.Logger) = {
     StaticLoggerBinder.sbtLogger = log
     new DispatchClient(host, ScapsControlApi.apiPath)[ScapsControlApi]
+  }
+
+  val indexSettingsParser: Parser[Option[Boolean]] = boolOpt("force-reindex").?
+
+  def boolOpt(key: String): Parser[Boolean] = {
+    import sbt.complete.DefaultParsers._
+    (Space ~> key ~> ("=" ~> (literal("true") | "false"))) map {
+      case "true"  => true
+      case "false" => false
+    }
   }
 }
