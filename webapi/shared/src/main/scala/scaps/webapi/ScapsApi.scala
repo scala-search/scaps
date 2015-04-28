@@ -14,6 +14,10 @@ trait ScapsApi extends CommonApi {
   def search(query: String): Future[Either[String, Seq[TermEntity]]]
 }
 
+object ScapsApi {
+  val apiPath = "api"
+}
+
 /**
  * A control API which access may be limited to local requests.
  *
@@ -21,6 +25,10 @@ trait ScapsApi extends CommonApi {
  */
 trait ScapsControlApi extends CommonApi {
   def index(module: Module, artifactPath: String, classpath: Seq[String]): Unit
+}
+
+object ScapsControlApi {
+  val apiPath = "api"
 }
 
 /**

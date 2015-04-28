@@ -14,7 +14,7 @@ import scaps.webapi.ScapsApi
 
 @JSExport
 object Main {
-  val scaps = Ajaxer[ScapsApi]
+  val scaps = new AjaxClient(ScapsApi.apiPath)[ScapsApi]
 
   @JSExport
   def main(searchField: html.Input, container: html.Div) = {

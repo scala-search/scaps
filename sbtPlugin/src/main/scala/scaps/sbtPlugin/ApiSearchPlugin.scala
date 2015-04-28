@@ -1,69 +1,45 @@
 package scaps.sbtPlugin
 
-import sbt.{ url => sbtUrl, _ }
-import sbt.Keys._
-import sbt.complete.DefaultParsers.spaceDelimited
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import autowire._
+import sbt.{ url => sbtUrl, _ }
+import sbt.Keys._
+import sbt.complete.DefaultParsers.spaceDelimited
+import scaps.webapi.Module
 import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
-import autowire._
-import scala.concurrent.Future
-import scaps.webapi.Module
+import org.slf4j.impl.StaticLoggerBinder
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
   object autoImport {
-    lazy val apiSearchHost = SettingKey[String]("apiSearchHost", "Hostname of the Scala API Search service.")
-    lazy val apiSearchControlHost = SettingKey[String]("apiSearchControlHost", "Hostname of the Scala API Search control service.")
-    lazy val apiSearchIndex = TaskKey[Unit]("apiSearchIndex", "Requests indexing this project.")
-    lazy val api = InputKey[Unit]("api", "Use Scaps to search for terms and functions in the indexed libraries.")
+    lazy val scapsHost = SettingKey[String]("scapsHost", "Hostname of the Scala API Search service.")
+    lazy val scapsControlHost = SettingKey[String]("scapsControlHost", "Hostname of the Scala API Search control service.")
+
+    lazy val scaps = InputKey[Unit]("scaps", "Use Scaps to search for terms and functions in the indexed libraries.")
+
+    lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
+    lazy val scapsModules = TaskKey[Seq[(Module, String)]]("scapsModules", "Modules that will be indexed.")
+    lazy val scapsIndex = TaskKey[Unit]("scapsIndex", "Requests indexing this project.")
   }
 
   import autoImport._
 
   override lazy val projectSettings = Seq(
-    apiSearchHost := "localhost:8080",
-    apiSearchControlHost := "localhost:8081",
-    apiSearchIndex := {
-      val logger = streams.value.log
-      val scapsControl = controlClient(apiSearchControlHost.value)
-
-      val deps = libraryDependencies.value.map(_.name)
-
-      val modules = updateClassifiers.value.configuration(Compile.name).get.modules
-
-      val sourceFiles = modules.flatMap(m => m.artifacts.map(a => (m.module, a._1, a._2))).filter {
-        case (_, Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.contains(name) =>
-          true
-        case _ =>
-          false
-      }.map { case (m, a, f) => (Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
-
-      val classpath = (fullClasspath in Compile).value.map {
-        case Attributed(f) => f.getAbsolutePath
-      }
-
-      val f = for {
-        _ <- Future.sequence(sourceFiles.map { case (module, file) => scapsControl.index(module, file, classpath).call() })
-        status <- scapsControl.getStatus().call()
-      } yield {
-        logger.info(s"Scaps: ${status.workQueue.size} documents in work queue")
-      }
-
-      Await.result(f, 5.seconds)
-    },
-    api := {
-      val logger = streams.value.log
+    scapsHost := "localhost:8080",
+    scapsControlHost := "localhost:8081",
+    scaps := {
       val query = spaceDelimited("<query>").parsed
+
+      val scaps = scapsClient(scapsHost.value, streams.value.log)
 
       def writeln(s: String) = {
         println(s"[apiSearch] $s")
       }
-
-      val scaps = scapsClient(apiSearchHost.value)
 
       val msgs = Await.result(scaps.search(query.mkString(" ")).call().map {
         case Left(error) =>
@@ -75,11 +51,55 @@ object ApiSearchPlugin extends AutoPlugin {
       msgs.foreach(writeln)
 
       ()
+    },
+    scapsStatus := {
+      val log = streams.value.log
+      val scaps = scapsClient(scapsHost.value, log)
+
+      for { status <- scaps.getStatus().call() } {
+        log.info(s"Scaps Work Queue:")
+        for { module <- status.workQueue } {
+          log.info(s"  ${module.moduleId}")
+        }
+      }
+    },
+    scapsModules := {
+      val deps = libraryDependencies.value.collect {
+        case ModuleID(_, name, _, _, _, _, _, _, _, _, _) => name
+      }
+
+      val modules = updateClassifiers.value.configuration(Compile.name).get.modules
+
+      modules.flatMap(m => m.artifacts.map(a => (m.module, a._1, a._2))).filter {
+        case (_, Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.exists(name.startsWith(_)) =>
+          true
+        case _ =>
+          false
+      }.map { case (m, a, f) => (Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
+    },
+    scapsIndex := {
+      val scapsControl = controlClient(scapsControlHost.value, streams.value.log)
+
+      val classpath = (fullClasspath in Compile).value.map {
+        case Attributed(f) => f.getAbsolutePath
+      }
+
+      val f = Future.sequence(
+        scapsModules.value.map { case (module, file) => scapsControl.index(module, file, classpath).call() })
+
+      Await.result(f, 5.seconds)
+
+      scapsStatus.result
+      ()
     })
 
-  def scapsClient(host: String) =
-    new DispatchClient(host)[ScapsApi]
+  def scapsClient(host: String, log: sbt.Logger) = {
+    StaticLoggerBinder.sbtLogger = log
+    new DispatchClient(host, ScapsApi.apiPath)[ScapsApi]
+  }
 
-  def controlClient(host: String) =
-    new DispatchClient(host)[ScapsControlApi]
+  def controlClient(host: String, log: sbt.Logger) = {
+    StaticLoggerBinder.sbtLogger = log
+    new DispatchClient(host, ScapsControlApi.apiPath)[ScapsControlApi]
+  }
 }

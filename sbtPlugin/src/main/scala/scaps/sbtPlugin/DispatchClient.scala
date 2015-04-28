@@ -3,11 +3,11 @@ package scaps.sbtPlugin
 import dispatch._
 import dispatch.Defaults._
 
-class DispatchClient(hostName: String) extends autowire.Client[String, upickle.Reader, upickle.Writer] {
+class DispatchClient(hostName: String, apiPath: String) extends autowire.Client[String, upickle.Reader, upickle.Writer] {
   override def doCall(req: Request): Future[String] = {
     val service = host(hostName)
 
-    val path = req.path.foldLeft(service / "api")(_ / _)
+    val path = req.path.foldLeft(service / apiPath)(_ / _)
 
     val request = path.POST
       .setContentType("application/json", "UTF-8")

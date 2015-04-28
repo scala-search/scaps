@@ -39,6 +39,7 @@ object Dependencies {
   val utest = "com.lihaoyi" %% "utest" % utestVersion % "test"
 
   val dispatch = "net.databinder.dispatch" %% "dispatch-core" % "0.11.2"
+  val sbtSlf4j = "com.github.eirslett" %% "sbt-slf4j" % "0.1"
 
   val coreDependencies = Seq(
     scalaCompiler,
@@ -69,5 +70,6 @@ object Dependencies {
   val sbtPluginDependencies = Seq(
     dispatch,
     autowire,
-    upickle)
+    upickle,
+    sbtSlf4j)
 }
