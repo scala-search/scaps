@@ -108,9 +108,11 @@ object ApiSearchPlugin extends AutoPlugin {
       val scaps = scapsClient.value
       val log = streams.value.log
 
+      val noResults = 100
+
       val results = scapsTestCollection.value.map {
         case (query, expectedSignatures) =>
-          scaps.search(query).call().map[Option[QueryStats]] {
+          scaps.search(query, noResults).call().map[Option[QueryStats]] {
             case Left(error) =>
               log.warn(s"$query: $error")
               None

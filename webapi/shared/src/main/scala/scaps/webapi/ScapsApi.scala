@@ -11,7 +11,7 @@ case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module])
  * when missused.
  */
 trait ScapsApi extends CommonApi {
-  def search(query: String): Future[Either[String, Seq[TermEntity]]]
+  def search(query: String, noResults: Int = 10, offset: Int = 0): Future[Either[String, Seq[TermEntity]]]
 }
 
 object ScapsApi {

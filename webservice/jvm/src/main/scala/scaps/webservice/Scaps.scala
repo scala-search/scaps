@@ -34,8 +34,8 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   def getStatus(): Future[IndexStatus] =
     (searchEngine ? GetStatus).mapTo[IndexStatus]
 
-  def search(query: String): Future[Either[String, Seq[TermEntity]]] =
+  def search(query: String, noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] =
     for {
-      result <- (searchEngine ? Search(query)).mapTo[String \/ Seq[TermEntity]]
+      result <- (searchEngine ? Search(query, noResults, offset)).mapTo[String \/ Seq[TermEntity]]
     } yield result.toEither
 }

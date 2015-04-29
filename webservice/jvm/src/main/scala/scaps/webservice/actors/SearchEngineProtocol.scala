@@ -9,7 +9,7 @@ object SearchEngineProtocol {
   case class Indexed(job: Index, error: Option[Throwable])
   case object Reset
 
-  case class Search(query: String)
+  case class Search(query: String, noResults: Int, offset: Int)
   type Result = String \/ Seq[TermEntity]
 
   case object GetStatus

@@ -80,7 +80,7 @@ class SearchEngineActor extends Actor {
         }
       case Indexed(j, _) =>
         throw new IllegalStateException()
-      case Search(_) =>
+      case _: Search =>
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetStatus =>
         sender ! IndexStatus(queue.map(_.module), indexedModules)
@@ -150,9 +150,9 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
   import scaps.searchEngine._
 
   def receive = {
-    case Search(q) =>
+    case Search(q, noResults, offset) =>
       sender ! searchEngine.search(q).get.map {
-        case terms => terms.take(10)
+        case terms => terms.drop(offset).take(noResults)
       }.leftMap {
         case SyntaxError(msg) =>
           msg
