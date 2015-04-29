@@ -6,8 +6,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.urlToProcess
-import scaps.evaluation.stats.QueryStats
-import scaps.evaluation.stats.Stats
 import scaps.featureExtraction.CompilerUtils
 import scaps.featureExtraction.JarExtractor
 import scaps.searchEngine.QueryError
@@ -17,6 +15,8 @@ import scalaz.\/
 import scalaz.std.list.listInstance
 import scalaz.syntax.traverse.ToTraverseOps
 import scaps.webapi.Module
+import scaps.evaluation.stats.QueryStats
+import scaps.evaluation.stats.Stats
 
 object Common {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {

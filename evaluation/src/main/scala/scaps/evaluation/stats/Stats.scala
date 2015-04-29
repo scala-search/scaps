@@ -1,5 +1,7 @@
 package scaps.evaluation.stats
 
+import scala.Ordering
+
 case class Stats(queryStats: List[QueryStats]) {
   val noQueries = queryStats.size
   val meanAveragePrecision = queryStats.foldLeft(0d)(_ + _.averagePrecision) / queryStats.size

@@ -1,6 +1,7 @@
 package scaps.evaluation.stats
 
 import scala.annotation.tailrec
+import scala.Ordering
 
 case class QueryStats(query: String, retrievedDocs: Int, relevantRetrievedDocs: Int, relevantDocs: Int, accumulatedPrecision: Double) {
   val recall = relevantRetrievedDocs.toDouble / relevantDocs
