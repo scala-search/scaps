@@ -50,7 +50,7 @@ object Main {
     } else {
       scaps.search(query).call().map {
         case Left(msg)      => DomPages.queryError(msg)
-        case Right(results) => DomPages.results(results)
+        case Right(results) => DomPages.results(0, query, results)
       }
     }.recover {
       case AjaxException(_) => DomPages.error("The Scaps service is currently unreachable. Please try again later.")

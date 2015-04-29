@@ -8,6 +8,7 @@ import scaps.webapi.TermEntity
 import scaps.webapi.TypeEntity
 import scaps.webapi.TypeEntity.MemberAccess
 import scaps.webapi.TypeParameterEntity
+import scaps.webapi.ScapsApi
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])
   extends Helpers[Builder, Output, FragT]
@@ -18,13 +19,20 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   import bundle.tags2.title
   import bundle.tags2.nav
 
-  def encodeUri(path: String, params: Map[String, String]): String
+  def encodeUri(path: String, params: Map[String, Any]): String
 
   val searchFieldId = "searchField"
   val resultContainerId = "results"
   val main = "scaps.webservice.ui.Main()"
   val boot = s"$main.main(document.getElementById('$searchFieldId'), document.getElementById('$resultContainerId'))"
   val pageTitle = "Scaps: Scala API Search"
+
+  def searchUri(query: String, page: Int = 0) = {
+    val params = Map[String, Any]() ++
+      (if (query == "") None else Some("q" -> query)) ++
+      (if (page == 0) None else Some("p" -> page))
+    encodeUri("", params)
+  }
 
   def skeleton(status: IndexStatus, mods: Modifier, query: String = "") =
     html(lang := "en")(
@@ -59,8 +67,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   def main(status: IndexStatus) = {
     def example(query: String, desc: String) = {
-      val uri = encodeUri("", Map("q" -> query))
-      li(a(href := uri)(code(query)), " - ", desc)
+      li(a(href := searchUri(query))(code(query)), " - ", desc)
     }
 
     div(
@@ -87,8 +94,21 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-danger")(msg)
 
-  def results(results: Seq[TermEntity]) =
-    dl(results.map(result(_)))
+  def results(currentPage: Int, query: String, results: Seq[TermEntity]) = {
+    val pager =
+      nav(
+        ul(cls := "pager")(
+          when(currentPage > 0) {
+            li(cls := "previous")(a(href := searchUri(query, currentPage - 1))(raw("&larr; Previous")))
+          },
+          when(results.size == ScapsApi.defaultPageSize) {
+            li(cls := "previous")(a(href := searchUri(query, currentPage + 1))(raw("Next &rarr;")))
+          }))
+
+    div(
+      dl(results.map(result(_))),
+      pager)
+  }
 
   def result(term: TermEntity) = {
     def typeName(t: TypeEntity) =
@@ -153,4 +173,8 @@ trait Helpers[Builder, Output <: FragT, FragT] {
 
   def intersperse[T](ts: Seq[T], t: T): Seq[T] =
     ts.flatMap(e => Seq(e, t)).dropRight(1)
+
+  def when(cond: Boolean)(content: => Modifier): Modifier =
+    if (cond) content
+    else ""
 }

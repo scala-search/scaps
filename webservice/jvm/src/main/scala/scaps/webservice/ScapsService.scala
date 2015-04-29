@@ -36,15 +36,18 @@ trait ScapsService extends HttpService {
     } ~
       pathSingleSlash {
         get {
-          parameter('q) { query =>
+          parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
             if (query.isEmpty())
               reject
             else
               complete {
+                val resultOffset = resultPage * ScapsApi.defaultPageSize
+
                 for {
                   status <- apiImpl.getStatus()
-                  result <- apiImpl.search(query)
-                  page = HtmlPages.skeleton(status, result.fold(HtmlPages.queryError(_), HtmlPages.results(_)), query)
+                  result <- apiImpl.search(query, offset = resultOffset)
+                  page = HtmlPages.skeleton(status,
+                    result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, _)), query)
                 } yield HttpEntity(MediaTypes.`text/html`, page.toString())
               }
           } ~
@@ -67,8 +70,8 @@ trait ScapsService extends HttpService {
 }
 
 object HtmlPages extends Pages(scalatags.Text) {
-  def encodeUri(path: String, params: Map[String, String]): String =
-    (Uri(path) withQuery params).toString()
+  def encodeUri(path: String, params: Map[String, Any]): String =
+    (Uri(path) withQuery params.mapValues(_.toString)).toString()
 }
 
 object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {
