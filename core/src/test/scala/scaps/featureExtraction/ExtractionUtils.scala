@@ -3,6 +3,7 @@ package scaps.featureExtraction
 import scaps.webapi._
 import scala.util.Random
 import scala.reflect.internal.util.BatchSourceFile
+import scalaz.std.list._
 
 import org.scalatest.Matchers
 
@@ -12,7 +13,10 @@ trait ExtractionUtils extends Matchers {
     CompilerUtils.withCompiler() { compiler =>
       val extractor = new ScalaSourceExtractor(compiler)
       val randomFileName = s"${Random.nextInt()}.scala"
-      extractor(new BatchSourceFile(randomFileName, source)).distinct
+
+      ExtractionError.handleErrors(extractor(new BatchSourceFile(randomFileName, source))) {
+        e => fail(e.entityName, e.error)
+      }
     }
 
   def extractAllTerms(source: String): Seq[TermEntity] = {

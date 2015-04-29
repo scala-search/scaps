@@ -3,11 +3,12 @@ package scaps.featureExtraction
 import scala.tools.nsc.doc.ScaladocGlobalTrait
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.reporters.ConsoleReporter
+import scaps.utils.Logging
 
 /**
  * Provides an instance of the Scala presentation compiler
  */
-object CompilerUtils {
+object CompilerUtils extends Logging {
   def withCompiler[A](classpath: List[String] = Nil)(fn: Global => A): A = {
     val compiler = createCompiler(classpath)
 
@@ -31,6 +32,8 @@ object CompilerUtils {
       settings.classpath.append(cp)
       settings.bootclasspath.append(cp)
     }
+
+    logger.trace(s"Setup presentation compiler with settings ${settings.toConciseString}")
 
     val reporter = new ConsoleReporter(settings)
 

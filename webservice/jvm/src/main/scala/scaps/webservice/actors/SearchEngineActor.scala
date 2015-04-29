@@ -4,6 +4,7 @@ import java.io.File
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scaps.featureExtraction.CompilerUtils
+import scaps.featureExtraction.ExtractionError
 import scaps.featureExtraction.JarExtractor
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
@@ -16,6 +17,7 @@ import akka.actor.actorRef2Scala
 import scala.concurrent.Future
 import akka.actor.ActorRef
 import scalaz.\/
+import scalaz.std.stream._
 import java.util.concurrent.TimeoutException
 import scaps.webapi.IndexStatus
 import scaps.webapi.Module
@@ -128,7 +130,9 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
 
         logger.info(s"start indexing ${module.moduleId} (${sourceFile})")
 
-        val f = searchEngine.indexEntities(module, extractor(new File(sourceFile)))
+        val entityStream = ExtractionError.logErrors(extractor(new File(sourceFile)), logger.info(_))
+
+        val f = searchEngine.indexEntities(module, entityStream)
 
         val error = try {
           Await.ready(f, 1.hour)

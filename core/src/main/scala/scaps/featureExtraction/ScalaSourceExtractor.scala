@@ -7,11 +7,12 @@ import scala.tools.nsc.interactive.Global
 import scala.util.Failure
 import scala.util.Success
 import scaps.utils.Logging
+import scalaz._
 
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logging {
   import compiler._
 
-  def apply(sourceFile: SourceFile): Seq[Entity] =
+  def apply(sourceFile: SourceFile): List[ExtractionError \/ Entity] =
     withTypedTree(sourceFile) { root =>
       compiler.ask { () =>
         val classes = findClasses(root)
@@ -31,8 +32,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logg
             extractEntities(cls, getDocComment _)
           } catch {
             case t: Throwable =>
-              logger.info(s"error during extraction of ${cls.name}", t)
-              Nil
+              \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
           }
         }
       }

@@ -17,8 +17,10 @@ import scalaz.syntax.traverse.ToTraverseOps
 import scaps.webapi.Module
 import scaps.evaluation.stats.QueryStats
 import scaps.evaluation.stats.Stats
+import scaps.featureExtraction.ExtractionError
+import scaps.utils.Logging
 
-object Common {
+object Common extends Logging {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
     queriesWithRelevantDocs.map {
       case (query, relevantResults) =>
@@ -59,7 +61,9 @@ object Common {
             (project.url #> jar).!!
           }
 
-          Await.result(engine.indexEntities(Module("", project.name, ""), extractor(jar)), 1.hour)
+          val entities = ExtractionError.logErrors(extractor(jar), logger.info(_))(scalaz.std.stream.streamInstance)
+
+          Await.result(engine.indexEntities(Module("", project.name, ""), entities), 1.hour)
         }
       }
     }

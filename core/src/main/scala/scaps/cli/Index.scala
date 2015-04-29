@@ -6,11 +6,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scaps.searchEngine.SearchEngine
 import scaps.featureExtraction.CompilerUtils
+import scaps.featureExtraction.ExtractionError
 import scaps.featureExtraction.JarExtractor
 import scaps.settings.Settings
 import scaps.webapi.Module
+import scaps.utils.Logging
+import scalaz.std.stream._
 
-object Index extends App {
+object Index extends App with Logging {
   val sourceJar = new File(args(0))
 
   CompilerUtils.withCompiler() { compiler =>
@@ -18,6 +21,9 @@ object Index extends App {
 
     val engine = SearchEngine(Settings.fromApplicationConf).get
 
-    Await.result(engine.indexEntities(Module.Unknown, extractor(sourceJar)), 1.hour)
+    val entities =
+      ExtractionError.logErrors(extractor(sourceJar), logger.info(_))
+
+    Await.result(engine.indexEntities(Module.Unknown, entities), 1.hour)
   }
 }

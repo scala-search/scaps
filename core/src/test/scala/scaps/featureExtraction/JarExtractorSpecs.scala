@@ -25,6 +25,6 @@ class JarExtractorSpecs extends FlatSpec with Matchers {
     CompilerUtils.withCompiler() { compiler =>
       val extractor = new JarExtractor(compiler)
       val extractorTestSources = new File(getClass.getResource("/jarExtractorTests.jar").toURI().getPath)
-      extractor(extractorTestSources).toList
+      extractor(extractorTestSources).flatMap(_.fold(_ => Nil, List(_))).toList
     }
 }

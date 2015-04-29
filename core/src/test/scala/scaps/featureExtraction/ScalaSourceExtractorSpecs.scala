@@ -439,12 +439,25 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
   it should "yield referenced types as class entities" in {
     extractClasses("""
-      package scaps.featureExtraction
+      package p
 
       object O{
         def x = "hi"
       }
       """)(
       ("java.lang.String", _ => ()))
+  }
+
+  it should "support type lambdas" in {
+    extractTerms("""
+      package p
+
+      object O {
+        type IntTuple[+A] = (Int, A)
+
+        def m[T](x: T): IntTuple[T] = ???
+      }
+      """)(
+      ("p.O.m", t => println(t)))
   }
 }

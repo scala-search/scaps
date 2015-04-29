@@ -2,13 +2,15 @@ package scaps.featureExtraction
 
 import scaps.webapi._
 import scala.tools.nsc.interactive.Global
+import scala.util.Try
+import scalaz.{ Contravariant => _, _ }
 
 trait EntityFactory {
   val compiler: Global
 
   import compiler._
 
-  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[Entity] =
+  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Entity] =
     if (isClassOfInterest(classSym)) {
       val cls = createClassEntity(classSym)
 
@@ -40,12 +42,13 @@ trait EntityFactory {
       Nil
     }
 
-  def createClassEntity(sym: Symbol): ClassEntity = {
-    val baseTypes = sym.tpe.baseTypeSeq.toList.tail
-      .filter(tpe => isClassOfInterest(tpe.typeSymbol))
-      .map(tpe => createTypeEntity(tpe, Covariant))
-    ClassEntity(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
-  }
+  def createClassEntity(sym: Symbol): ExtractionError \/ ClassEntity =
+    \/.fromTryCatchNonFatal {
+      val baseTypes = sym.tpe.baseTypeSeq.toList.tail
+        .filter(tpe => isClassOfInterest(tpe.typeSymbol))
+        .map(tpe => createTypeEntity(tpe, Covariant))
+      ClassEntity(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
+    }.leftMap(ExtractionError(qualifiedName(sym, true), _))
 
   def isClassOfInterest(sym: Symbol): Boolean =
     (sym.isClass || sym.isModuleOrModuleClass) &&
@@ -53,10 +56,11 @@ trait EntityFactory {
       !sym.isLocalClass &&
       sym.isPublic
 
-  def createTermEntity(sym: Symbol, rawComment: String): TermEntity = {
-    val (typeParams, tpe) = createTypeEntity(sym)
-    TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment)
-  }
+  def createTermEntity(sym: Symbol, rawComment: String): ExtractionError \/ TermEntity =
+    \/.fromTryCatchNonFatal {
+      val (typeParams, tpe) = createTypeEntity(sym)
+      TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment)
+    }.leftMap(ExtractionError(qualifiedName(sym, false), _))
 
   def isTermOfInterest(sym: Symbol): Boolean =
     (sym.isTerm || (sym.isConstructor && !sym.owner.isAbstractClass)) &&

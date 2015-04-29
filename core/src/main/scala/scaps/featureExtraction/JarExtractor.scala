@@ -7,11 +7,12 @@ import scala.reflect.internal.util.BatchSourceFile
 import scaps.webapi.Entity
 import scala.tools.nsc.interactive.Global
 import scala.io.Codec
+import scalaz._
 
 class JarExtractor(val compiler: Global) {
   val scalaExtractor = new ScalaSourceExtractor(compiler)
 
-  def apply(file: File): Stream[Entity] = {
+  def apply(file: File): Stream[ExtractionError \/ Entity] = {
     val jar = new JarFile(file)
 
     jar.entries().toStream.flatMap { entry =>
