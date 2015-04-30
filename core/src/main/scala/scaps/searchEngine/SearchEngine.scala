@@ -74,14 +74,14 @@ class SearchEngine private (
     Future {
       termsIndex.deleteEntitiesIn(module).get
     }.flatMap { _ =>
-      def updateModule(t: TermEntity) =
+      def setModule(t: TermEntity) =
         if (module == Module.Unknown)
           t
         else
           t.copy(module = module)
 
       Future.sequence(List(
-        Future { termsIndex.addEntities(entities.collect { case t: TermEntity => updateModule(t) }) },
+        Future { termsIndex.addEntities(entities.collect { case t: TermEntity => setModule(t) }) },
         Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }))
         .map { results =>
           results.foreach(_.get)
