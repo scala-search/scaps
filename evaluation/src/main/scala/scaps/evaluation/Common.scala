@@ -1,24 +1,27 @@
 package scaps.evaluation
 
 import java.io.File
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.urlToProcess
+
+import scalaz.{ \/ => \/ }
+import scalaz.std.list.listInstance
+import scalaz.std.stream.streamInstance
+import scalaz.syntax.traverse.ToTraverseOps
+import scaps.evaluation.stats.QueryStats
+import scaps.evaluation.stats.Stats
 import scaps.featureExtraction.CompilerUtils
+import scaps.featureExtraction.ExtractionError
 import scaps.featureExtraction.JarExtractor
 import scaps.searchEngine.QueryError
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
-import scalaz.\/
-import scalaz.std.list.listInstance
-import scalaz.syntax.traverse.ToTraverseOps
-import scaps.webapi.Module
-import scaps.evaluation.stats.QueryStats
-import scaps.evaluation.stats.Stats
-import scaps.featureExtraction.ExtractionError
 import scaps.utils.Logging
+import scaps.webapi.Module
 
 object Common extends Logging {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
@@ -61,7 +64,7 @@ object Common extends Logging {
             (project.url #> jar).!!
           }
 
-          val entities = ExtractionError.logErrors(extractor(jar), logger.info(_))(scalaz.std.stream.streamInstance)
+          val entities = ExtractionError.logErrors(extractor(jar), logger.info(_))
 
           Await.result(engine.indexEntities(Module("", project.name, ""), entities), 1.hour)
         }

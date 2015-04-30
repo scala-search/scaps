@@ -8,13 +8,11 @@ import autowire._
 import sbt.{ url => sbtUrl, _ }
 import sbt.Keys._
 import sbt.complete.DefaultParsers.spaceDelimited
-import scaps.sbtPlugin.evaluation.QueryStats
 import scaps.webapi.Module
 import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import org.slf4j.impl.StaticLoggerBinder
 import sbt.complete.Parser
-import scaps.sbtPlugin.evaluation.Stats
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -103,33 +101,6 @@ object ApiSearchPlugin extends AutoPlugin {
     },
     scapsReset := {
       Await.result(controlClient.value.resetIndexes().call(), 5.seconds)
-    },
-    scapsBenchmark := {
-      val scaps = scapsClient.value
-      val log = streams.value.log
-
-      val noResults = 100
-
-      val results = scapsTestCollection.value.map {
-        case (query, expectedSignatures) =>
-          scaps.search(query, noResults).call().map[Option[QueryStats]] {
-            case Left(error) =>
-              log.warn(s"$query: $error")
-              None
-            case Right(searchResults) =>
-              val queryStats = QueryStats(query, searchResults.map(_.signature), expectedSignatures)
-              log.info(s"$query: ${queryStats.averagePrecision}")
-              Some(queryStats)
-          }
-      }
-
-      val map = Future.sequence(results).map { results =>
-        val stats = Stats(results.flatten.toList)
-        log.info(s"MAP: ${stats.meanAveragePrecision}")
-        stats.meanAveragePrecision
-      }
-
-      Await.result(map, 1.hour)
     })
 
   lazy val scapsClient = Def.task {
