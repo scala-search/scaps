@@ -59,6 +59,7 @@ object Dependencies {
   val webapiDependencies = Seq()
 
   val webserviceDependencies = Seq(
+    scalaz,
     akkaActor,
     akkaSlf4j,
     sprayCan,

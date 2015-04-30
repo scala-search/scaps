@@ -43,7 +43,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         title(pageTitle),
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
         stylesheet("scaps.css"),
-        javascript("api-search-webservice-fastopt.js")),
+        javascript("api-search-webservice-ui-fastopt.js")),
 
       body(ScapsStyle.world, onload := boot)(
         nav(cls := "navbar navbar-inverse navbar-fixed-top")(

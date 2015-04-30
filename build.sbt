@@ -15,7 +15,7 @@ lazy val commonSettings = Seq(
       "-Xfatal-warnings"))
 
 lazy val root = (project in file("."))
-  .aggregate(core, evaluation, sbtPlug, webserviceJVM, webserviceJS, webapi_2_10, webapi_2_11, webapiJS)
+  .aggregate(webapi_2_10, webapi_2_11, webapiJS, core, evaluation, webservice, webserviceUI, sbtPlug)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)
@@ -57,26 +57,42 @@ lazy val evaluation = (project in file("evaluation"))
   .settings(commonSettings: _*)
   .settings(
     name := "api-search-evaluation",
+    publishArtifact := false,
     libraryDependencies ++= Dependencies.evaluationDependencies)
 
-lazy val webservice = (crossProject in file("webservice"))
+lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
   .dependsOn(webapi_2_11_cross)
-  .jvmConfigure(_.dependsOn(core))
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-webservice")
-  .jvmSettings(
-    libraryDependencies ++= Dependencies.webserviceDependencies)
-  .jsSettings(
+    name := "api-search-webservice-shared",
+    publishArtifact := false,
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion))
+
+lazy val webserviceShared_JVM = webserviceShared_cross.jvm
+lazy val webserviceShared_JS = webserviceShared_cross.js
+
+lazy val webservice = (project in file("webservice"))
+  .dependsOn(webserviceShared_JVM, core)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "api-search-webservice",
+    publishArtifact := false,
+    libraryDependencies ++= Dependencies.webserviceDependencies,
+    (resources in Compile) += (fastOptJS in (webserviceUI, Compile)).value.data)
+
+lazy val webserviceUI = (project in file("webserviceUI"))
+  .dependsOn(webserviceShared_JS)
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "api-search-webservice-ui",
+    publishArtifact := false,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "upickle" % Dependencies.upickleVersion,
       "com.lihaoyi" %%% "autowire" % Dependencies.autowireVersion,
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion,
       "org.scala-js" %%% "scalajs-dom" % "0.8.0"))
-
-lazy val webserviceJVM = webservice.jvm
-  .settings((resources in Compile) += (fastOptJS in (webserviceJS, Compile)).value.data)
-lazy val webserviceJS = webservice.js
 
 lazy val sbtPlug = (project in file("sbtPlugin"))
   .dependsOn(webapi_2_10)
