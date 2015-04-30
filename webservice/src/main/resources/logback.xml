@@ -1,0 +1,24 @@
+<configuration>
+
+  <appender name="LOGFILE" class="ch.qos.logback.core.FileAppender">
+  	<file>scapsWebservice.log</file>
+    <encoder>
+      <pattern>%date{ISO8601} %-5level %logger{36} %X{sourceThread} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="USER_INTERACTIONS" class="ch.qos.logback.core.FileAppender">
+  	<file>userInteractions.log</file>
+    <encoder>
+      <pattern>%date{ISO8601}; %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="warning">
+    <appender-ref ref="LOGFILE" />
+  </root>
+  
+  <logger level="info" name="scaps.webservice.actors.UserInteractionLogger">
+    <appender-ref ref="USER_INTERACTIONS" />
+  </logger>
+</configuration>
