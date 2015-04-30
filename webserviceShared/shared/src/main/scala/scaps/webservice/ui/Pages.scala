@@ -23,9 +23,16 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   val searchFieldId = "searchField"
   val resultContainerId = "results"
-  val main = "scaps.webservice.ui.Main()"
-  val boot = s"$main.main(document.getElementById('$searchFieldId'), document.getElementById('$resultContainerId'))"
   val pageTitle = "Scaps: Scala API Search"
+
+  object jsCallbacks {
+    val main = "scaps.webservice.ui.Main()"
+
+    val boot = s"$main.main(document.getElementById('$searchFieldId'), document.getElementById('$resultContainerId'))"
+
+    def assessPositively(feedbackElementId: String, query: String, term: TermEntity) =
+      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '$query', '${term.signature}')"
+  }
 
   def searchUri(query: String, page: Int = 0) = {
     val params = Map[String, Any]() ++
@@ -45,7 +52,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         stylesheet("scaps.css"),
         javascript("api-search-webservice-ui-fastopt.js")),
 
-      body(ScapsStyle.world, onload := boot)(
+      body(ScapsStyle.world, onload := jsCallbacks.boot)(
         nav(cls := "navbar navbar-inverse navbar-fixed-top")(
           div(cls := "container")(
             form(cls := "navbar-form navbar-left", method := "get", role := "search")(
@@ -106,11 +113,11 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           }))
 
     div(
-      dl(results.map(result(_))),
+      dl(results.map(result(query, _))),
       pager)
   }
 
-  def result(term: TermEntity) = {
+  def result(query: String, term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
         em(ScapsStyle.typeParameter)(t.name)
@@ -145,6 +152,14 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       if (ps.isEmpty) span()
       else span("[", intersperse[Modifier](ps.map(p => em(ScapsStyle.typeParameter)(p.toString)), ", "), "]")
 
+    val feedback = {
+      val feedbackElemId = s"feedback_${term.signature}"
+
+      div(id := feedbackElemId)(
+        a(href := "#", onclick := jsCallbacks.assessPositively(feedbackElemId, query, term))(
+          span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
+    }
+
     Seq(
       dt(code(term.tpe match {
         case TypeEntity.MemberAccess(owner, member) =>
@@ -156,8 +171,15 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           span(strong(term.name), typeParams(term.typeParameters), signature(t))
       })),
       dd(div(term.comment),
-        div(cls := "label label-default")(term.module.name), " ", term.name))
+        div(span(cls := "label label-default")(term.module.name), " ", term.name),
+        feedback))
   }
+
+  def feedbackReceived =
+    span(ScapsStyle.feedbackFeedback)(raw("Thank you for your feedback &#9786;"))
+
+  def feedbackError =
+    span(ScapsStyle.feedbackFeedback)("Sorry, there was an error transferring your feedback.")
 }
 
 trait Helpers[Builder, Output <: FragT, FragT] {

@@ -14,11 +14,13 @@ import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import scaps.webapi.TermEntity
 import scaps.webservice.actors.SearchEngineActor
+import scaps.webservice.actors.UserInteractionLogger
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.SearchEngineProtocol._
 
   val searchEngine = context.actorOf(Props[SearchEngineActor], "searchEngine")
+  val userInteractionLogger = context.actorOf(Props[UserInteractionLogger], "userInteractionLogger")
 
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
@@ -34,8 +36,16 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   def getStatus(): Future[IndexStatus] =
     (searchEngine ? GetStatus).mapTo[IndexStatus]
 
-  def search(query: String, noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] =
+  def search(query: String, noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] = {
+    val searchMsg = Search(query, noResults, offset)
     for {
-      result <- (searchEngine ? Search(query, noResults, offset)).mapTo[String \/ Seq[TermEntity]]
-    } yield result.toEither
+      result <- (searchEngine ? searchMsg).mapTo[String \/ Seq[TermEntity]]
+    } yield {
+      userInteractionLogger ! ((searchMsg, result))
+      result.toEither
+    }
+  }
+
+  def assessPositivley(query: String, termSignature: String): Unit =
+    userInteractionLogger ! PositiveAssessement(query, termSignature)
 }

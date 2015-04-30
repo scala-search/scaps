@@ -62,6 +62,7 @@ object Dependencies {
     scalaz,
     akkaActor,
     akkaSlf4j,
+    logback,
     sprayCan,
     sprayRouting,
     upickle,

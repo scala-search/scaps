@@ -33,15 +33,16 @@ object Main {
       Observable.debounce(400.millis)(q)
     }
 
-    val content = Observable.async {
-      query.map(fetchContent)
-    }
+    Observable.async(query.map(fetchContent))
+      .foreach(content => replaceContent(container, content.render))
+  }
 
-    content.foreach { content =>
-      container.innerHTML = ""
-      container.appendChild(content.render)
-      ()
-    }
+  @JSExport
+  def assessPositively(feedbackElement: html.Div, query: String, signature: String): Unit = {
+    scaps.assessPositivley(query, signature).call()
+      .map(_ => DomPages.feedbackReceived)
+      .recover { case _ => DomPages.feedbackError }
+      .foreach(answer => replaceContent(feedbackElement, answer.render))
   }
 
   def fetchContent(query: String) = {
@@ -55,5 +56,11 @@ object Main {
     }.recover {
       case AjaxException(_) => DomPages.error("The Scaps service is currently unreachable. Please try again later.")
     }
+  }
+
+  def replaceContent(outer: dom.Element, content: dom.Element): Unit = {
+    outer.innerHTML = ""
+    outer.appendChild(content)
+    ()
   }
 }

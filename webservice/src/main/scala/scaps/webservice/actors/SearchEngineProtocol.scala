@@ -12,5 +12,7 @@ object SearchEngineProtocol {
   case class Search(query: String, noResults: Int, offset: Int)
   type Result = String \/ Seq[TermEntity]
 
+  case class PositiveAssessement(query: String, signature: String)
+
   case object GetStatus
 }

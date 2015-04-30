@@ -27,5 +27,8 @@ trait ScapsStyles[Builder, Output <: FragT, FragT] {
 
     def typeParameter = cls(
       color := "#999999")
+
+    def feedbackFeedback = cls(
+      color := "#999999")
   }
 }
