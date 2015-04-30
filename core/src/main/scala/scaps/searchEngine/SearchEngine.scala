@@ -95,7 +95,7 @@ class SearchEngine private (
       analyzed <- analyzer(parsed).get
       results <- termsIndex.find(analyzed).get
     } yield {
-      logger.info(s"""query "${query}" expanded to "${analyzed.fingerprint.mkString(" ")}" """)
+      logger.debug(s"""query "${query}" expanded to "${analyzed.fingerprint.mkString(" ")}" """)
       results
     }
   }
