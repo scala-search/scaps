@@ -4,14 +4,17 @@ import scaps.webapi._
 import scala.tools.nsc.interactive.Global
 import scala.util.Try
 import scalaz.{ Contravariant => _, _ }
+import scaps.utils.Logging
 
-trait EntityFactory {
+trait EntityFactory extends Logging {
   val compiler: Global
 
   import compiler._
 
   def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Entity] =
     if (isClassOfInterest(classSym)) {
+      logger.trace(s"Extract entities in ${qualifiedName(classSym, true)}")
+
       val cls = createClassEntity(classSym)
 
       val objTerm =

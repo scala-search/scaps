@@ -62,8 +62,8 @@ class SearchEngineActor extends Actor {
       case GetStatus =>
         sender ! IndexStatus(Nil, indexedModules)
       case Reset =>
-        become(resetting())
-        self ! Reset
+        searchEngine.resetIndexes().get
+        become(ready(Nil))
     }
 
     def indexing(queue: List[Index], indexedModules: List[Module]): Receive = {
@@ -87,13 +87,7 @@ class SearchEngineActor extends Actor {
       case GetStatus =>
         sender ! IndexStatus(queue.map(_.module), indexedModules)
       case Reset =>
-        become(resetting())
-    }
-
-    def resetting(): Receive = {
-      case _ =>
-        searchEngine.resetIndexes().get
-        become(ready(Nil))
+      // TODO
     }
 
     def rewriteUnenforcedIndexJob(i: Index, indexedModules: List[Module]) =
@@ -135,7 +129,7 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
         val f = searchEngine.indexEntities(module, entityStream)
 
         val error = try {
-          Await.ready(f, 1.hour)
+          Await.ready(f, 1.day)
           logger.info(s"${module.moduleId} has been indexed successfully")
           None
         } catch {

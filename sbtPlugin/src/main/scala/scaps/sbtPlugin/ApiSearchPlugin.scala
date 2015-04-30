@@ -132,12 +132,12 @@ object ApiSearchPlugin extends AutoPlugin {
       Await.result(map, 1.hour)
     })
 
-  val scapsClient = Def.task {
+  lazy val scapsClient = Def.task {
     StaticLoggerBinder.sbtLogger = streams.value.log
     new DispatchClient(scapsHost.value, ScapsApi.apiPath)[ScapsApi]
   }
 
-  val controlClient = Def.task {
+  lazy val controlClient = Def.task {
     StaticLoggerBinder.sbtLogger = streams.value.log
     new DispatchClient(scapsControlHost.value, ScapsControlApi.apiPath)[ScapsControlApi]
   }

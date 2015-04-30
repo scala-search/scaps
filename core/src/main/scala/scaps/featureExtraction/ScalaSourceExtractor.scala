@@ -12,9 +12,12 @@ import scalaz._
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logging {
   import compiler._
 
-  def apply(sourceFile: SourceFile): List[ExtractionError \/ Entity] =
+  def apply(sourceFile: SourceFile): List[ExtractionError \/ Entity] = {
+    logger.trace(s"Extracting source file ${sourceFile.path}")
+
     withTypedTree(sourceFile) { root =>
       compiler.ask { () =>
+        logger.trace("Collect Classes and Fragments")
         val classes = findClasses(root)
 
         val fragments = for {
@@ -37,6 +40,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logg
         }
       }
     }.getOrElse(Nil).distinct
+  }
 
   private def findClasses(tree: Tree): List[Symbol] =
     traverse(tree) {
