@@ -1,1 +1,1 @@
-cloc . --exclude-dir=target,bin,.settings,codeMetrics.sh
+cloc . --exclude-dir=target,target-2.10.5,target-2.11.6,bin,.settings,codeMetrics.sh

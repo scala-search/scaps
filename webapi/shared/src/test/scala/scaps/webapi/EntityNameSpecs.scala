@@ -48,7 +48,7 @@ object EntityNameSpecs extends TestSuite {
         }
       }
     }
-    'identity{
+    'bijectivity{
       * - {
         val parts = List("pkg", "#", "##")
         val name = parts.foldLeft("")(appendStaticMember)
