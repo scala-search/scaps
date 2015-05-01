@@ -13,10 +13,11 @@ case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module])
 trait ScapsApi extends CommonApi {
   def search(
     query: String,
+    moduleId: Option[String] = None,
     noResults: Int = ScapsApi.defaultPageSize,
     offset: Int = 0): Future[Either[String, Seq[TermEntity]]]
 
-  def assessPositivley(query: String, resultNo: Int, termSignature: String): Unit
+  def assessPositivley(query: String, moduleId: Option[String], resultNo: Int, termSignature: String): Unit
 }
 
 object ScapsApi {

@@ -21,27 +21,30 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   def encodeUri(path: String, params: Map[String, Any]): String
 
-  val searchFieldId = "searchField"
-  val resultContainerId = "results"
   val pageTitle = "Scaps: Scala API Search"
 
   object jsCallbacks {
     val main = "scaps.webservice.ui.Main()"
 
-    val boot = s"$main.main(document.getElementById('$searchFieldId'), document.getElementById('$resultContainerId'))"
+    def boot(searchFormId: String, resultContainerId: String) =
+      s"$main.main(document.getElementById('$searchFormId'), document.getElementById('$resultContainerId'))"
 
-    def assessPositively(feedbackElementId: String, query: String, resultNo: Int, term: TermEntity) =
-      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '$query', $resultNo, '${term.signature}')"
+    def assessPositively(feedbackElementId: String, query: String, moduleId: String, resultNo: Int, term: TermEntity) =
+      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '$query', '$moduleId', $resultNo, '${term.signature}')"
   }
 
-  def searchUri(query: String, page: Int = 0) = {
+  def searchUri(query: String, enabledModuleIds: Option[String] = None, page: Int = 0) = {
     val params = Map[String, Any]() ++
       (if (query == "") None else Some("q" -> query)) ++
-      (if (page == 0) None else Some("p" -> page))
+      (if (page == 0) None else Some("p" -> page)) ++
+      enabledModuleIds.map("m" -> _)
     encodeUri("", params)
   }
 
-  def skeleton(status: IndexStatus, mods: Modifier, query: String = "") =
+  def skeleton(status: IndexStatus, enabledModuleId: Option[String], mods: Modifier, query: String = "") = {
+    val searchFormId = "searchField"
+    val resultContainerId = "results"
+
     html(lang := "en")(
       head(
         meta(charset := "utf-8"),
@@ -52,25 +55,45 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         stylesheet("scaps.css"),
         javascript("api-search-webservice-ui-fastopt.js")),
 
-      body(ScapsStyle.world, onload := jsCallbacks.boot)(
-        nav(cls := "navbar navbar-inverse navbar-fixed-top")(
-          div(cls := "container")(
-            form(cls := "navbar-form navbar-left", method := "get", role := "search")(
-              div(cls := "input-group")(
-                span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
-                input(tpe := "search", name := "q", id := searchFieldId, value := query,
-                  autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
-        nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
-          div(cls := "container")(
-            ul(
-              status.indexedModules.flatMap { m =>
-                Seq[Modifier](li(cls := "label label-default")(m.name, " ", span(cls := "glyphicon glyphicon-minus")()), " ")
-              },
-              li(cls := "label label-default")(span(cls := "glyphicon glyphicon-plus")(), " ")))),
+      body(ScapsStyle.world, onload := jsCallbacks.boot(searchFormId, resultContainerId))(
+        form(id := searchFormId, method := "get", role := "search")(
+          nav(cls := "navbar navbar-inverse navbar-fixed-top")(
+            div(cls := "container")(
+              div(cls := "navbar-form navbar-left")(
+                div(cls := "input-group")(
+                  span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
+                  input(tpe := "search", name := "q", value := query,
+                    autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
+          nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
+            div(cls := "container")(
+              ul(
+                li(display.inline, paddingRight := 20.px) {
+                  val allChecked =
+                    if (enabledModuleId.isEmpty)
+                      checked := true
+                    else
+                      style := "" // just some attr without effect
+
+                  label(cls := "radio-inline")(
+                    input(tpe := "radio", name := "m", value := "", allChecked), "All ")
+                },
+                status.indexedModules.map { m =>
+                  li(display.inline, paddingRight := 20.px) {
+                    val checkedAttr =
+                      if (enabledModuleId.contains(m.moduleId))
+                        checked := true
+                      else
+                        style := "" // just some attr without effect
+
+                    label(cls := "radio-inline")(
+                      input(tpe := "radio", name := "m", value := m.moduleId, checkedAttr), s"${m.name}:${m.revision} ")
+                  }
+                })))),
 
         div(cls := "container")(
           div(cls := "row")(
             div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods)))))
+  }
 
   def main(status: IndexStatus) = {
     def example(query: String, desc: String) = {
@@ -101,27 +124,27 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-danger")(msg)
 
-  def results(currentPage: Int, query: String, results: Seq[TermEntity]) = {
+  def results(currentPage: Int, query: String, enabledModuleId: Option[String], results: Seq[TermEntity]) = {
     val pager =
       nav(
         ul(cls := "pager")(
           when(currentPage > 0) {
-            li(cls := "previous")(a(href := searchUri(query, currentPage - 1))(raw("&larr; Previous")))
+            li(cls := "previous")(a(href := searchUri(query, enabledModuleId, currentPage - 1))(raw("&larr; Previous")))
           },
           when(results.size == ScapsApi.defaultPageSize) {
-            li(cls := "previous")(a(href := searchUri(query, currentPage + 1))(raw("Next &rarr;")))
+            li(cls := "previous")(a(href := searchUri(query, enabledModuleId, currentPage + 1))(raw("Next &rarr;")))
           }))
 
     val renderedResults = results
       .zipWithIndex
-      .map { case (term, idx) => result(query, (currentPage * ScapsApi.defaultPageSize) + idx, term) }
+      .map { case (term, idx) => result(query, enabledModuleId, (currentPage * ScapsApi.defaultPageSize) + idx, term) }
 
     div(
       dl(renderedResults),
       pager)
   }
 
-  def result(query: String, resultNo: Int, term: TermEntity) = {
+  def result(query: String, moduleId: Option[String], resultNo: Int, term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
         em(ScapsStyle.typeParameter)(t.decodedName)
@@ -159,7 +182,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       val feedbackElemId = s"feedback_${term.signature}"
 
       div(id := feedbackElemId)(
-        a(href := "#", onclick := jsCallbacks.assessPositively(feedbackElemId, query, resultNo, term))(
+        a(href := "#", 
+            onclick := jsCallbacks.assessPositively(feedbackElemId, query, moduleId.getOrElse(""), resultNo, term))(
           span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
 

@@ -69,9 +69,9 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  def find(query: APIQuery): Try[ProcessingError \/ Seq[TermEntity]] =
+  def find(query: APIQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
-      toLuceneQuery(query).map(
+      toLuceneQuery(query, moduleIds).map(
         lq => search(lq, settings.query.maxResults).get)
     }
 
@@ -80,9 +80,10 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
 
-  private def toLuceneQuery(query: APIQuery): ProcessingError \/ Query = {
+  private def toLuceneQuery(query: APIQuery, moduleIds: Set[String]): ProcessingError \/ Query = {
     try {
       val q = new BooleanQuery
+
       query.keywords.foreach { keyword =>
         val nameQuery = new TermQuery(new Term(fields.name, keyword))
         nameQuery.setBoost(settings.query.nameBoost.toFloat)
@@ -92,12 +93,23 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         docQuery.setBoost(settings.query.docBoost.toFloat)
         q.add(docQuery, Occur.SHOULD)
       }
+
       query.types.foreach { tpe =>
         val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
         val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
         tq.setBoost(tpe.boost)
         q.add(tq, Occur.SHOULD)
       }
+
+      if (!moduleIds.isEmpty) {
+        val moduleQuery = new BooleanQuery
+        moduleIds.foreach { moduleId =>
+          val tq = new TermQuery(new Term(fields.moduleId, moduleId))
+          moduleQuery.add(tq, Occur.SHOULD)
+        }
+        q.add(moduleQuery, Occur.MUST)
+      }
+
       q.right
     } catch {
       case _: BooleanQuery.TooManyClauses => TooUnspecific().left

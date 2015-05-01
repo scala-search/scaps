@@ -148,8 +148,8 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
   import scaps.searchEngine._
 
   def receive = {
-    case Search(q, noResults, offset) =>
-      sender ! searchEngine.search(q).get.map {
+    case Search(q, moduleIds, noResults, offset) =>
+      sender ! searchEngine.search(q, moduleIds).get.map {
         case terms => terms.drop(offset).take(noResults)
       }.leftMap {
         case SyntaxError(msg) =>

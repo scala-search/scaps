@@ -9,10 +9,10 @@ object SearchEngineProtocol {
   case class Indexed(job: Index, error: Option[Throwable])
   case object Reset
 
-  case class Search(query: String, noResults: Int, offset: Int)
+  case class Search(query: String, moduleIds: Set[String], noResults: Int, offset: Int)
   type Result = String \/ Seq[TermEntity]
 
-  case class PositiveAssessement(query: String, resultNo: Int, signature: String)
+  case class PositiveAssessement(query: String, moduleIds: Set[String], resultNo: Int, signature: String)
 
   case object GetStatus
 }

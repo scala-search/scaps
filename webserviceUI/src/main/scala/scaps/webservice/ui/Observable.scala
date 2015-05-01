@@ -17,8 +17,10 @@ import org.scalajs.dom
  */
 trait Observable[T] { outer =>
   private var observers: List[T => Unit] = Nil
+  private var current: Option[T] = None
 
   protected def notifyObservers(v: T) = {
+    current = Some(v)
     observers.foreach(_(v))
   }
 
@@ -26,6 +28,8 @@ trait Observable[T] { outer =>
   def foreach(handler: T => Unit): Unit = {
     observers = handler :: observers
   }
+
+  def tryGet(): Option[T] = current
 
   def map[A](f: T => A): Observable[A] =
     new Observable[A] {
@@ -52,6 +56,8 @@ object Observable {
    */
   def debounce[T](duration: Duration)(o: Observable[T]): Observable[T] =
     new Observable[T] {
+      override def tryGet() = o.tryGet()
+
       override def foreach(handler: T => Unit) = {
         var handle = 0
         o.foreach { (v: T) =>
@@ -64,8 +70,8 @@ object Observable {
   def join[A, B](oa: Observable[A], ob: Observable[B]): Observable[(A, B)] =
     new Observable[(A, B)] {
       override def foreach(handler: ((A, B)) => Unit) = {
-        var a: Option[A] = None
-        var b: Option[B] = None
+        var a: Option[A] = oa.tryGet()
+        var b: Option[B] = ob.tryGet()
         oa.foreach { va =>
           a = Some(va)
           for {
@@ -100,11 +106,17 @@ object Observable {
 class Variable[T](init: T) extends Observable[T] {
   private var v: T = init
 
+  override def tryGet() = Some(v)
+
   def update(newV: T) = {
     if (v != newV) {
       v = newV
       notifyObservers(newV)
     }
+  }
+
+  def apply() = {
+    v
   }
 }
 

@@ -36,25 +36,26 @@ trait ScapsService extends HttpService {
     } ~
       pathSingleSlash {
         get {
-          parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
+          parameters('q, 'p.as[Int] ? 0, 'm.?) { (query, resultPage, moduleId) =>
             if (query.isEmpty())
               reject
             else
               complete {
+                val enabledModuleId = moduleId.flatMap(m => if (m.isEmpty()) None else Some(m))
                 val resultOffset = resultPage * ScapsApi.defaultPageSize
 
                 for {
                   status <- apiImpl.getStatus()
-                  result <- apiImpl.search(query, offset = resultOffset)
-                  page = HtmlPages.skeleton(status,
-                    result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, _)), query)
+                  result <- apiImpl.search(query, moduleId = enabledModuleId, offset = resultOffset)
+                  page = HtmlPages.skeleton(status, enabledModuleId,
+                    result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleId, _)), query)
                 } yield HttpEntity(MediaTypes.`text/html`, page.toString())
               }
           } ~
             complete {
               for {
                 status <- apiImpl.getStatus()
-                page = HtmlPages.skeleton(status, HtmlPages.main(status))
+                page = HtmlPages.skeleton(status, None, HtmlPages.main(status))
               } yield HttpEntity(MediaTypes.`text/html`, page.toString())
             }
         }
