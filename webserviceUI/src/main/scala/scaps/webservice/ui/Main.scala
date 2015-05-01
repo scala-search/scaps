@@ -38,8 +38,8 @@ object Main {
   }
 
   @JSExport
-  def assessPositively(feedbackElement: html.Div, query: String, signature: String): Unit = {
-    scaps.assessPositivley(query, signature).call()
+  def assessPositively(feedbackElement: html.Div, query: String, resultNo: Int, signature: String): Unit = {
+    scaps.assessPositivley(query, resultNo, signature).call()
       .map(_ => DomPages.feedbackReceived)
       .recover { case _ => DomPages.feedbackError }
       .foreach(answer => replaceContent(feedbackElement, answer.render))

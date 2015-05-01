@@ -46,6 +46,6 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
     }
   }
 
-  def assessPositivley(query: String, termSignature: String): Unit =
-    userInteractionLogger ! PositiveAssessement(query, termSignature)
+  def assessPositivley(query: String, resultNo: Int, termSignature: String): Unit =
+    userInteractionLogger ! PositiveAssessement(query, resultNo, termSignature)
 }

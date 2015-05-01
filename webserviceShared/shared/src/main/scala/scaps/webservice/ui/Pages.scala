@@ -30,8 +30,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     val boot = s"$main.main(document.getElementById('$searchFieldId'), document.getElementById('$resultContainerId'))"
 
-    def assessPositively(feedbackElementId: String, query: String, term: TermEntity) =
-      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '$query', '${term.signature}')"
+    def assessPositively(feedbackElementId: String, query: String, resultNo: Int, term: TermEntity) =
+      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '$query', $resultNo, '${term.signature}')"
   }
 
   def searchUri(query: String, page: Int = 0) = {
@@ -112,12 +112,16 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
             li(cls := "previous")(a(href := searchUri(query, currentPage + 1))(raw("Next &rarr;")))
           }))
 
+    val renderedResults = results
+      .zipWithIndex
+      .map { case (term, idx) => result(query, (currentPage * ScapsApi.defaultPageSize) + idx, term) }
+
     div(
-      dl(results.map(result(query, _))),
+      dl(renderedResults),
       pager)
   }
 
-  def result(query: String, term: TermEntity) = {
+  def result(query: String, resultNo: Int, term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
         em(ScapsStyle.typeParameter)(t.decodedName)
@@ -155,7 +159,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       val feedbackElemId = s"feedback_${term.signature}"
 
       div(id := feedbackElemId)(
-        a(href := "#", onclick := jsCallbacks.assessPositively(feedbackElemId, query, term))(
+        a(href := "#", onclick := jsCallbacks.assessPositively(feedbackElemId, query, resultNo, term))(
           span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
 
