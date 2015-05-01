@@ -45,6 +45,24 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)("p.C#=:=")
   }
 
+  it should "escape # character in names" in {
+    shouldExtractTerms("""
+      package p
+
+      class C {
+        def ### = 1
+      }
+
+      object ### {
+        def ### = 1
+      }
+      """)(
+      "p.C#'#'#", // inherited from Any
+      "p.C#'#'#'#",
+      "p.'#'#'#.'#'#",
+      "p.'#'#'#.'#'#'#")
+  }
+
   it should "extract doc comments" in {
     val entities = extractAllTerms("""
       package p

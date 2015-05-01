@@ -5,6 +5,7 @@ import scala.tools.nsc.interactive.Global
 import scala.util.Try
 import scalaz.{ Contravariant => _, _ }
 import scaps.utils.Logging
+import scala.annotation.tailrec
 
 trait EntityFactory extends Logging {
   val compiler: Global
@@ -95,30 +96,24 @@ trait EntityFactory extends Logging {
   }
 
   def qualifiedName(sym: Symbol, isTypeName: Boolean): String = {
-    def toName(sym: Symbol) =
-      if (sym.isPackageObject)
-        ""
-      else
-        sym.name.decode
+    def rec(s: Symbol): String = {
+      val owner = s.owner
 
-    def rec(member: Symbol): String = {
-      val owner = member.owner
-
-      if (owner.isRootSymbol || owner == owner.owner)
+      if (s.isRootSymbol || s == s.owner)
         ""
-      else if (owner.isPackageObject)
+      else if (s.isPackageObject)
         rec(owner)
-      else if (owner.hasPackageFlag || owner.hasModuleFlag || member.isConstructor)
-        rec(owner) + toName(owner) + "."
+      else if (owner.hasPackageFlag || owner.hasModuleFlag || s.isConstructor)
+        EntityName.appendStaticMember(rec(owner), s.decodedName)
       else
-        rec(owner) + toName(owner) + "#"
+        EntityName.appendClassMember(rec(owner), s.decodedName)
     }
 
     val name =
       if (sym.isTypeParameter)
-        toName(sym)
+        EntityName.encodeIdentifier(sym.decodedName)
       else
-        rec(sym) + toName(sym)
+        rec(sym)
 
     if (isTypeName)
       s"$name${sym.moduleSuffix}"

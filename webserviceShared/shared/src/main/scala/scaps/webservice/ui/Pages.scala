@@ -120,15 +120,14 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def result(query: String, term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
-        em(ScapsStyle.typeParameter)(t.name)
+        em(ScapsStyle.typeParameter)(t.decodedName)
       else
         em(a(attrs.title := t.name)(t.shortName))
 
     def tpe(t: TypeEntity): Modifier = t match {
       case TypeEntity.Function(params, res, _) =>
         val paramTypes =
-          if (params.length <= 1) span(params.map(tpe(_)))
-          else span("(", intersperse[Modifier](params.map(tpe(_)), ", "), ")")
+          span("(", intersperse[Modifier](params.map(tpe(_)), ", "), ")")
         span(paramTypes, " => ", tpe(res))
       case TypeEntity.Tuple(tpes, _) =>
         span("(", intersperse[Modifier](tpes.map(tpe(_)), ", "), ")")
@@ -168,10 +167,10 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
           span(tpe(owner), ".", strong(term.shortName), typeParams(memberTypeParams), signature(member))
         case t =>
-          span(strong(term.name), typeParams(term.typeParameters), signature(t))
+          span(strong(term.decodedName), typeParams(term.typeParameters), signature(t))
       })),
       dd(div(term.comment),
-        div(span(cls := "label label-default")(term.module.name), " ", term.name),
+        div(span(cls := "label label-default")(term.module.name), " ", term.decodedName),
         feedback))
   }
 

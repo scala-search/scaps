@@ -1,11 +1,103 @@
 package scaps.webapi
 
-sealed trait Entity {
+import scala.collection.mutable.ListBuffer
+
+trait EntityLike {
   def name: String
 
+  def decodedName: String =
+    EntityName.decodeFullName(name)
+
   def shortName: String =
-    // workaround because of isses with String.split(Array) in Scala JS
-    name.split('.').flatMap(_.split('#')).last
+    EntityName.splitName(name).last
+}
+
+sealed trait Entity extends EntityLike
+
+/**
+ * Helper methods for de-/encoding entity names.
+ *
+ * We use a plain string representation for entity names because a more
+ * sophisticated representation is too expensive to create during extraction.
+ */
+object EntityName {
+  /**
+   * Creates a new name referring to a class member and takes care of the encoding.
+   */
+  def appendClassMember(ownerName: String, memberId: String): String =
+    append(ownerName, memberId, '#')
+
+  /**
+   * Creates a new name referring to a static member (package/module member)
+   * and takes care of the encoding.
+   */
+  def appendStaticMember(ownerName: String, memberId: String): String =
+    append(ownerName, memberId, '.')
+
+  private def append(ownerName: String, memberId: String, separator: Char): String =
+    if (ownerName == "")
+      memberId
+    else
+      ownerName + separator + encodeIdentifier(memberId)
+
+  /**
+   * Splits an encoded name into the decoded identifiers it is composed of.
+   * E.g. "pkg.Cls#member" becomes List("pkg", "Cls", "member").
+   */
+  def splitName(name: String): List[String] = {
+    val lb = new ListBuffer[String]
+    var currentName = new StringBuilder
+    var i = 0
+    while (i < name.length()) {
+      val c = name(i)
+      if (c == ''') {
+        i += 1
+        currentName.append(name(i))
+      } else if (c == '#' || c == '.') {
+        lb.append(currentName.mkString)
+        currentName = new StringBuilder
+      } else {
+        currentName.append(c)
+      }
+      i += 1
+    }
+    lb.append(currentName.mkString)
+    lb.result()
+  }
+
+  def decodeFullName(name: String): String = {
+    val decoded = new StringBuilder
+    var i = 0
+    while (i < name.length()) {
+      val c = name(i)
+      if (c == ''') {
+        i += 1
+        decoded.append(name(i))
+      } else {
+        decoded.append(c)
+      }
+      i += 1
+    }
+    decoded.mkString
+  }
+
+  /**
+   * Encodes a Scala identifier such that # characters are escaped by single quotes (').
+   */
+  def encodeIdentifier(id: String): String = {
+    if (id.indexOf('#') == -1) {
+      id
+    } else {
+      val sb = new StringBuilder
+      for (c <- id) {
+        if (c == '#')
+          sb.append("'#")
+        else
+          sb.append(c)
+      }
+      sb.mkString
+    }
+  }
 }
 
 case class ClassEntity(
@@ -65,11 +157,8 @@ case class TermEntity(
   def withoutComment = copy(comment = "")
 }
 
-case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) {
+case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) extends EntityLike {
   import TypeEntity._
-
-  def shortName: String =
-    name.split(Array('.', '#')).last
 
   override def toString() = {
     val argStr = args match {
