@@ -13,7 +13,7 @@ class UserInteractionLogger extends Actor {
   def receive = {
     case (Search(query, moduleIds, _, _), -\/(error: String)) if error.contains("not found") =>
       logger.info(s"failed; $query; $moduleIds; 0; $error;")
-    case (Search(query, moduleIds, noResults, offset), _) =>
+    case (Search(query, moduleIds, noResults, offset), \/-(_)) =>
       val page = offset / noResults
       logger.info(s"succeeded; $query; $moduleIds; $page;")
     case PositiveAssessement(query, resultNo, moduleIds, signature) =>
