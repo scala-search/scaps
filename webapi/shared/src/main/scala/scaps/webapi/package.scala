@@ -218,6 +218,10 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
             case arg :: Nil => arg
             case args       => Refinement(args, v)
           }
+        case ByName(arg, _) =>
+          loop(arg)
+        case Repeated(arg, _) =>
+          loop(arg)
         case tpe: TypeEntity =>
           val normalizedArgs = tpe.args.map(loop)
           typeParams.find(_.name == tpe.name).fold {

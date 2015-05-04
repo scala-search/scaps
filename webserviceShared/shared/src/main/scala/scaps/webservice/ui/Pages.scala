@@ -150,6 +150,10 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         span("(", intersperse[Modifier](tpes.map(tpe(_)), ", "), ")")
       case TypeEntity.Refinement(tpes, _) =>
         span(intersperse[Modifier](tpes.map(tpe(_)), " with "))
+      case TypeEntity.ByName(arg, _) =>
+        span(" => ", tpe(arg))
+      case TypeEntity.Repeated(arg, _) =>
+        span(tpe(arg), "*")
       case t @ TypeEntity(_, _, args) =>
         val typeArgs =
           if (args.isEmpty) span()
