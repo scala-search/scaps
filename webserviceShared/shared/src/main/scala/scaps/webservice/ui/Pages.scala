@@ -19,7 +19,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   import bundle.tags2.title
   import bundle.tags2.nav
 
-  def encodeUri(path: String, params: Map[String, Any]): String
+  def encodeUri(path: String, params: List[(String, String)]): String
 
   val pageTitle = "Scaps: Scala API Search"
 
@@ -33,15 +33,15 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       s"$main.assessPositively(document.getElementById('$feedbackElementId'), $resultNo, '${term.signature}')"
   }
 
-  def searchUri(query: String, enabledModuleIds: Option[String] = None, page: Int = 0) = {
-    val params = Map[String, Any]() ++
+  def searchUri(query: String, enabledModuleIds: Set[String] = Set(), page: Int = 0) = {
+    val params = List[(String, String)]() ++
       (if (query == "") None else Some("q" -> query)) ++
-      (if (page == 0) None else Some("p" -> page)) ++
+      (if (page == 0) None else Some("p" -> page.toString)) ++
       enabledModuleIds.map("m" -> _)
     encodeUri("", params)
   }
 
-  def skeleton(status: IndexStatus, enabledModuleId: Option[String], mods: Modifier, query: String = "") = {
+  def skeleton(status: IndexStatus, enabledModuleIds: Set[String], mods: Modifier, query: String = "") = {
     val searchFormId = "searchField"
     val resultContainerId = "results"
 
@@ -67,26 +67,16 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
             div(cls := "container")(
               ul(
-                li(display.inline, paddingRight := 20.px) {
-                  val allChecked =
-                    if (enabledModuleId.isEmpty)
-                      checked := true
-                    else
-                      style := "" // just some attr without effect
-
-                  label(cls := "radio-inline")(
-                    input(tpe := "radio", name := "m", value := "", allChecked), "All ")
-                },
                 status.indexedModules.map { m =>
                   li(display.inline, paddingRight := 20.px) {
                     val checkedAttr =
-                      if (enabledModuleId.contains(m.moduleId))
+                      if (enabledModuleIds.contains(m.moduleId))
                         checked := true
                       else
                         style := "" // just some attr without effect
 
-                    label(cls := "radio-inline")(
-                      input(tpe := "radio", name := "m", value := m.moduleId, checkedAttr), s"${m.name}:${m.revision} ")
+                    label(cls := "checkbox-inline")(
+                      input(tpe := "checkbox", name := "m", value := m.moduleId, checkedAttr), s"${m.name}:${m.revision} ")
                   }
                 })))),
 
@@ -95,9 +85,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
             div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods)))))
   }
 
-  def main(status: IndexStatus) = {
+  def main(status: IndexStatus, enabledModuleIds: Set[String]) = {
     def example(query: String, desc: String) = {
-      li(a(href := searchUri(query))(code(query)), " - ", desc)
+      li(a(href := searchUri(query, enabledModuleIds))(code(query)), " - ", desc)
     }
 
     div(
@@ -124,15 +114,15 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-danger")(msg)
 
-  def results(currentPage: Int, query: String, enabledModuleId: Option[String], results: Seq[TermEntity]) = {
+  def results(currentPage: Int, query: String, enabledModuleIds: Set[String], results: Seq[TermEntity]) = {
     val pager =
       nav(
         ul(cls := "pager")(
           when(currentPage > 0) {
-            li(cls := "previous")(a(href := searchUri(query, enabledModuleId, currentPage - 1))(raw("&larr; Previous")))
+            li(cls := "previous")(a(href := searchUri(query, enabledModuleIds, currentPage - 1))(raw("&larr; Previous")))
           },
           when(results.size == ScapsApi.defaultPageSize) {
-            li(cls := "previous")(a(href := searchUri(query, enabledModuleId, currentPage + 1))(raw("Next &rarr;")))
+            li(cls := "previous")(a(href := searchUri(query, enabledModuleIds, currentPage + 1))(raw("Next &rarr;")))
           }))
 
     val renderedResults = results

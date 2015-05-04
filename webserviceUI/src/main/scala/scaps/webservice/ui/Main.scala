@@ -45,16 +45,16 @@ object Main {
     }
 
     { // init modules state
-      def getModule() =
+      def getModules() =
         moduleCheckboxes
-          .filter(checkBox => checkBox.checked && !checkBox.value.isEmpty())
-          .map(_.value).headOption
+          .filter(checkBox => checkBox.checked)
+          .map(_.value).toSet
 
-      globalState.moduleId() = getModule()
+      globalState.moduleIds() = getModules()
 
       moduleCheckboxes.foreach { checkbox =>
         checkbox.addEventListener("change", (_: Event) => {
-          globalState.moduleId() = getModule()
+          globalState.moduleIds() = getModules()
         })
       }
     }
@@ -62,25 +62,25 @@ object Main {
     mainContent.foreach(content => replaceContent(container, content.render))
   }
 
-  val queryWithModules = Observable.join(globalState.query, globalState.moduleId)
+  val queryWithModules = Observable.join(globalState.query, globalState.moduleIds)
 
   val mainContent = Observable.async(queryWithModules.map((fetchContent _).tupled))
 
   @JSExport
   def assessPositively(feedbackElement: html.Div, resultNo: Int, signature: String): Unit = {
-    scaps.assessPositivley(globalState.query(), globalState.moduleId(), resultNo, signature).call()
+    scaps.assessPositivley(globalState.query(), globalState.moduleIds(), resultNo, signature).call()
       .map(_ => DomPages.feedbackReceived)
       .recover { case _ => DomPages.feedbackError }
       .foreach(answer => replaceContent(feedbackElement, answer.render))
   }
 
-  def fetchContent(query: String, moduleId: Option[String]) = {
+  def fetchContent(query: String, moduleIds: Set[String]) = {
     if (query.isEmpty()) {
-      scaps.getStatus().call().map(DomPages.main(_))
+      scaps.getStatus().call().map(DomPages.main(_, moduleIds))
     } else {
-      scaps.search(query, moduleId).call().map {
+      scaps.search(query, moduleIds).call().map {
         case Left(msg)      => DomPages.queryError(msg)
-        case Right(results) => DomPages.results(0, query, moduleId, results)
+        case Right(results) => DomPages.results(0, query, moduleIds, results)
       }
     }.recover {
       case AjaxException(_) => DomPages.error("The Scaps service is currently unreachable. Please try again later.")

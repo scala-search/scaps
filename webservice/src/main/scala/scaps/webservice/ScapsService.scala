@@ -36,28 +36,45 @@ trait ScapsService extends HttpService {
     } ~
       pathSingleSlash {
         get {
-          parameters('q, 'p.as[Int] ? 0, 'm.?) { (query, resultPage, moduleId) =>
-            if (query.isEmpty())
-              reject
-            else
-              complete {
-                val enabledModuleId = moduleId.flatMap(m => if (m.isEmpty()) None else Some(m))
-                val resultOffset = resultPage * ScapsApi.defaultPageSize
+          parameterMultiMap { params =>
+            val indexStatus = apiImpl.getStatus()
 
+            val moduleIds = indexStatus.map { status =>
+              val modulesFromQuery = (for {
+                moduleIds <- params.lift("m").toList
+                moduleId <- moduleIds
+              } yield moduleId).toSet
+
+              if (modulesFromQuery.isEmpty)
+                status.indexedModules.map(_.moduleId).toSet
+              else
+                modulesFromQuery
+            }
+
+            parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
+              if (query.isEmpty())
+                reject
+              else
+                complete {
+                  val resultOffset = resultPage * ScapsApi.defaultPageSize
+
+                  for {
+                    status <- indexStatus
+                    enabledModuleIds <- moduleIds
+                    result <- apiImpl.search(query, moduleIds = enabledModuleIds, offset = resultOffset)
+                    page = HtmlPages.skeleton(status, enabledModuleIds,
+                      result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleIds, _)), query)
+                  } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+                }
+            } ~
+              complete {
                 for {
-                  status <- apiImpl.getStatus()
-                  result <- apiImpl.search(query, moduleId = enabledModuleId, offset = resultOffset)
-                  page = HtmlPages.skeleton(status, enabledModuleId,
-                    result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleId, _)), query)
+                  status <- indexStatus
+                  enabledModuleIds <- moduleIds
+                  page = HtmlPages.skeleton(status, enabledModuleIds, HtmlPages.main(status, enabledModuleIds))
                 } yield HttpEntity(MediaTypes.`text/html`, page.toString())
               }
-          } ~
-            complete {
-              for {
-                status <- apiImpl.getStatus()
-                page = HtmlPages.skeleton(status, None, HtmlPages.main(status))
-              } yield HttpEntity(MediaTypes.`text/html`, page.toString())
-            }
+          }
         }
       } ~
       path("scaps.css") {
@@ -71,8 +88,8 @@ trait ScapsService extends HttpService {
 }
 
 object HtmlPages extends Pages(scalatags.Text) {
-  def encodeUri(path: String, params: Map[String, Any]): String =
-    (Uri(path) withQuery params.mapValues(_.toString)).toString()
+  def encodeUri(path: String, params: List[(String, String)]): String =
+    (Uri(path) withQuery (params: _*)).toString()
 }
 
 object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {

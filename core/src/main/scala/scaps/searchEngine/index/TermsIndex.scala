@@ -65,6 +65,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
     override def get(field: String) = field match {
       case fields.fingerprint => new FingerprintSimilarity(settings)
+      case fields.moduleId    => new ModuleIdSimilarity()
       case _                  => default
     }
   }
@@ -82,33 +83,39 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
   private def toLuceneQuery(query: APIQuery, moduleIds: Set[String]): ProcessingError \/ Query = {
     try {
-      val q = new BooleanQuery
+      val keysAndTypes = new BooleanQuery
 
       query.keywords.foreach { keyword =>
         val nameQuery = new TermQuery(new Term(fields.name, keyword))
         nameQuery.setBoost(settings.query.nameBoost.toFloat)
-        q.add(nameQuery, Occur.SHOULD)
+        keysAndTypes.add(nameQuery, Occur.SHOULD)
 
         val docQuery = new TermQuery(new Term(fields.doc, keyword))
         docQuery.setBoost(settings.query.docBoost.toFloat)
-        q.add(docQuery, Occur.SHOULD)
+        keysAndTypes.add(docQuery, Occur.SHOULD)
       }
 
       query.types.foreach { tpe =>
         val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
         val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
         tq.setBoost(tpe.boost)
-        q.add(tq, Occur.SHOULD)
+        keysAndTypes.add(tq, Occur.SHOULD)
       }
 
+      val modules = new BooleanQuery
+
       if (!moduleIds.isEmpty) {
-        val moduleQuery = new BooleanQuery
         moduleIds.foreach { moduleId =>
           val tq = new TermQuery(new Term(fields.moduleId, moduleId))
-          moduleQuery.add(tq, Occur.SHOULD)
+          modules.add(tq, Occur.SHOULD)
         }
-        q.add(moduleQuery, Occur.MUST)
+      } else {
+        modules.add(new MatchAllDocsQuery, Occur.SHOULD)
       }
+
+      val q = new BooleanQuery
+      q.add(keysAndTypes, Occur.MUST)
+      q.add(modules, Occur.MUST)
 
       q.right
     } catch {
@@ -177,5 +184,9 @@ object TermsIndex {
     override def tf(freq: Float): Float = delegate.tf(freq)
     override def queryNorm(sumOfSquaredWeights: Float): Float = delegate.queryNorm(sumOfSquaredWeights)
     override def coord(overlap: Int, maxOverlap: Int): Float = delegate.coord(overlap, maxOverlap)
+  }
+
+  class ModuleIdSimilarity extends DefaultSimilarity {
+    override def idf(docFreq: Long, numDocs: Long) = 1f
   }
 }

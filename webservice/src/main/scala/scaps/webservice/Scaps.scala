@@ -36,8 +36,8 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   def getStatus(): Future[IndexStatus] =
     (searchEngine ? GetStatus).mapTo[IndexStatus]
 
-  def search(query: String, moduleId: Option[String], noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] = {
-    val searchMsg = Search(query, moduleId.toSet, noResults, offset)
+  def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] = {
+    val searchMsg = Search(query, moduleIds, noResults, offset)
     for {
       result <- (searchEngine ? searchMsg).mapTo[String \/ Seq[TermEntity]]
     } yield {
@@ -46,6 +46,6 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
     }
   }
 
-  def assessPositivley(query: String, moduleId: Option[String], resultNo: Int, termSignature: String): Unit =
-    userInteractionLogger ! PositiveAssessement(query, moduleId.toSet, resultNo, termSignature)
+  def assessPositivley(query: String, moduleIds: Set[String], resultNo: Int, termSignature: String): Unit =
+    userInteractionLogger ! PositiveAssessement(query, moduleIds, resultNo, termSignature)
 }

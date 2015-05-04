@@ -2,8 +2,8 @@ package scaps.webservice.ui
 
 import scaps.webapi.Module
 
-case class PageState(query: Variable[String], moduleId: Variable[Option[String]])
+case class PageState(query: Variable[String], moduleIds: Variable[Set[String]])
 
 object PageState {
-  val empty = PageState(Variable(""), Variable(None))
+  val empty = PageState(Variable(""), Variable(Set()))
 }
