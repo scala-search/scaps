@@ -46,7 +46,10 @@ trait ScapsService extends HttpService {
               } yield moduleId).toSet
 
               if (modulesFromQuery.isEmpty)
-                status.indexedModules.map(_.moduleId).toSet
+                status.indexedModules
+                  .filter(m => m.name.contains("scala-library") || m.name.contains("scalaz"))
+                  .map(_.moduleId)
+                  .toSet
               else
                 modulesFromQuery
             }
