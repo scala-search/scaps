@@ -260,6 +260,20 @@ object TypeEntity {
         None
   }
 
+  object ByName extends GenericType("<byname>")
+  object Repeated extends GenericType("<repeated>")
+
+  class GenericType(val name: String) {
+    def apply(arg: TypeEntity, variance: Variance = Covariant) =
+      TypeEntity(name, variance, arg :: Nil)
+
+    def unapply(tpe: TypeEntity): Option[(TypeEntity, Variance)] =
+      if (tpe.name == name && tpe.args.length == 1)
+        Some((tpe.args.head, tpe.variance))
+      else
+        None
+  }
+
   object Tuple extends VariantType("scala.Tuple")
   object Refinement extends VariantType("<refinement", ">")
 

@@ -139,7 +139,16 @@ trait EntityFactory extends Logging {
     val args = tpe.typeArgs.zipWithIndex.map {
       case (arg, idx) => createTypeEntity(arg, getVariance(idx))
     }
-    TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args)
+
+    if (tpe.typeSymbol.name == compiler.typeNames.BYNAME_PARAM_CLASS_NAME) {
+      assert(args.length == 1)
+      TypeEntity.ByName(args.head, variance)
+    } else if (tpe.typeSymbol.name == compiler.typeNames.REPEATED_PARAM_CLASS_NAME) {
+      assert(args.length == 1)
+      TypeEntity.Repeated(args.head, variance)
+    } else {
+      TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args)
+    }
   }
 
   private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {

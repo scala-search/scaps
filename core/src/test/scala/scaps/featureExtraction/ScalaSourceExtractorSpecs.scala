@@ -234,7 +234,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }))
   }
 
-  it should "extract type parameters from classes" in {
+  it should "extract type parameters from owners" in {
     extractTerms("""
       package p
 
@@ -362,6 +362,28 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)(
       ("p.O", _.tpe.toString should be("+<refinement1>[+java.lang.Object]")),
       ("p.P", _.tpe.toString should be("+<refinement3>[+java.lang.Object, +p.S, +p.T[scala.Int]]")))
+  }
+
+  it should "extract by name parameters" in {
+    extractTerms("""
+      package p
+
+      object O {
+        def m(v: => Int) = v
+      }
+      """)(
+      ("p.O.m", _.tpe.args should contain(TypeEntity.ByName(TypeEntity.Int(Contravariant), Contravariant))))
+  }
+
+  it should "extract by repeated parameters" in {
+    extractTerms("""
+      package p
+
+      object O {
+        def m(v: Int*) = v
+      }
+      """)(
+      ("p.O.m", _.tpe.args should contain(TypeEntity.Repeated(TypeEntity.Int(Contravariant), Contravariant))))
   }
 
   it should "not extract private terms and classes" in {
