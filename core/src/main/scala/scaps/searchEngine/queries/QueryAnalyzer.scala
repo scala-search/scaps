@@ -144,6 +144,6 @@ class QueryAnalyzer private[searchEngine] (
   private def boost(tpe: Fingerprint.Type): Float =
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
-  private def distanceBoost(dist: Int): Float = (1d / (settings.distanceBoostGradient * dist + 1d)).toFloat
-  private def depthBoost(depth: Int): Float = (1d / (settings.depthBoostGradient * depth + 1d)).toFloat
+  private def distanceBoost(dist: Int): Float = (1d / (Math.pow(dist, settings.distanceBoostGradient) + 1d)).toFloat
+  private def depthBoost(dist: Int): Float = (1d / (Math.pow(dist, settings.depthBoostGradient) + 1d)).toFloat
 }

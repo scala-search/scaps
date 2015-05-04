@@ -253,6 +253,19 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("-scala.Int_0"))))
   }
 
+  it should "ignore repeated types" in {
+    extractTerms("""
+      package p
+
+      object O {
+        def m(i: Int*) = 1
+      }
+      """)(
+      ("p.O.m", _.fingerprint.toString() should (
+        not include (TypeEntity.Repeated.name) and
+        include("-scala.Int_0"))))
+  }
+
   def fingerprint(types: (Variance, String, Int)*) =
     Fingerprint(types.toList.map { case (v, tpe, depth) => Fingerprint.Type(v, tpe, depth) })
 }
