@@ -16,6 +16,8 @@ import org.scalajs.dom.raw.Event
 object Main {
   val scaps = new AjaxClient(ScapsApi.apiPath)[ScapsApi]
 
+  val globalState = PageState.empty
+
   @JSExport
   def main(searchForm: html.Form, container: html.Div) = {
     val searchField = searchForm.querySelector("[name=q]").asInstanceOf[html.Input]
@@ -25,42 +27,48 @@ object Main {
       searchField.select()
     })
 
-    val query = {
-      val q = Variable(searchField.value)
+    { // init query state
+      def getQuery() =
+        searchField.value.trim
+
+      globalState.query() = getQuery()
+      val q = Variable(getQuery())
 
       searchField.addEventListener("keyup", {
         (_: dom.KeyboardEvent) =>
-          q() = searchField.value.trim()
+          q() = getQuery()
       })
 
-      Observable.debounce(400.millis)(q)
+      Observable.debounce(400.millis)(q).foreach { query =>
+        globalState.query() = query
+      }
     }
 
-    val moduleId = {
-      val init = moduleCheckboxes
-        .filter(checkBox => checkBox.checked && !checkBox.value.isEmpty())
-        .map(_.value).headOption
-      val ms = Variable(init)
+    { // init modules state
+      def getModule() =
+        moduleCheckboxes
+          .filter(checkBox => checkBox.checked && !checkBox.value.isEmpty())
+          .map(_.value).headOption
+
+      globalState.moduleId() = getModule()
+
       moduleCheckboxes.foreach { checkbox =>
         checkbox.addEventListener("change", (_: Event) => {
-          ms() =
-            if (checkbox.value.isEmpty()) None
-            else Some(checkbox.value)
+          globalState.moduleId() = getModule()
         })
       }
-      ms
     }
 
-    val queryWithModules = Observable.join(query, moduleId)
-
-    Observable.async(queryWithModules.map((fetchContent _).tupled))
-      .foreach(content => replaceContent(container, content.render))
+    mainContent.foreach(content => replaceContent(container, content.render))
   }
 
+  val queryWithModules = Observable.join(globalState.query, globalState.moduleId)
+
+  val mainContent = Observable.async(queryWithModules.map((fetchContent _).tupled))
+
   @JSExport
-  def assessPositively(feedbackElement: html.Div, query: String, moduleId: String, resultNo: Int, signature: String): Unit = {
-    val selectedModuleId = if (moduleId.isEmpty()) None else Some(moduleId)
-    scaps.assessPositivley(query, selectedModuleId, resultNo, signature).call()
+  def assessPositively(feedbackElement: html.Div, resultNo: Int, signature: String): Unit = {
+    scaps.assessPositivley(globalState.query(), globalState.moduleId(), resultNo, signature).call()
       .map(_ => DomPages.feedbackReceived)
       .recover { case _ => DomPages.feedbackError }
       .foreach(answer => replaceContent(feedbackElement, answer.render))

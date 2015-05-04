@@ -33,6 +33,8 @@ trait Observable[T] { outer =>
 
   def map[A](f: T => A): Observable[A] =
     new Observable[A] {
+      override def tryGet() = outer.tryGet().map(f)
+
       override def foreach(handler: A => Unit) = {
         outer.foreach(f andThen handler)
       }
@@ -40,7 +42,7 @@ trait Observable[T] { outer =>
 }
 
 object Observable {
-  /** Creates an observable that fires when a future in `o` is completed. */
+  /** Creates an observable that fires each time a future in `o` is completed. */
   def async[T](o: Observable[Future[T]])(implicit ec: ExecutionContext): Observable[T] =
     new Observable[T] {
       override def foreach(handler: T => Unit) = {
@@ -69,6 +71,12 @@ object Observable {
 
   def join[A, B](oa: Observable[A], ob: Observable[B]): Observable[(A, B)] =
     new Observable[(A, B)] {
+      override def tryGet() =
+        for {
+          a <- oa.tryGet()
+          b <- ob.tryGet()
+        } yield (a, b)
+
       override def foreach(handler: ((A, B)) => Unit) = {
         var a: Option[A] = oa.tryGet()
         var b: Option[B] = ob.tryGet()
@@ -98,7 +106,7 @@ object Observable {
 }
 
 /**
- * An observable that can be updated.
+ * An observable that can be updated and always holds a value.
  *
  * A Variable fires the first time when it is set to a value that is not equal
  * to the initial value `init`.

@@ -29,8 +29,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     def boot(searchFormId: String, resultContainerId: String) =
       s"$main.main(document.getElementById('$searchFormId'), document.getElementById('$resultContainerId'))"
 
-    def assessPositively(feedbackElementId: String, query: String, moduleId: String, resultNo: Int, term: TermEntity) =
-      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '$query', '$moduleId', $resultNo, '${term.signature}')"
+    def assessPositively(feedbackElementId: String, resultNo: Int, term: TermEntity) =
+      s"$main.assessPositively(document.getElementById('$feedbackElementId'), $resultNo, '${term.signature}')"
   }
 
   def searchUri(query: String, enabledModuleIds: Option[String] = None, page: Int = 0) = {
@@ -137,14 +137,14 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     val renderedResults = results
       .zipWithIndex
-      .map { case (term, idx) => result(query, enabledModuleId, (currentPage * ScapsApi.defaultPageSize) + idx, term) }
+      .map { case (term, idx) => result((currentPage * ScapsApi.defaultPageSize) + idx, term) }
 
     div(
       dl(renderedResults),
       pager)
   }
 
-  def result(query: String, moduleId: Option[String], resultNo: Int, term: TermEntity) = {
+  def result(resultNo: Int, term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
         em(ScapsStyle.typeParameter)(t.decodedName)
@@ -182,9 +182,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       val feedbackElemId = s"feedback_${term.signature}"
 
       div(id := feedbackElemId)(
-        a(href := "#", 
-            onclick := jsCallbacks.assessPositively(feedbackElemId, query, moduleId.getOrElse(""), resultNo, term))(
-          span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
+        a(href := "#",
+          onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, term))(
+            span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
 
     Seq(
