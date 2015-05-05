@@ -92,7 +92,8 @@ lazy val webserviceUI = (project in file("webserviceUI"))
       "com.lihaoyi" %%% "upickle" % Dependencies.upickleVersion,
       "com.lihaoyi" %%% "autowire" % Dependencies.autowireVersion,
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion,
-      "org.scala-js" %%% "scalajs-dom" % "0.8.0"))
+      "org.scala-js" %%% "scalajs-dom" % "0.8.0",
+      "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"))
 
 lazy val sbtPlug = (project in file("sbtPlugin"))
   .dependsOn(webapi_2_10)

@@ -1,8 +1,8 @@
 package scaps.webservice.ui
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.ext._
@@ -16,62 +16,79 @@ import org.scalajs.dom.raw.Event
 object Main {
   val scaps = new AjaxClient(ScapsApi.apiPath)[ScapsApi]
 
-  val globalState = PageState.empty
+  val searchForm = Variable[html.Form]()
+  val mainContainer = Variable[html.Div]()
 
   @JSExport
-  def main(searchForm: html.Form, container: html.Div) = {
-    val searchField = searchForm.querySelector("[name=q]").asInstanceOf[html.Input]
-    val moduleCheckboxes = searchForm.querySelectorAll("[name=m]").map(_.asInstanceOf[html.Input])
-
-    searchField.addEventListener("focus", (_: FocusEvent) => {
-      searchField.select()
-    })
-
-    { // init query state
-      def getQuery() =
-        searchField.value.trim
-
-      globalState.query() = getQuery()
-      val q = Variable(getQuery())
-
-      searchField.addEventListener("keyup", {
-        (_: dom.KeyboardEvent) =>
-          q() = getQuery()
-      })
-
-      Observable.debounce(400.millis)(q).foreach { query =>
-        globalState.query() = query
-      }
-    }
-
-    { // init modules state
-      def getModules() =
-        moduleCheckboxes
-          .filter(checkBox => checkBox.checked)
-          .map(_.value).toSet
-
-      globalState.moduleIds() = getModules()
-
-      moduleCheckboxes.foreach { checkbox =>
-        checkbox.addEventListener("change", (_: Event) => {
-          globalState.moduleIds() = getModules()
-        })
-      }
-    }
-
-    mainContent.foreach(content => replaceContent(container, content.render))
+  def main(form: html.Form, container: html.Div) = {
+    searchForm() = form
+    mainContainer() = container
   }
 
-  val queryWithModules = Observable.join(globalState.query, globalState.moduleIds)
+  val searchField = searchForm.map(_.querySelector("[name=q]").asInstanceOf[html.Input])
 
-  val mainContent = Observable.async(queryWithModules.map((fetchContent _).tupled))
+  for {
+    field <- searchField
+    _ <- Observable.fromDomEvents(field, "focus")
+  } {
+    field.select()
+  }
+
+  val query = {
+    val fieldOrFieldValueChanges =
+      Observable.merge[Any](searchField,
+        Observable.debounce(400.millis)(
+          Observable.fromDomEvents(searchField, "keyup")))
+
+    Observable.join(searchField, fieldOrFieldValueChanges).map {
+      case (field, _) => field.value.trim
+    }
+  }
+
+  val moduleIds = searchForm.flatMap { form =>
+    val moduleCheckboxes = form.querySelectorAll("[name=m]").map(_.asInstanceOf[html.Input])
+
+    def getModules() =
+      moduleCheckboxes
+        .filter(checkBox => checkBox.checked)
+        .map(_.value).toSet
+
+    val ms = Variable[Set[String]]()
+    ms() = getModules()
+
+    moduleCheckboxes.foreach { checkbox =>
+      checkbox.addEventListener("change", (_: Event) => {
+        ms() = getModules()
+      })
+    }
+
+    ms
+  }
+
+  val mainContent = Observable.async(
+    Observable.join(query, moduleIds).map((fetchContent _).tupled))
+    .map(_.get)
+
+  Observable.join(mainContent, mainContainer).foreach {
+    case (content, container) => replaceContent(container, content.render)
+  }
+
+  val positiveAssessment = Variable[(html.Div, Int, String)]
 
   @JSExport
   def assessPositively(feedbackElement: html.Div, resultNo: Int, signature: String): Unit = {
-    scaps.assessPositivley(globalState.query(), globalState.moduleIds(), resultNo, signature).call()
-      .map(_ => DomPages.feedbackReceived)
-      .recover { case _ => DomPages.feedbackError }
-      .foreach(answer => replaceContent(feedbackElement, answer.render))
+    positiveAssessment() = (feedbackElement, resultNo, signature)
+  }
+
+  Observable.join(query, moduleIds, positiveAssessment).foreach {
+    case (query, moduleIds, (feedbackElem, resultNo, signature)) =>
+      println(query)
+      println(moduleIds)
+      println(feedbackElem)
+      scaps.assessPositivley(query, moduleIds, resultNo, signature).call()
+        .map(_ => DomPages.feedbackReceived)
+        .recover { case _ => DomPages.feedbackError }
+        .foreach(answer => replaceContent(feedbackElem, answer.render))
   }
 
   def fetchContent(query: String, moduleIds: Set[String]) = {
