@@ -1,8 +1,8 @@
 package scaps.webservice.ui
 
 import scala.concurrent.duration.DurationInt
+import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
-import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import org.scalajs.dom
 import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.ext._
@@ -11,80 +11,93 @@ import org.scalajs.dom.raw.FocusEvent
 import autowire._
 import scaps.webapi.ScapsApi
 import org.scalajs.dom.raw.Event
+import monifu.reactive._
+import monifu.reactive.subjects.PublishSubject
+import monifu.reactive.Observable.FutureIsObservable
+import monifu.concurrent.Implicits.globalScheduler
+import monifu.concurrent.Scheduler
+import scaps.webservice.ui.ObservableExtensions._
 
 @JSExport
 object Main {
   val scaps = new AjaxClient(ScapsApi.apiPath)[ScapsApi]
 
-  val searchForm = Variable[html.Form]()
-  val mainContainer = Variable[html.Div]()
+  val searchForm = PublishSubject[html.Form]()
+  val mainContainer = PublishSubject[html.Div]()
 
   @JSExport
   def main(form: html.Form, container: html.Div) = {
-    searchForm() = form
-    mainContainer() = container
+    implicitly[Scheduler].execute {
+      searchForm.onNext(form)
+      mainContainer.onNext(container)
+      ()
+    }
   }
 
   val searchField = searchForm.map(_.querySelector("[name=q]").asInstanceOf[html.Input])
 
+  val moduleCheckboxes = searchForm.map(form =>
+    form.querySelectorAll("[name=m]").map(_.asInstanceOf[html.Input]))
+
+  val searchFieldChanges = Observable.merge[Any](
+    searchField,
+    searchField.mergeMap(_ observeDomEvents ("keyup")))
+
+  val moduleChanges = Observable.merge[Any](
+    moduleCheckboxes,
+    moduleCheckboxes.flatMap { checkboxes =>
+      Observable.merge(checkboxes.map(_.observeDomEvents("change")): _*)
+    })
+
   for {
     field <- searchField
-    _ <- Observable.fromDomEvents(field, "focus")
+    _ <- field.observeDomEvents("focus")
   } {
     field.select()
   }
 
-  val query = {
-    val fieldOrFieldValueChanges =
-      Observable.merge[Any](searchField,
-        Observable.debounce(400.millis)(
-          Observable.fromDomEvents(searchField, "keyup")))
+  val query =
+    Observable.combineLatest(searchField, searchFieldChanges)
+      .map {
+        case (field, _) => field.value.trim
+      }
+      .distinctUntilChanged
+      .debounce(400.millis)
+      .dump("query")
 
-    Observable.join(searchField, fieldOrFieldValueChanges).map {
-      case (field, _) => field.value.trim
-    }
+  val moduleIds =
+    Observable.combineLatest(moduleCheckboxes, moduleChanges)
+      .map {
+        case (checkboxes, _) => checkboxes.filter(_.checked).map(_.value).toSet
+      }
+      .dump("moduleIds")
+
+  val staticContent = mainContainer.map(_.childNodes.head)
+
+  val dynamicContent =
+    Observable.combineLatest(query, moduleIds)
+      .drop(1)
+      .flatMap {
+        case (q, ms) => fetchContent(q, ms)
+      }
+      .map(_.render)
+
+  Observable.combineLatest(dynamicContent, mainContainer).foreach {
+    case (content, container) => replaceContent(container, content)
   }
 
-  val moduleIds = searchForm.flatMap { form =>
-    val moduleCheckboxes = form.querySelectorAll("[name=m]").map(_.asInstanceOf[html.Input])
+  val content = Observable.merge(staticContent, dynamicContent)
 
-    def getModules() =
-      moduleCheckboxes
-        .filter(checkBox => checkBox.checked)
-        .map(_.value).toSet
-
-    val ms = Variable[Set[String]]()
-    ms() = getModules()
-
-    moduleCheckboxes.foreach { checkbox =>
-      checkbox.addEventListener("change", (_: Event) => {
-        ms() = getModules()
-      })
-    }
-
-    ms
-  }
-
-  val mainContent = Observable.async(
-    Observable.join(query, moduleIds).map((fetchContent _).tupled))
-    .map(_.get)
-
-  Observable.join(mainContent, mainContainer).foreach {
-    case (content, container) => replaceContent(container, content.render)
-  }
-
-  val positiveAssessment = Variable[(html.Div, Int, String)]
+  val positiveAssessment = PublishSubject[(html.Div, Int, String)]
 
   @JSExport
   def assessPositively(feedbackElement: html.Div, resultNo: Int, signature: String): Unit = {
-    positiveAssessment() = (feedbackElement, resultNo, signature)
+    positiveAssessment.onNext((feedbackElement, resultNo, signature))
+    ()
   }
 
-  Observable.join(query, moduleIds, positiveAssessment).foreach {
+  Observable.combineLatest(query, moduleIds, positiveAssessment).foreach {
     case (query, moduleIds, (feedbackElem, resultNo, signature)) =>
-      println(query)
-      println(moduleIds)
-      println(feedbackElem)
       scaps.assessPositivley(query, moduleIds, resultNo, signature).call()
         .map(_ => DomPages.feedbackReceived)
         .recover { case _ => DomPages.feedbackError }

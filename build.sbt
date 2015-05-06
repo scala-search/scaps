@@ -88,12 +88,15 @@ lazy val webserviceUI = (project in file("webserviceUI"))
   .settings(
     name := "api-search-webservice-ui",
     publishArtifact := false,
+    // disable fatal warnings in this project because there are some unavoidable warnings
+    scalacOptions := scalacOptions.value.filter(_ != "-Xfatal-warnings"),
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "upickle" % Dependencies.upickleVersion,
       "com.lihaoyi" %%% "autowire" % Dependencies.autowireVersion,
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion,
       "org.scala-js" %%% "scalajs-dom" % "0.8.0",
-      "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"))
+      "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test",
+      "org.monifu" %%% "monifu" % "1.0-M1"))
 
 lazy val sbtPlug = (project in file("sbtPlugin"))
   .dependsOn(webapi_2_10)
