@@ -29,12 +29,8 @@ object SearchEngine {
     val classes = new ClassIndex(createDir(settings.index.classesDir), settings)
     val modules = new ModuleIndex(createDir(settings.index.modulesDir))
 
-    for {
-      _ <- terms.init()
-      _ <- classes.init()
-      _ <- modules.init()
-    } yield new SearchEngine(settings, terms, classes, modules)
-  }.flatten
+    new SearchEngine(settings, terms, classes, modules)
+  }
 
   /**
    * Names from the `scala` root package are favored over other names and all names in
@@ -59,7 +55,7 @@ object SearchEngine {
     }
 }
 
-class SearchEngine private (
+class SearchEngine private[searchEngine] (
   val settings: Settings,
   val termsIndex: TermsIndex,
   val classesIndex: ClassIndex,
@@ -70,7 +66,7 @@ class SearchEngine private (
     (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
     classesIndex.findSubClasses _)
 
-  def indexEntities(module: Module, entities: Stream[Entity])(implicit ec: ExecutionContext): Future[Unit] =
+  def indexEntities(module: Module, entities: Seq[Entity])(implicit ec: ExecutionContext): Future[Unit] =
     Future {
       termsIndex.deleteEntitiesIn(module).get
     }.flatMap { _ =>
@@ -104,11 +100,8 @@ class SearchEngine private (
     moduleIndex.allModules()
 
   def resetIndexes(): Try[Unit] = for {
-    _ <- termsIndex.delete()
-    _ <- classesIndex.delete()
-    _ <- moduleIndex.delete()
-    _ <- termsIndex.init()
-    _ <- classesIndex.init()
-    _ <- moduleIndex.init()
+    _ <- termsIndex.resetIndex()
+    _ <- classesIndex.resetIndex()
+    _ <- moduleIndex.resetIndex()
   } yield ()
 }

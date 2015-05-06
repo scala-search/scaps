@@ -21,11 +21,7 @@ trait Index[E] {
 
   private[index] val similarity: Similarity = new DefaultSimilarity
 
-  def init() = {
-    withWriter(_ => ())
-  }
-
-  def delete(): Try[Unit] = Try {
+  def resetIndex(): Try[Unit] = Try {
     dir.listAll().foreach(dir.deleteFile(_))
   }
 
@@ -55,11 +51,23 @@ trait Index[E] {
     }
   }
 
+  @volatile
+  private var writerInitialized = false
+
   private[index] def withSearcher[A](f: IndexSearcher => A): Try[A] = {
+    if (!writerInitialized) {
+      initWriter()
+      writerInitialized = true
+    }
+
     using(DirectoryReader.open(dir)) { reader =>
       val searcher = new IndexSearcher(reader)
       searcher.setSimilarity(similarity)
       f(searcher)
     }
+  }
+
+  def initWriter() = {
+    withWriter(_ => ()).get
   }
 }

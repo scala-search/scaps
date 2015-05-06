@@ -41,4 +41,10 @@ trait IndexUtils extends ExtractionUtils {
       index.addEntities(entities).get
       f(index)
     }
+
+  def withModuleIndex(f: ModuleIndex => Unit): Unit =
+    withDir { dir =>
+      val index = new ModuleIndex(dir)
+      f(index)
+    }.get
 }
