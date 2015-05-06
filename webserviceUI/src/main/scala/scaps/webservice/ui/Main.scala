@@ -39,40 +39,19 @@ object Main {
   val moduleCheckboxes = searchForm.map(form =>
     form.querySelectorAll("[name=m]").map(_.asInstanceOf[html.Input]))
 
-  val searchFieldChanges = Observable.merge[Any](
-    searchField,
-    searchField.mergeMap(_ observeDomEvents ("keyup")))
+  searchField
+    .flatMap(_.observeDomEvents("focus"))
+    .foreach(_.select())
 
-  val moduleChanges = Observable.merge[Any](
-    moduleCheckboxes,
-    moduleCheckboxes.flatMap { checkboxes =>
-      Observable.merge(checkboxes.map(_.observeDomEvents("change")): _*)
-    })
+  val query = searchField
+    .flatMap(_.observeValue())
+    .map(_.trim)
+    .distinctUntilChanged
+    .debounce(400.millis)
 
-  for {
-    field <- searchField
-    _ <- field.observeDomEvents("focus")
-  } {
-    field.select()
-  }
-
-  val query =
-    Observable.combineLatest(searchField, searchFieldChanges)
-      .map {
-        case (field, _) => field.value.trim
-      }
-      .distinctUntilChanged
-      .debounce(400.millis)
-      .dump("query")
-
-  val moduleIds =
-    Observable.combineLatest(moduleCheckboxes, moduleChanges)
-      .map {
-        case (checkboxes, _) => checkboxes.filter(_.checked).map(_.value).toSet
-      }
-      .dump("moduleIds")
-
-  val staticContent = mainContainer.map(_.childNodes.head)
+  val moduleIds = moduleCheckboxes
+    .flatMap(_.observeValues())
+    .distinctUntilChanged
 
   val dynamicContent =
     Observable.combineLatest(query, moduleIds)
@@ -85,8 +64,6 @@ object Main {
   Observable.combineLatest(dynamicContent, mainContainer).foreach {
     case (content, container) => replaceContent(container, content)
   }
-
-  val content = Observable.merge(staticContent, dynamicContent)
 
   val positiveAssessment = PublishSubject[(html.Div, Int, String)]
 

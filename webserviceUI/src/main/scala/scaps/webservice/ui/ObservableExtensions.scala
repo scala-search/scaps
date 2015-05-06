@@ -2,6 +2,7 @@ package scaps.webservice.ui
 
 import scalajs.js
 import org.scalajs.dom
+import org.scalajs.dom.html
 import monifu.reactive._
 import scala.concurrent.duration._
 import monifu.concurrent.Scheduler
@@ -60,15 +61,15 @@ object ObservableExtensions {
     }
   }
 
-  implicit class ObservableDomNodes(node: dom.Node) {
-    def observeDomEvents(eventName: String): Observable[dom.Event] =
+  implicit class ObservableDomNodes[N <: dom.Node](node: N) {
+    def observeDomEvents(eventName: String): Observable[N] =
       Observable.create { subscriber =>
         implicit val executionContext = subscriber.scheduler
 
         def loop(): Unit = {
           lazy val listener: js.Function1[dom.Event, Unit] = (e: dom.Event) => {
             subscriber.scheduler.execute {
-              subscriber.observer.onNext(e).onSuccess {
+              subscriber.observer.onNext(node).onSuccess {
                 case Ack.Continue =>
                   node.removeEventListener(eventName, listener)
                   loop()
@@ -84,5 +85,31 @@ object ObservableExtensions {
 
         loop()
       }
+  }
+
+  implicit class ObservableInputElements(input: html.Input) {
+    def observeValue(): Observable[String] = {
+      val changeEvent = input.`type` match {
+        case "text" | "search" => input.observeDomEvents("input")
+        case "checkbox"        => input.observeDomEvents("change")
+        case t                 => throw new NotImplementedError(s"observe changes on $t")
+      }
+
+      Observable.concat(
+        Observable.unit(input.value),
+        changeEvent.map(_ => input.value))
+    }
+  }
+
+  implicit class ObservableCheckboxGroup(checkboxes: Seq[html.Input]) {
+    def observeValues(): Observable[Set[String]] = {
+      val changeEvents = Observable.fromIterable(checkboxes.map(_.observeValue())).merge()
+
+      def getValues = checkboxes.filter(_.checked).map(_.value).toSet
+
+      Observable.concat(
+        Observable.unit(getValues),
+        changeEvents.map(_ => getValues))
+    }
   }
 }
