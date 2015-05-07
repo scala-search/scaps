@@ -117,12 +117,9 @@ class SearchEngine private[searchEngine] (
     def findClassBySuffix(suffix: String) =
       (classesIndex.findClassBySuffix(suffix, moduleIds))
 
-    def findSubClasses(tpe: TypeEntity) =
-      classesIndex.findSubClasses(tpe, moduleIds)
-
     new QueryAnalyzer(
       settings.query,
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
-      findSubClasses _)
+      classesIndex.findSubClasses _)
   }
 }

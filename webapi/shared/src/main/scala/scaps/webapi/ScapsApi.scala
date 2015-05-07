@@ -2,7 +2,9 @@ package scaps.webapi
 
 import scala.concurrent.Future
 
-case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module])
+case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module]) {
+  def allModules = workQueue ++ indexedModules
+}
 
 /**
  * The main API exposed to search engine users.

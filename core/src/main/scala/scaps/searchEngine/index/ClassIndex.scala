@@ -76,12 +76,20 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     val query = new BooleanQuery()
     query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
 
-    addModuleQuery(query, moduleIds)
+    if (!moduleIds.isEmpty) {
+      val moduleQuery = new BooleanQuery()
+
+      for (moduleId <- moduleIds) {
+        moduleQuery.add(new TermQuery(new Term(fields.modules, moduleId)), Occur.SHOULD)
+      }
+
+      query.add(moduleQuery, Occur.MUST)
+    }
 
     search(query)
   }
 
-  def findSubClasses(tpe: TypeEntity, moduleIds: Set[String] = Set()): Try[Seq[ClassEntity]] = {
+  def findSubClasses(tpe: TypeEntity): Try[Seq[ClassEntity]] = {
     def partialTypes(tpe: TypeEntity): List[TypeEntity] = {
       def argPerms(args: List[TypeEntity]): List[List[TypeEntity]] = args match {
         case Nil => List(Nil)
@@ -100,21 +108,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       q.add(new TermQuery(new Term(fields.baseClass, perm.signature)), Occur.SHOULD)
     }
 
-    addModuleQuery(q, moduleIds)
-
     search(q)
-  }
-
-  private def addModuleQuery(query: BooleanQuery, moduleIds: Set[String]) = {
-    if (!moduleIds.isEmpty) {
-      val moduleQuery = new BooleanQuery()
-
-      for (moduleId <- moduleIds) {
-        moduleQuery.add(new TermQuery(new Term(fields.modules, moduleId)), Occur.SHOULD)
-      }
-
-      query.add(moduleQuery, Occur.MUST)
-    }
   }
 
   def allClasses(): Try[Seq[ClassEntity]] =

@@ -23,6 +23,7 @@ trait Index[E] {
 
   def resetIndex(): Try[Unit] = Try {
     dir.listAll().foreach(dir.deleteFile(_))
+    writerInitialized = false
   }
 
   private[index] def toDocument(e: E): Document

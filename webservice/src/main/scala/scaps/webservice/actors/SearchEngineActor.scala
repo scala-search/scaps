@@ -21,6 +21,8 @@ import scalaz.std.stream._
 import java.util.concurrent.TimeoutException
 import scaps.webapi.IndexStatus
 import scaps.webapi.Module
+import scala.util.control.NonFatal
+import akka.event.LoggingReceive
 
 /**
  * Manages the state of an instance of the search engine.
@@ -34,7 +36,7 @@ class SearchEngineActor extends Actor {
   private case object Initialize
   self ! Initialize
 
-  def receive = initializing
+  def receive = LoggingReceive(initializing)
 
   def initializing: Receive = {
     case Initialize =>
@@ -42,21 +44,22 @@ class SearchEngineActor extends Actor {
       searchEngine.indexedModules().map { indexedModules =>
         become(initialized(searchEngine, indexedModules.toList))
       }.get
+    case m =>
+      self.tell(m, sender)
   }
 
   def initialized(searchEngine: SearchEngine, indexedModules: List[Module]): Receive = {
+    logger.info(s"started search engine with modules $indexedModules")
+
     val searcher = actorOf(Props(classOf[Searcher], searchEngine), "searcher")
-    val indexWorker = actorOf(Props(classOf[IndexWorkerActor], searchEngine), "index-worker")
+    val indexWorker = actorOf(Props(classOf[IndexWorkerActor], searchEngine), "indexWorker")
 
     def ready(indexedModules: List[Module]): Receive = {
       case i: Index if i.forceReindex == false =>
         rewriteUnenforcedIndexJob(i, indexedModules)
       case i: Index =>
-        // delay first indexing job to ensure all search tasks have been completed
-        system.scheduler.scheduleOnce(2.seconds) {
-          indexWorker ! i
-        }
-        become(indexing(i :: Nil, indexedModules))
+        indexWorker ! i
+        become(indexing((sender, i) :: Nil, indexedModules))
       case s: Search =>
         searcher.tell(s, sender)
       case GetStatus =>
@@ -66,18 +69,20 @@ class SearchEngineActor extends Actor {
         become(ready(Nil))
     }
 
-    def indexing(queue: List[Index], indexedModules: List[Module]): Receive = {
+    def indexing(queue: List[(ActorRef, Index)], indexedModules: List[Module]): Receive = {
       case i: Index if i.forceReindex == false =>
-        rewriteUnenforcedIndexJob(i, queue.map(_.module) ++ indexedModules)
+        rewriteUnenforcedIndexJob(i, queue.map(_._2.module) ++ indexedModules)
       case i: Index =>
-        become(indexing(queue :+ i, indexedModules))
-      case Indexed(j, _) if j == queue.head =>
+        become(indexing(queue :+ ((sender, i)), indexedModules))
+      case res @ Indexed(j, _) if j == queue.head._2 =>
+        queue.head._1 ! res
+
         if (queue.tail.isEmpty) {
           searchEngine.indexedModules().map { indexedModules =>
             become(ready(indexedModules.toList))
           }.get
         } else {
-          indexWorker ! queue.tail.head
+          indexWorker ! queue.tail.head._2
           become(indexing(queue.tail, j.module :: indexedModules))
         }
       case Indexed(j, _) =>
@@ -85,7 +90,7 @@ class SearchEngineActor extends Actor {
       case _: Search =>
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetStatus =>
-        sender ! IndexStatus(queue.map(_.module), indexedModules)
+        sender ! IndexStatus(queue.map(_._2.module), indexedModules)
       case Reset =>
       // TODO
     }
@@ -99,6 +104,7 @@ class SearchEngineActor extends Actor {
           self.tell(i.copy(forceReindex = true), sender)
         } else {
           logger.debug(s"Drop index job $i")
+          sender ! Indexed(i, None)
         }
       }
 
@@ -120,19 +126,22 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
       val requestor = sender
 
       CompilerUtils.withCompiler(classpath.toList) { compiler =>
-        val extractor = new JarExtractor(compiler)
-
-        logger.info(s"start indexing ${module.moduleId} (${sourceFile})")
-
-        val entityStream = ExtractionError.logErrors(extractor(new File(sourceFile)), logger.info(_))
-
         val error = try {
+          val extractor = new JarExtractor(compiler)
+
+          logger.info(s"start indexing ${module.moduleId} (${sourceFile})")
+
+          val entityStream = ExtractionError.logErrors(extractor(new File(sourceFile)), logger.info(_))
+
           searchEngine.indexEntities(module, entityStream).get
           logger.info(s"${module.moduleId} has been indexed successfully")
           None
         } catch {
           case e: TimeoutException =>
             logger.error(s"Indexing ${module.moduleId} timed out")
+            Some(e)
+          case NonFatal(e) =>
+            logger.error(s"Indexing ${module.moduleId} threw $e")
             Some(e)
         }
 

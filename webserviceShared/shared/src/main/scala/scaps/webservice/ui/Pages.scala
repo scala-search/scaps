@@ -67,7 +67,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
             div(cls := "container")(
               ul(
-                status.indexedModules.map { m =>
+                status.indexedModules.sortBy(_.name).map { m =>
                   li(display.inline, paddingRight := 20.px) {
                     val checkedAttr =
                       if (enabledModuleIds.contains(m.moduleId))

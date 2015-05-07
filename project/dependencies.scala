@@ -22,6 +22,7 @@ object Dependencies {
   val akkaVersion = "2.3.9"
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
+  val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
 
   val sprayVersion = "1.3.3"
   val sprayCan = "io.spray" %% "spray-can" % sprayVersion
@@ -60,8 +61,10 @@ object Dependencies {
 
   val webserviceDependencies = Seq(
     scalaz,
+    scalatest,
     akkaActor,
     akkaSlf4j,
+    akkaTestkit,
     logback,
     sprayCan,
     sprayRouting,

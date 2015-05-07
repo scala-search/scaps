@@ -1,3 +1,5 @@
+// Common Settings
+
 lazy val utestFramework = new TestFramework("utest.runner.Framework")
 
 lazy val commonSettings = Seq(
@@ -12,13 +14,19 @@ lazy val commonSettings = Seq(
       "-feature",
       "-deprecation",
       "-Ywarn-value-discard",
-      "-Xfatal-warnings"))
+      "-Xfatal-warnings"),
+    testModules := Seq(),
+    resourceGenerators in Test <+= createTestModules)
+
+// Root Project
 
 lazy val root = (project in file("."))
   .aggregate(webapi_2_10, webapi_2_11, webapiJS, core, evaluation, webservice, webserviceUI, sbtPlug)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)
+
+// Sub Projects
 
 def webapiSettings = 
   commonSettings ++ Seq(
@@ -50,7 +58,7 @@ lazy val core = (project in file("core"))
   .settings(
     name := "api-search-core",
     libraryDependencies ++= Dependencies.coreDependencies,
-    resourceGenerators in Test <+= JarExtractorTests.createJar)
+    testModules += "jarExtractorTests")
 
 lazy val evaluation = (project in file("evaluation"))
   .dependsOn(core)
@@ -79,7 +87,8 @@ lazy val webservice = (project in file("webservice"))
     name := "api-search-webservice",
     publishArtifact := false,
     libraryDependencies ++= Dependencies.webserviceDependencies,
-    (resources in Compile) += (fastOptJS in (webserviceUI, Compile)).value.data)
+    (resources in Compile) += (fastOptJS in (webserviceUI, Compile)).value.data,
+    testModules := Seq("testModule1", "testModule2"))
 
 lazy val webserviceUI = (project in file("webserviceUI"))
   .dependsOn(webserviceShared_JS)
@@ -106,3 +115,26 @@ lazy val sbtPlug = (project in file("sbtPlugin"))
     scalaVersion := Commons.sbtPluginScalaVersion,
     sbtPlugin := true,
     libraryDependencies ++= Dependencies.sbtPluginDependencies)
+
+// Custom tasks and settings
+
+lazy val testModules = settingKey[Seq[String]]("Folder names of test modules")
+
+lazy val createTestModules = Def.task {
+  for(packageName <- (testModules in Test).value) yield {
+    val jar = (resourceManaged in Test).value / (packageName + ".jar")
+    val packageDir = (resourceDirectory in Test).value / packageName
+
+    streams.value.log.info(s"compress $packageDir into $jar")
+
+    IO.delete(jar)
+    def entries(f: File): List[File] =
+      f :: (if (f.isDirectory) IO.listFiles(f).toList.flatMap(entries(_)) else Nil)
+
+    val files = entries(packageDir).map(d => (d, d.getAbsolutePath.substring(packageDir.getParent.length +1)))
+
+    IO.zip(files, jar)
+
+    jar
+  }
+}

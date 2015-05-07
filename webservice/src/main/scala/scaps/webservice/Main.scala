@@ -23,7 +23,7 @@ import akka.actor.Terminated
 object Main extends App {
   val settings = WebserviceSettings.fromApplicationConf
 
-  implicit val system = ActorSystem("scaps-system")
+  implicit val system = ActorSystem("scapsSystem")
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(1.second)
 
