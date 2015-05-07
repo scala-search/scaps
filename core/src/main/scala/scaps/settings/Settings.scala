@@ -17,7 +17,7 @@ case class Settings(
 
 object Settings {
   def fromApplicationConf =
-    Settings(ConfigFactory.load().getConfig("scala-api-search"))
+    Settings(ConfigFactory.load().getConfig("scaps"))
 
   def apply(conf: Config): Settings =
     Settings(

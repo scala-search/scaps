@@ -14,7 +14,7 @@ case class EvaluationSettings(
 
 object EvaluationSettings {
   def fromApplicationConf =
-    EvaluationSettings(ConfigFactory.load().getConfig("scala-api-search.evaluation"))
+    EvaluationSettings(ConfigFactory.load().getConfig("scaps.evaluation"))
 
   def apply(conf: Config): EvaluationSettings =
     EvaluationSettings(
