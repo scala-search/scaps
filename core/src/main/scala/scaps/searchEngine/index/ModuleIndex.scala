@@ -17,7 +17,7 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
 
   val analyzer = new KeywordAnalyzer
 
-  override def addEntities(entities: Seq[Module]): Try[Unit] =
+  def addEntities(entities: Seq[Module]): Try[Unit] =
     withWriter { writer =>
       entities.foreach { entity =>
         val doc = toDocument(entity)
@@ -27,6 +27,11 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
 
   def allModules(): Try[Seq[Module]] =
     search(new MatchAllDocsQuery)
+
+  def deleteModule(module: Module): Try[Unit] =
+    withWriter { writer =>
+      writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
+    }
 
   override def toDocument(entity: Module): Document = {
     val doc = new Document

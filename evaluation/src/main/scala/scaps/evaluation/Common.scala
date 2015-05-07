@@ -66,7 +66,7 @@ object Common extends Logging {
 
           val entities = ExtractionError.logErrors(extractor(jar), logger.info(_))
 
-          Await.result(engine.indexEntities(Module("", project.name, ""), entities), 1.hour)
+          engine.indexEntities(Module("", project.name, ""), entities).get
         }
       }
     }
@@ -76,16 +76,16 @@ object Common extends Logging {
   def updateSearchEngine(engine: SearchEngine, newSettings: Settings) = {
     if (engine.settings.index != newSettings.index) {
       println("Index time settings have changed!")
-      Await.result(
-        for {
-          entities <- Future { engine.termsIndex.allTerms().get ++ engine.classesIndex.allClasses().get }
-          newEngine = {
-            val e = SearchEngine(newSettings).get
-            e.resetIndexes().get
-            e
-          }
-          _ <- newEngine.indexEntities(Module.Unknown, entities.toStream)
-        } yield (newEngine), 1.hour)
+
+      val entities = engine.termsIndex.allTerms().get ++ engine.classesIndex.allClasses().get
+      val newEngine = {
+        val e = SearchEngine(newSettings).get
+        e.resetIndexes().get
+        e
+      }
+      newEngine.indexEntities(Module.Unknown, entities.toStream).get
+
+      newEngine
     } else {
       SearchEngine(newSettings).get
     }

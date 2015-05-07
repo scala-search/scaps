@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-import scala.collection.JavaConversions.mapAsJavaMap
+import scala.collection.JavaConverters._
 import scaps.webapi.TermEntity
 import scaps.searchEngine.APIQuery
 import scaps.searchEngine.ProcessingError
@@ -58,7 +58,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
           val ts2 = new LowerCaseFilter(ts1)
           new TokenStreamComponents(tokenizer, ts2)
         }
-      }))
+      }).asJava)
 
   override val similarity = new PerFieldSimilarityWrapper {
     val default = new DefaultSimilarity
@@ -69,6 +69,12 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       case _                  => default
     }
   }
+
+  def addEntities(entities: Seq[TermEntity]): Try[Unit] =
+    withWriter { writer =>
+      val docs = entities.map(toDocument)
+      writer.addDocuments(docs.asJava)
+    }
 
   def find(query: APIQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {

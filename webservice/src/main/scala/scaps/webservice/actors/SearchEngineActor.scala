@@ -126,10 +126,8 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
 
         val entityStream = ExtractionError.logErrors(extractor(new File(sourceFile)), logger.info(_))
 
-        val f = searchEngine.indexEntities(module, entityStream)
-
         val error = try {
-          Await.ready(f, 1.day)
+          searchEngine.indexEntities(module, entityStream).get
           logger.info(s"${module.moduleId} has been indexed successfully")
           None
         } catch {

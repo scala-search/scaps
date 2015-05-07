@@ -20,6 +20,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       object O {
         def m = 1
         def c = new C
+        def f = 1f
       }
 
       class C
@@ -31,6 +32,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       object O {
         def m = 1
         def c = new C
+        def f = 1f
       }
 
       class C
@@ -62,6 +64,30 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         not contain ("q.O.m"))
     }
 
+  it should "accumulate referencedFrom fields from class entities" in
+    withSearchEngine { searchEngine =>
+      val intClasses = searchEngine.classesIndex.findClassBySuffix("Int").get
+
+      intClasses.size should be(1)
+      intClasses.head.referencedFrom should be(
+        Set(module1._1, module2._1))
+    }
+
+  it should "remove module ids in referencedFrom when class is no longer referenced from a module" in
+    withSearchEngine { searchEngine =>
+      val f = searchEngine.indexEntities(module1._1, extractAll("""
+        package p
+
+        // empty, float is no longer referenced from module1
+        """)).get
+
+      val floatClasses = searchEngine.classesIndex.findClassBySuffix("Float").get
+
+      floatClasses.size should be(1)
+      floatClasses.head.referencedFrom should be(
+        Set(module2._1))
+    }
+
   it should "yield an ambiguity error on ambiguities between selected modules" in
     withSearchEngine { searchEngine =>
       val result = searchEngine.search("C").get
@@ -71,16 +97,16 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       }
     }
 
-  it should "not yield an ambiguity error on ambiguities between not selected modules" in
+  it should "not yield ambiguity errors when ambiguities are caused by excluded modules" in
     withSearchEngine { searchEngine =>
       val result = searchEngine.search("C", Set(module1._1.moduleId)).get
 
       result should matchPattern {
-        case \/-(Seq(_)) =>
+        case \/-(_) =>
       }
     }
 
-  it should "overwritte modules when reindexed with same id" in
+  it should "overwritte terms when reindexed with the same module id" in
     withSearchEngine { searchEngine =>
       val f = searchEngine.indexEntities(module1._1, extractAll("""
         package p
@@ -88,9 +114,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         object O {
           def neu = 1
         }
-        """))
-
-      Await.ready(f, 5.seconds)
+        """)).get
 
       val results = searchEngine.search("Int")
         .get.fold(qe => fail(qe.toString), identity)
@@ -98,6 +122,19 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       results.map(_.name) should (
         not contain ("p.O.m")
         and contain("p.O.neu"))
+    }
+
+  it should "overwritte classes when reindexed with the same module id" in
+    withSearchEngine { searchEngine =>
+      val f = searchEngine.indexEntities(module1._1, extractAll("""
+        package p
+
+        // empty, p.C does no longer exist in module1
+        """)).get
+
+      val c = searchEngine.classesIndex.findClassBySuffix("p.C").get
+
+      c should be(Seq())
     }
 
   def withSearchEngine(block: SearchEngine => Unit): Unit =
@@ -112,11 +149,9 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
           val se = new SearchEngine(
             settings, termIndex, classIndex, moduleIndex)
 
-          val fs = for ((module, entities) <- modulesWithEntities) yield {
-            se.indexEntities(module, entities)
+          for ((module, entities) <- modulesWithEntities) {
+            se.indexEntities(module, entities).get
           }
-
-          Await.ready(Future.sequence(fs), 5.seconds)
 
           block(se)
         }

@@ -28,12 +28,6 @@ trait Index[E] {
   private[index] def toDocument(e: E): Document
   private[index] def toEntity(d: Document): E
 
-  def addEntities(entities: Seq[E]): Try[Unit] =
-    withWriter { writer =>
-      val docs = entities.map(toDocument)
-      writer.addDocuments(docs.asJava)
-    }
-
   private[index] def search(query: Query, maxResults: Int = Int.MaxValue): Try[Seq[E]] =
     withSearcher { searcher =>
       val docs = searcher.search(query, maxResults)

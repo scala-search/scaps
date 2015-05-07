@@ -104,6 +104,7 @@ case class ClassEntity(
   name: String,
   typeParameters: List[TypeParameterEntity],
   baseTypes: List[TypeEntity],
+  referencedFrom: Set[Module] = Set(),
   comment: String = "")
   extends Entity {
 

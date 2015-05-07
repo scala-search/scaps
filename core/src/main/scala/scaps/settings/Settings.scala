@@ -1,8 +1,12 @@
 package scaps.settings
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
-import scala.collection.JavaConversions.asScalaBuffer
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationLong
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -32,6 +36,7 @@ case class IndexSettings(
   classesDir: File,
   termsDir: File,
   modulesDir: File,
+  timeout: Duration,
   lengthNormWeight: Double) {
 
   import Settings._
@@ -44,6 +49,7 @@ object IndexSettings {
       new File(conf.getString("classes-dir")),
       new File(conf.getString("terms-dir")),
       new File(conf.getString("modules-dir")),
+      conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
       conf.getDouble("length-norm-weight"))
 }
 

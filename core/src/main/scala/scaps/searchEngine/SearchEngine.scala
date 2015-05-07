@@ -17,6 +17,10 @@ import org.apache.lucene.store.FSDirectory
 import scalaz.\/
 import scaps.webapi.Module
 import scaps.searchEngine.index.ModuleIndex
+import scaps.webapi.ClassEntity
+import scaps.webapi.TypeEntity
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -57,38 +61,42 @@ object SearchEngine {
 
 class SearchEngine private[searchEngine] (
   val settings: Settings,
-  val termsIndex: TermsIndex,
-  val classesIndex: ClassIndex,
-  val moduleIndex: ModuleIndex) extends Logging {
+  private[scaps] val termsIndex: TermsIndex,
+  private[scaps] val classesIndex: ClassIndex,
+  private[scaps] val moduleIndex: ModuleIndex) extends Logging {
 
-  val analyzer = new QueryAnalyzer(
-    settings.query,
-    (classesIndex.findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
-    classesIndex.findSubClasses _)
+  def indexEntities(module: Module, entities: Seq[Entity])(implicit ec: ExecutionContext): Try[Unit] =
+    Try {
+      deleteModule(module).get
 
-  def indexEntities(module: Module, entities: Seq[Entity])(implicit ec: ExecutionContext): Future[Unit] =
-    Future {
-      termsIndex.deleteEntitiesIn(module).get
-    }.flatMap { _ =>
       def setModule(t: TermEntity) =
         if (module == Module.Unknown)
           t
         else
           t.copy(module = module)
 
-      Future.sequence(List(
-        Future { termsIndex.addEntities(entities.collect { case t: TermEntity => setModule(t) }) },
-        Future { classesIndex.addEntities(entities.collect { case c: ClassEntity => c }) }))
-        .map { results =>
-          results.foreach(_.get)
-          moduleIndex.addEntities(Seq(module)).get
-        }
+      val termsWithModule = entities.collect { case t: TermEntity => setModule(t) }
+      val classesWithModule = entities.collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
+
+      val f = Future.sequence(List(
+        Future { termsIndex.addEntities(termsWithModule).get },
+        Future { classesIndex.addEntities(classesWithModule).get }))
+
+      Await.result(f, settings.index.timeout)
+
+      moduleIndex.addEntities(Seq(module)).get
     }
+
+  def deleteModule(module: Module): Try[Unit] = Try {
+    termsIndex.deleteEntitiesIn(module).get
+    classesIndex.deleteEntitiesIn(module).get
+    moduleIndex.deleteModule(module).get
+  }
 
   def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[TermEntity]] = Try {
     for {
       parsed <- QueryParser(query)
-      analyzed <- analyzer(parsed).get
+      analyzed <- analyzer(moduleIds)(parsed).get
       results <- termsIndex.find(analyzed, moduleIds).get
     } yield {
       logger.debug(s"""query "${query}" expanded to "${analyzed.fingerprint.mkString(" ")}" """)
@@ -104,4 +112,17 @@ class SearchEngine private[searchEngine] (
     _ <- classesIndex.resetIndex()
     _ <- moduleIndex.resetIndex()
   } yield ()
+
+  private def analyzer(moduleIds: Set[String]) = {
+    def findClassBySuffix(suffix: String) =
+      (classesIndex.findClassBySuffix(suffix, moduleIds))
+
+    def findSubClasses(tpe: TypeEntity) =
+      classesIndex.findSubClasses(tpe, moduleIds)
+
+    new QueryAnalyzer(
+      settings.query,
+      (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
+      findSubClasses _)
+  }
 }

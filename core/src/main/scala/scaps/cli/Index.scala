@@ -24,6 +24,6 @@ object Index extends App with Logging {
     val entities =
       ExtractionError.logErrors(extractor(sourceJar), logger.info(_))
 
-    Await.result(engine.indexEntities(Module.Unknown, entities), 1.hour)
+    engine.indexEntities(Module.Unknown, entities).get
   }
 }
