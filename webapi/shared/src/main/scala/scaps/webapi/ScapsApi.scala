@@ -2,7 +2,7 @@ package scaps.webapi
 
 import scala.concurrent.Future
 
-case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module]) {
+case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module], indexErrors: Seq[String]) {
   def allModules = workQueue ++ indexedModules
 }
 

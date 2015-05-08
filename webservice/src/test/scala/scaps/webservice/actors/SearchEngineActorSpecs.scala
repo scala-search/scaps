@@ -3,13 +3,11 @@ package scaps.webservice.actors
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.Finders
 import org.scalatest.FlatSpecLike
 import org.scalatest.Matchers
-
 import akka.actor.Actor
 import akka.actor.ActorRef
 import akka.actor.ActorSelection.toScala
@@ -20,13 +18,12 @@ import akka.pattern.ask
 import akka.testkit.ImplicitSender
 import akka.testkit.TestKit
 import akka.util.Timeout
-
 import scalaz.{ Index => _, _ }
-
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
 import scaps.webapi._
 import scaps.webservice.actors.SearchEngineProtocol._
+import java.io.FileNotFoundException
 
 class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with ImplicitSender
   with FlatSpecLike with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
@@ -65,28 +62,24 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
     searchEngine ! job
 
-    expectMsgPF(10.seconds) {
-      case Indexed(job, Some(e)) => ()
-    }
+    awaitIndexReady()
 
     searchEngine ! GetStatus
 
     expectMsgPF(1.second) {
-      case IndexStatus(Nil, Nil) => ()
+      case IndexStatus(Nil, Nil, Seq(_)) => ()
     }
   }
 
   it should "enqueue valid jobs and report success" in {
     searchEngine ! indexModule1
 
-    expectMsgPF(10.seconds) {
-      case Indexed(indexModule1, None) => ()
-    }
+    awaitIndexReady()
 
     searchEngine ! GetStatus
 
     expectMsgPF(1.second) {
-      case IndexStatus(Nil, Seq(indexModule1.module)) => ()
+      case IndexStatus(Nil, Seq(indexModule1.module), Nil) => ()
     }
   }
 
@@ -141,19 +134,11 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
   }
 
   it should "reject search queries while indexing" in {
-    val (searchEngine, indexWorker) = {
-      val searchEngine = system.actorOf(
-        SearchEngineActor.props(searchEngineImpl, Some(Props[MockedIndexWorker])))
-
-      searchEngine ! Reset
-
-      (searchEngine, system.actorSelection(searchEngine.path / "indexWorker"))
-    }
+    val (searchEngine, indexWorker) = searchEngineWithMockedIndexWorker()
 
     searchEngine ! indexModule1
 
-    val r1 = await(search("Int", searchEngine))
-    r1 should matchPattern {
+    await(search("Int", searchEngine)) should matchPattern {
       case -\/(msg: String) if msg.contains("index is being built") =>
     }
 
@@ -161,10 +146,27 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
     awaitIndexReady(searchEngine)
 
-    val r2 = await(search("Int", searchEngine))
-    r2 should matchPattern {
+    await(search("Int", searchEngine)) should matchPattern {
       case -\/(msg: String) if msg.contains("not found") =>
     }
+  }
+
+  it should "enqueue reset operations while indexing" in {
+    val (searchEngine, indexWorker) = searchEngineWithMockedIndexWorker()
+
+    searchEngine ! indexModule1
+    searchEngine ! indexModule2
+
+    searchEngine ! Reset
+
+    awaitStatus(searchEngine).workQueue should be(
+      Seq(indexModule1.module, indexModule2.module))
+
+    indexWorker ! "continue"
+
+    awaitIndexReady(searchEngine)
+
+    awaitStatus(searchEngine).allModules should be('empty)
   }
 
   def await[T](f: Future[T]): T = {
@@ -177,8 +179,20 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
       status.workQueue should be('empty)
     }, 5.second, 10.millis)
 
+  def awaitStatus(se: ActorRef = searchEngine) =
+    await(se ? GetStatus).asInstanceOf[IndexStatus]
+
   def search(q: String, se: ActorRef = searchEngine): Future[String \/ Seq[TermEntity]] =
     (se ? Search(q, Set(), 10, 0)).mapTo[String \/ Seq[TermEntity]]
+
+  def searchEngineWithMockedIndexWorker() = {
+    val searchEngine = system.actorOf(
+      SearchEngineActor.props(searchEngineImpl, Some(Props[MockedIndexWorker])))
+
+    searchEngine ! Reset
+
+    (searchEngine, system.actorSelection(searchEngine.path / "indexWorker"))
+  }
 }
 
 class MockedIndexWorker() extends Actor {

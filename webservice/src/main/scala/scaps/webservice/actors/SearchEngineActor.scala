@@ -49,70 +49,81 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props) ext
     val searcher = actorOf(Props(classOf[Searcher], searchEngine), "searcher")
     val indexWorker = actorOf(indexWorkerProps, "indexWorker")
 
-    def ready: Receive = {
-      val indexedModules = searchEngine.indexedModules().get
+    def ready(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
       logger.info(s"search engine ready with modules $indexedModules")
 
       {
         case i: Index if i.forceReindex == false =>
-          enqueueJobIfNewModule(i, Nil, indexedModules)
+          enqueueJobIfNewModule(i, Nil, indexedModules, indexErrors)
         case i: Index =>
-          enqueueJob(i, Nil, indexedModules)
+          enqueueJob(i, Nil, indexedModules, indexErrors)
         case s: Search =>
           searcher.tell(s, sender)
         case GetStatus =>
-          sender ! IndexStatus(Nil, indexedModules)
+          sender ! IndexStatus(Nil, indexedModules.toSeq, indexErrors)
         case Reset =>
           searchEngine.resetIndexes().get
-          become(ready)
+          become(ready(Set(), Nil))
       }
     }
 
-    def indexing(queue: Seq[(ActorRef, Index)], indexedModules: Seq[Module]): Receive = {
+    def indexing(queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
       case i: Index if i.forceReindex == false =>
-        enqueueJobIfNewModule(i, queue, indexedModules)
+        enqueueJobIfNewModule(i, queue, indexedModules, indexErrors)
       case i: Index =>
-        enqueueJob(i, queue, indexedModules)
-      case res @ Indexed(indexJob, _) if indexJob == queue.head._2 =>
-        queue.head._1 ! res
+        enqueueJob(i, queue, indexedModules, indexErrors)
+      case res @ Indexed(indexJob, error) if indexJob == queue.head =>
+        val errors = indexErrors ++ error.map(_.toString())
+        val indexed = indexedModules ++
+          (if (error.isDefined) Nil else Seq(indexJob.module))
 
         if (queue.tail.isEmpty) {
-          become(ready)
+          become(ready(indexed, errors))
         } else {
-          indexWorker ! queue.tail.head._2
-          become(indexing(queue.tail, indexJob.module +: indexedModules))
+          indexWorker ! queue.tail.head
+          become(indexing(queue.tail, indexed, errors))
         }
       case Indexed(j, _) =>
         throw new IllegalStateException()
       case _: Search =>
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetStatus =>
-        sender ! IndexStatus(queue.map(_._2.module), indexedModules)
+        sender ! IndexStatus(queue.map(_.module), indexedModules.toSeq, indexErrors)
       case Reset =>
-      // TODO
+        become(resetting(queue))
     }
 
-    def enqueueJob(indexJob: Index, queue: Seq[(ActorRef, Index)], indexedModules: Seq[Module]) = {
+    def resetting(queue: Seq[Index]): Receive = {
+      case i: Indexed =>
+        searchEngine.resetIndexes().get
+        become(ready(Set(), Nil))
+      case GetStatus =>
+        sender ! IndexStatus(queue.map(_.module), Nil, Nil)
+    }
+
+    def enqueueJob(indexJob: Index, queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]) = {
       if (queue.isEmpty) {
         indexWorker ! indexJob
       }
 
-      become(indexing(queue :+ ((sender, indexJob)), indexedModules))
+      become(indexing(queue :+ indexJob, indexedModules, indexErrors))
     }
 
-    def enqueueJobIfNewModule(indexJob: Index, queue: Seq[(ActorRef, Index)], indexedModules: Seq[Module]) = {
-      val allModules = queue.map(_._2.module) ++ indexedModules
+    def enqueueJobIfNewModule(indexJob: Index, queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]) = {
+      val allModules = queue.map(_.module) ++ indexedModules
 
       if (allModules.contains(indexJob.module)) {
         logger.debug(s"Drop index job $indexJob")
         sender ! Indexed(indexJob, None)
       } else {
         logger.debug(s"Enqueue unenforced index job $indexJob")
-        enqueueJob(indexJob, queue, indexedModules)
+        enqueueJob(indexJob, queue, indexedModules, indexErrors)
       }
     }
 
-    ready
+    val indexedModules = searchEngine.indexedModules().get
+
+    ready(indexedModules.toSet, Nil)
   }
 }
 
