@@ -9,7 +9,7 @@ import scaps.utils.Logging
  * Provides an instance of the Scala presentation compiler
  */
 object CompilerUtils extends Logging {
-  def withCompiler[A](classpath: List[String] = Nil)(fn: Global => A): A = {
+  def withCompiler[A](classpath: Seq[String] = Nil)(fn: Global => A): A = {
     val compiler = createCompiler(classpath)
 
     compiler.ask(() => new compiler.Run)
@@ -21,14 +21,14 @@ object CompilerUtils extends Logging {
     res
   }
 
-  def createCompiler(classpath: List[String]): Global = {
+  def createCompiler(classpath: Seq[String]): Global = {
     val settings = new scala.tools.nsc.Settings(msg => throw sys.error(msg))
 
     val scalaLibClassPath =
       if (classpath == Nil) scalaLibRef
       else None
 
-    (scalaLibClassPath.toList ::: classpath).foreach { cp =>
+    (scalaLibClassPath.toList ++ classpath).foreach { cp =>
       settings.classpath.append(cp)
       settings.bootclasspath.append(cp)
     }

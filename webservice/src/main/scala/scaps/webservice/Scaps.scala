@@ -1,13 +1,17 @@
 package scaps.webservice
 
+import scala.annotation.implicitNotFound
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+
 import akka.actor.ActorRefFactory
 import akka.actor.Props
 import akka.actor.actorRef2Scala
 import akka.pattern.ask
 import akka.util.Timeout
 import scalaz.{ \/ => \/ }
+import scaps.searchEngine.SearchEngine
+import scaps.settings.Settings
 import scaps.webapi.IndexStatus
 import scaps.webapi.Module
 import scaps.webapi.ScapsApi
@@ -19,7 +23,10 @@ import scaps.webservice.actors.UserInteractionLogger
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.SearchEngineProtocol._
 
-  val searchEngine = context.actorOf(Props[SearchEngineActor], "searchEngine")
+  val searchEngine = {
+    val se = SearchEngine(Settings.fromApplicationConf).get
+    context.actorOf(SearchEngineActor.props(se), "searcher")
+  }
   val userInteractionLogger = context.actorOf(Props[UserInteractionLogger], "userInteractionLogger")
 
   implicit val _ = context.dispatcher

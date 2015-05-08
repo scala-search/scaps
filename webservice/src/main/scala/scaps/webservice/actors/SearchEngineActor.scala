@@ -24,10 +24,17 @@ import scaps.webapi.Module
 import scala.util.control.NonFatal
 import akka.event.LoggingReceive
 
+object SearchEngineActor {
+  def props(searchEngine: SearchEngine, indexWorkerProps: Option[Props] = None) =
+    Props(classOf[SearchEngineActor],
+      searchEngine,
+      indexWorkerProps.getOrElse(IndexWorkerActor.props(searchEngine)))
+}
+
 /**
  * Manages the state of an instance of the search engine.
  */
-class SearchEngineActor extends Actor {
+class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props) extends Actor {
   import SearchEngineProtocol._
   import context._
 
@@ -36,54 +43,44 @@ class SearchEngineActor extends Actor {
   private case object Initialize
   self ! Initialize
 
-  def receive = LoggingReceive(initializing)
+  def receive = initialized
 
-  def initializing: Receive = {
-    case Initialize =>
-      val searchEngine = SearchEngine(Settings.fromApplicationConf).get
-      searchEngine.indexedModules().map { indexedModules =>
-        become(initialized(searchEngine, indexedModules.toList))
-      }.get
-    case m =>
-      self.tell(m, sender)
-  }
-
-  def initialized(searchEngine: SearchEngine, indexedModules: List[Module]): Receive = {
-    logger.info(s"started search engine with modules $indexedModules")
-
+  def initialized: Receive = {
     val searcher = actorOf(Props(classOf[Searcher], searchEngine), "searcher")
-    val indexWorker = actorOf(Props(classOf[IndexWorkerActor], searchEngine), "indexWorker")
+    val indexWorker = actorOf(indexWorkerProps, "indexWorker")
 
-    def ready(indexedModules: List[Module]): Receive = {
-      case i: Index if i.forceReindex == false =>
-        rewriteUnenforcedIndexJob(i, indexedModules)
-      case i: Index =>
-        indexWorker ! i
-        become(indexing((sender, i) :: Nil, indexedModules))
-      case s: Search =>
-        searcher.tell(s, sender)
-      case GetStatus =>
-        sender ! IndexStatus(Nil, indexedModules)
-      case Reset =>
-        searchEngine.resetIndexes().get
-        become(ready(Nil))
+    def ready: Receive = {
+      val indexedModules = searchEngine.indexedModules().get
+      logger.info(s"search engine ready with modules $indexedModules")
+
+      {
+        case i: Index if i.forceReindex == false =>
+          enqueueJobIfNewModule(i, Nil, indexedModules)
+        case i: Index =>
+          enqueueJob(i, Nil, indexedModules)
+        case s: Search =>
+          searcher.tell(s, sender)
+        case GetStatus =>
+          sender ! IndexStatus(Nil, indexedModules)
+        case Reset =>
+          searchEngine.resetIndexes().get
+          become(ready)
+      }
     }
 
-    def indexing(queue: List[(ActorRef, Index)], indexedModules: List[Module]): Receive = {
+    def indexing(queue: Seq[(ActorRef, Index)], indexedModules: Seq[Module]): Receive = {
       case i: Index if i.forceReindex == false =>
-        rewriteUnenforcedIndexJob(i, queue.map(_._2.module) ++ indexedModules)
+        enqueueJobIfNewModule(i, queue, indexedModules)
       case i: Index =>
-        become(indexing(queue :+ ((sender, i)), indexedModules))
-      case res @ Indexed(j, _) if j == queue.head._2 =>
+        enqueueJob(i, queue, indexedModules)
+      case res @ Indexed(indexJob, _) if indexJob == queue.head._2 =>
         queue.head._1 ! res
 
         if (queue.tail.isEmpty) {
-          searchEngine.indexedModules().map { indexedModules =>
-            become(ready(indexedModules.toList))
-          }.get
+          become(ready)
         } else {
           indexWorker ! queue.tail.head._2
-          become(indexing(queue.tail, j.module :: indexedModules))
+          become(indexing(queue.tail, indexJob.module +: indexedModules))
         }
       case Indexed(j, _) =>
         throw new IllegalStateException()
@@ -95,21 +92,33 @@ class SearchEngineActor extends Actor {
       // TODO
     }
 
-    def rewriteUnenforcedIndexJob(i: Index, indexedModules: List[Module]) =
-      if (i.forceReindex)
-        throw new IllegalArgumentException
-      else {
-        if (!indexedModules.contains(i.module)) {
-          logger.debug(s"Rewrite index job $i with forceReindex=true")
-          self.tell(i.copy(forceReindex = true), sender)
-        } else {
-          logger.debug(s"Drop index job $i")
-          sender ! Indexed(i, None)
-        }
+    def enqueueJob(indexJob: Index, queue: Seq[(ActorRef, Index)], indexedModules: Seq[Module]) = {
+      if (queue.isEmpty) {
+        indexWorker ! indexJob
       }
 
-    ready(indexedModules)
+      become(indexing(queue :+ ((sender, indexJob)), indexedModules))
+    }
+
+    def enqueueJobIfNewModule(indexJob: Index, queue: Seq[(ActorRef, Index)], indexedModules: Seq[Module]) = {
+      val allModules = queue.map(_._2.module) ++ indexedModules
+
+      if (allModules.contains(indexJob.module)) {
+        logger.debug(s"Drop index job $indexJob")
+        sender ! Indexed(indexJob, None)
+      } else {
+        logger.debug(s"Enqueue unenforced index job $indexJob")
+        enqueueJob(indexJob, queue, indexedModules)
+      }
+    }
+
+    ready
   }
+}
+
+object IndexWorkerActor {
+  def props(searchEngine: SearchEngine) =
+    Props(classOf[IndexWorkerActor], searchEngine)
 }
 
 /**
@@ -125,8 +134,8 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
     case i @ Index(module, sourceFile, classpath, _) =>
       val requestor = sender
 
-      CompilerUtils.withCompiler(classpath.toList) { compiler =>
-        val error = try {
+      val error = try {
+        CompilerUtils.withCompiler(classpath) { compiler =>
           val extractor = new JarExtractor(compiler)
 
           logger.info(s"start indexing ${module.moduleId} (${sourceFile})")
@@ -136,17 +145,17 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
           searchEngine.indexEntities(module, entityStream).get
           logger.info(s"${module.moduleId} has been indexed successfully")
           None
-        } catch {
-          case e: TimeoutException =>
-            logger.error(s"Indexing ${module.moduleId} timed out")
-            Some(e)
-          case NonFatal(e) =>
-            logger.error(s"Indexing ${module.moduleId} threw $e")
-            Some(e)
         }
-
-        requestor ! Indexed(i, error)
+      } catch {
+        case e: TimeoutException =>
+          logger.error(s"Indexing ${module.moduleId} timed out")
+          Some(e)
+        case NonFatal(e) =>
+          logger.error(s"Indexing ${module.moduleId} threw $e")
+          Some(e)
       }
+
+      requestor ! Indexed(i, error)
   }
 }
 

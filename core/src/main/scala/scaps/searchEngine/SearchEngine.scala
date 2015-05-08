@@ -21,6 +21,7 @@ import scaps.webapi.ClassEntity
 import scaps.webapi.TypeEntity
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import org.apache.lucene.store.RAMDirectory
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -32,6 +33,14 @@ object SearchEngine {
     val terms = new TermsIndex(createDir(settings.index.termsDir), settings)
     val classes = new ClassIndex(createDir(settings.index.classesDir), settings)
     val modules = new ModuleIndex(createDir(settings.index.modulesDir))
+
+    new SearchEngine(settings, terms, classes, modules)
+  }
+
+  def inMemory(settings: Settings): SearchEngine = {
+    val terms = new TermsIndex(new RAMDirectory, settings)
+    val classes = new ClassIndex(new RAMDirectory, settings)
+    val modules = new ModuleIndex(new RAMDirectory)
 
     new SearchEngine(settings, terms, classes, modules)
   }
