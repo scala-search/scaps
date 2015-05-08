@@ -87,6 +87,7 @@ lazy val webservice = (project in file("webservice"))
     name := "api-search-webservice",
     publishArtifact := false,
     libraryDependencies ++= Dependencies.webserviceDependencies,
+    parallelExecution in Test := false,
     (resources in Compile) += (fastOptJS in (webserviceUI, Compile)).value.data,
     testModules := Seq("testModule1", "testModule2"))
 

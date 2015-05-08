@@ -41,7 +41,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
   val searchEngineImpl = SearchEngine.inMemory(Settings.fromApplicationConf)
   val searchEngine = {
-    system.actorOf(SearchEngineActor.props(searchEngineImpl), "searcher")
+    system.actorOf(SearchEngineActor.props(searchEngineImpl)(), "searcher")
   }
 
   implicit val timeout = Timeout(5.seconds)
@@ -64,22 +64,18 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
     awaitIndexReady()
 
-    searchEngine ! GetStatus
-
-    expectMsgPF(1.second) {
-      case IndexStatus(Nil, Nil, Seq(_)) => ()
+    awaitStatus() should matchPattern {
+      case IndexStatus(Nil, Nil, Seq(_)) =>
     }
   }
 
-  it should "enqueue valid jobs and report success" in {
+  it should "enqueue valid jobs and add them to the indexed modules" in {
     searchEngine ! indexModule1
 
     awaitIndexReady()
 
-    searchEngine ! GetStatus
-
-    expectMsgPF(1.second) {
-      case IndexStatus(Nil, Seq(indexModule1.module), Nil) => ()
+    awaitStatus() should matchPattern {
+      case IndexStatus(Nil, Seq(indexModule1.module), Nil) =>
     }
   }
 
@@ -88,7 +84,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
       searchEngine ! indexModule1
     }
 
-    val status = await(searchEngine ? GetStatus).asInstanceOf[IndexStatus]
+    val status = awaitStatus()
     status.allModules should be(Seq(indexModule1.module))
   }
 
@@ -99,7 +95,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
     awaitIndexReady()
 
-    val status = await(searchEngine ? GetStatus).asInstanceOf[IndexStatus]
+    val status = awaitStatus()
     status.allModules should be(Seq(indexModule1.module))
   }
 
@@ -187,7 +183,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
   def searchEngineWithMockedIndexWorker() = {
     val searchEngine = system.actorOf(
-      SearchEngineActor.props(searchEngineImpl, Some(Props[MockedIndexWorker])))
+      SearchEngineActor.props(searchEngineImpl)(Props[MockedIndexWorker]))
 
     searchEngine ! Reset
 

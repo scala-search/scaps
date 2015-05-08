@@ -25,7 +25,7 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
 
   val searchEngine = {
     val se = SearchEngine(Settings.fromApplicationConf).get
-    context.actorOf(SearchEngineActor.props(se), "searcher")
+    context.actorOf(SearchEngineActor.props(se)(), "searcher")
   }
   val userInteractionLogger = context.actorOf(Props[UserInteractionLogger], "userInteractionLogger")
 

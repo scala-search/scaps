@@ -25,28 +25,23 @@ import scala.util.control.NonFatal
 import akka.event.LoggingReceive
 
 object SearchEngineActor {
-  def props(searchEngine: SearchEngine, indexWorkerProps: Option[Props] = None) =
-    Props(classOf[SearchEngineActor],
-      searchEngine,
-      indexWorkerProps.getOrElse(IndexWorkerActor.props(searchEngine)))
+  def props(searchEngine: SearchEngine)(
+    indexWorkerProps: Props = IndexWorkerActor.props(searchEngine),
+    searcherProps: Props = Searcher.props(searchEngine)) =
+    Props(classOf[SearchEngineActor], searchEngine, indexWorkerProps, searcherProps)
 }
 
 /**
  * Manages the state of an instance of the search engine.
  */
-class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props) extends Actor {
+class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, searcherProps: Props) extends Actor {
   import SearchEngineProtocol._
   import context._
 
   val logger = Logging(context.system, this)
 
-  private case object Initialize
-  self ! Initialize
-
-  def receive = initialized
-
-  def initialized: Receive = {
-    val searcher = actorOf(Props(classOf[Searcher], searchEngine), "searcher")
+  def receive = {
+    val searcher = actorOf(searcherProps, "searcher")
     val indexWorker = actorOf(indexWorkerProps, "indexWorker")
 
     def ready(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
@@ -168,6 +163,11 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
 
       requestor ! Indexed(i, error)
   }
+}
+
+object Searcher {
+  def props(searchEngine: SearchEngine) =
+    Props(classOf[Searcher], searchEngine)
 }
 
 class Searcher(searchEngine: SearchEngine) extends Actor {
