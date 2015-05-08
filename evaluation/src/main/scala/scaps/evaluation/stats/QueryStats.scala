@@ -3,10 +3,18 @@ package scaps.evaluation.stats
 import scala.annotation.tailrec
 import scala.Ordering
 
-case class QueryStats(query: String, retrievedDocs: Int, relevantRetrievedDocs: Int, relevantDocs: Int, accumulatedPrecision: Double) {
+case class QueryStats(
+  query: String,
+  retrievedDocs: Int,
+  relevantRetrievedDocs: Int,
+  relevantDocs: Int,
+  accumulatedPrecision: Double,
+  relevantRetrievedInTop10: Int) {
+
   val recall = relevantRetrievedDocs.toDouble / relevantDocs
   val precision = QueryStats.precision(relevantRetrievedDocs, retrievedDocs)
   val averagePrecision = accumulatedPrecision / relevantDocs
+  val recallAt10 = relevantRetrievedInTop10.toDouble / Math.min(relevantDocs, 10)
 
   override def toString() =
     s"ret: $retrievedDocs, rel: $relevantDocs, relret: $relevantRetrievedDocs, recall: $recall, precision: $precision, accp: $accumulatedPrecision, avep: $averagePrecision"
@@ -21,10 +29,12 @@ object QueryStats {
       val isRel = if (isRelevant) 1 else 0
       val ret = prev.retrievedDocs + 1
       val relret = prev.relevantRetrievedDocs + isRel
+      val relret10 = if (ret <= 10) relret else prev.relevantRetrievedInTop10
       prev.copy(
         retrievedDocs = ret,
         relevantRetrievedDocs = relret,
-        accumulatedPrecision = prev.accumulatedPrecision + (QueryStats.precision(relret, ret) * isRel))
+        accumulatedPrecision = prev.accumulatedPrecision + (QueryStats.precision(relret, ret) * isRel),
+        relevantRetrievedInTop10 = relret10)
     }
 
     @tailrec
@@ -35,7 +45,7 @@ object QueryStats {
       }
     }
 
-    loop(results, QueryStats(query, 0, 0, relevant.size, 0d))
+    loop(results, QueryStats(query, 0, 0, relevant.size, 0d, 0))
   }
 
   implicit val queryStatsOrdering =

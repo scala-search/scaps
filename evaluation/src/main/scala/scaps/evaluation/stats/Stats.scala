@@ -1,13 +1,12 @@
 package scaps.evaluation.stats
 
-import scala.Ordering
-
 case class Stats(queryStats: List[QueryStats]) {
   val noQueries = queryStats.size
-  val meanAveragePrecision = queryStats.foldLeft(0d)(_ + _.averagePrecision) / queryStats.size
+  val meanAveragePrecision = queryStats.map(_.averagePrecision).sum / queryStats.size
   val geometricMeanAveragePrecision = Math.pow(queryStats.foldLeft(1d)(_ * _.averagePrecision), -queryStats.size)
+  val meanRecallAt10 = queryStats.map(_.recallAt10).sum / queryStats.size
 
-  override def toString = s"no. queries: $noQueries, MAP: $meanAveragePrecision, gMAP: $geometricMeanAveragePrecision"
+  override def toString = s"no. queries: $noQueries, MAP: $meanAveragePrecision, gMAP: $geometricMeanAveragePrecision, P10: $meanRecallAt10"
 }
 
 object Stats {

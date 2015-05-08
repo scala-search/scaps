@@ -34,13 +34,13 @@ object Benchmark extends App {
   val entries = Common.runQueries(engine, evaluationSettings.queries).fold(
     error => {
       println(error)
-      List(runInfo ::: "<MAP>" :: "---" :: Nil)
+      List(runInfo ::: "<MAP>" :: "---" :: "---" :: Nil)
     },
     stats => {
       val queryData = stats.queryStats.map { qs =>
-        runInfo ::: qs.query :: qs.averagePrecision.toString :: Nil
+        runInfo ::: qs.query :: qs.averagePrecision.toString :: qs.recallAt10.toString :: Nil
       }
-      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision.toString :: Nil)
+      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision.toString :: stats.meanRecallAt10.toString :: Nil)
     })
 
   val csvRows = entries.map(_.mkString("", "; ", ";"))
