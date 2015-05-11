@@ -17,10 +17,10 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   // they are referenced in `loadTypes.TypeToBeLoaded`
   val env = """
     package p {
-      class A
-      class B extends A
-      class C extends B
-      class D extends B
+      class Aa
+      class Bb extends Aa
+      class Cc extends Bb
+      class Dd extends Bb
 
       class Ambiguous
 
@@ -51,9 +51,9 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     """
 
   "the query analyzer" should "resolve type names" in {
-    val res = expectSuccess("A")
+    val res = expectSuccess("Aa")
 
-    res.fingerprint.mkString(" ") should include("p.A")
+    res.fingerprint.mkString(" ") should include("p.Aa")
   }
 
   it should "fail on unknown names" in {
@@ -96,88 +96,88 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   }
 
   it should "correctly trace variance in nested type constructor applications" in {
-    val res = expectSuccess("(A => B) => (C => D)")
+    val res = expectSuccess("(Aa => Bb) => (Cc => Dd)")
 
-    res.fingerprint should contain allOf ("+p.A_0", "-p.B_0", "-p.C_0", "+p.D_0")
+    res.fingerprint should contain allOf ("+p.Aa_0", "-p.Bb_0", "-p.Cc_0", "+p.Dd_0")
   }
 
   it should "add increasing occurrence numbers to repeated elements" in {
-    val res = expectSuccess("(A, A, A)")
+    val res = expectSuccess("(Aa, Aa, Aa)")
 
-    res.fingerprint should contain allOf ("+p.A_0", "+p.A_1", "+p.A_2")
+    res.fingerprint should contain allOf ("+p.Aa_0", "+p.Aa_1", "+p.Aa_2")
   }
 
   it should "include sub classes of types at covariant positions" in {
-    val res = expectSuccess("_ => A")
+    val res = expectSuccess("_ => Aa")
 
     res.fingerprint.mkString(" ") should (
-      include("p.B") and
-      include("p.C") and
-      include("p.D"))
+      include("p.Bb") and
+      include("p.Cc") and
+      include("p.Dd"))
   }
 
   it should "use the bottom type as a sub class of every type" in {
-    val res = expectSuccess("_ => A")
+    val res = expectSuccess("_ => Aa")
 
     res.fingerprint.mkString(" ") should (
       include("scala.Nothing"))
   }
 
   it should "include base classes of types at contravariant positions" in {
-    val res = expectSuccess("C => _")
+    val res = expectSuccess("Cc => _")
 
     res.fingerprint.mkString(" ") should (
-      include("p.B") and
-      include("p.A") and
+      include("p.Bb") and
+      include("p.Aa") and
       include("scala.Any"))
   }
 
   it should "yield a lower boost for types in deeper nested positions" in {
-    val res = expectSuccess("(A, (B, _))")
+    val res = expectSuccess("(Aa, (Bb, _))")
 
-    val A = res.types.find(_.typeName == "p.A").get
-    val B = res.types.find(_.typeName == "p.B").get
+    val Aa = res.types.find(_.typeName == "p.Aa").get
+    val Bb = res.types.find(_.typeName == "p.Bb").get
 
-    A.boost should be > (B.boost)
+    Aa.boost should be > (Bb.boost)
   }
 
   it should "yield a lower boost for types farther away from the original query type" in {
-    val res = expectSuccess("A")
+    val res = expectSuccess("Aa")
 
-    val A = res.types.find(_.typeName == "p.A").get
-    val B = res.types.find(_.typeName == "p.B").get
+    val Aa = res.types.find(_.typeName == "p.Aa").get
+    val Bb = res.types.find(_.typeName == "p.Bb").get
 
-    A.boost should be > (B.boost)
+    Aa.boost should be > (Bb.boost)
   }
 
   it should "yield a boost of 1 for a single type" in {
-    val res = expectSuccess("A")
+    val res = expectSuccess("Aa")
 
-    val A = res.types.find(_.typeName == "p.A").get
+    val Aa = res.types.find(_.typeName == "p.Aa").get
 
-    A.boost should be(1f +- 0.01f)
+    Aa.boost should be(1f +- 0.01f)
   }
 
   it should "omit the outermost function application" in {
-    val res = expectSuccess("A => B")
+    val res = expectSuccess("Aa => Bb")
 
     res.fingerprint.mkString(" ") should not include ("Function1")
   }
 
   it should "normalize curried querries" in {
-    val res1 = expectSuccess("A => B => C")
-    val res2 = expectSuccess("(A, B) => C")
+    val res1 = expectSuccess("Aa => Bb => Cc")
+    val res2 = expectSuccess("(Aa, Bb) => Cc")
 
     res1 should equal(res2)
 
-    val res3 = expectSuccess("A => (B, C) => D")
-    val res4 = expectSuccess("(A, B, C) => D")
+    val res3 = expectSuccess("Aa => (Bb, Cc) => Dd")
+    val res4 = expectSuccess("(Aa, Bb, Cc) => Dd")
 
     res3 should equal(res4)
   }
 
-  it should "not omit inner function types" in {
-    val res = expectSuccess("(A => B) => C")
+  it should "preserve function arguments in higher kinded queries" in {
+    val res = expectSuccess("(Aa => Bb) => Cc")
 
     res.fingerprint should contain("-scala.Function1_0")
   }

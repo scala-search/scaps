@@ -266,6 +266,18 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("-scala.Int_0"))))
   }
 
+  it should "preserve function arguments in higher kinded functions" in {
+    extractTerms("""
+      package p
+
+      object O {
+        def m(f: Int => String): String = f(1)
+      }
+      """)(
+      ("p.O.m", _.fingerprint.toString() should (
+        include(TypeEntity.Function.name(1)))))
+  }
+
   def fingerprint(types: (Variance, String, Int)*) =
     Fingerprint(types.toList.map { case (v, tpe, depth) => Fingerprint.Type(v, tpe, depth) })
 }
