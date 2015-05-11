@@ -90,14 +90,14 @@ class SearchEngine private[searchEngine] (
 
       Await.result(f, settings.index.timeout)
 
-      updateTypeFrequencies()
-
       moduleIndex.addEntities(Seq(module)).get
+
+      updateTypeFrequencies().get
     }
 
   def updateTypeFrequencies(): Try[Unit] =
     Try {
-      logger.info(s"Begin update type frequencies for modules ${moduleIndex.allModules().get}")
+      logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 
       val acc = TypeFrequencyAccumulator(termsIndex, classesIndex)
 
@@ -113,6 +113,8 @@ class SearchEngine private[searchEngine] (
       }
 
       classesIndex.addEntities(classesWithFrequencies).get
+
+      logger.info(s"Type frequencies have been updated")
     }
 
   def deleteModule(module: Module): Try[Unit] = Try {
@@ -152,7 +154,7 @@ class SearchEngine private[searchEngine] (
 
     analyzer(raw).map { analyzed =>
       def getFrequency(v: Variance, t: String) =
-        classesIndex.findClassBySuffix(t).get.head.frequency(v)
+        classesIndex.findClassBySuffix(t).get.headOption.map(_.frequency(v)).getOrElse(0)
 
       val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name).toDouble
 

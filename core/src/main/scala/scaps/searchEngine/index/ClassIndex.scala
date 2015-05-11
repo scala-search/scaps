@@ -104,7 +104,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     }
 
     val q = new BooleanQuery
-    for (perm <- partialTypes(tpe)) {
+    for (perm <- partialTypes(tpe).take(BooleanQuery.getMaxClauseCount)) {
       q.add(new TermQuery(new Term(fields.baseClass, perm.signature)), Occur.SHOULD)
     }
 
