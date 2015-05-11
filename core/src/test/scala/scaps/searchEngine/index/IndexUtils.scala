@@ -13,38 +13,38 @@ trait IndexUtils extends ExtractionUtils {
 
   val settings = Settings.fromApplicationConf
 
-  def withDir(f: Directory => Unit) =
-    using(new RAMDirectory)(f)
+  def withDir[T](f: Directory => T): T =
+    using(new RAMDirectory)(f).get
 
-  def withTermIndex(f: TermsIndex => Unit): Unit =
+  def withTermIndex[T](f: TermsIndex => T): T =
     withDir { dir =>
       val index = new TermsIndex(dir, settings)
       f(index)
-    }.get
+    }
 
-  def withTermIndex(sources: String*)(f: TermsIndex => Unit): Unit =
+  def withTermIndex[T](sources: String*)(f: TermsIndex => T): T =
     withTermIndex { index =>
       val entities = sources.toStream.flatMap(extractAll).collect { case t: TermEntity => t }
       index.addEntities(entities).get
       f(index)
     }
 
-  def withClassIndex(f: ClassIndex => Unit): Unit =
+  def withClassIndex[T](f: ClassIndex => T): T =
     withDir { dir =>
       val index = new ClassIndex(dir, settings)
       f(index)
-    }.get
+    }
 
-  def withClassIndex(sources: String*)(f: ClassIndex => Unit): Unit =
+  def withClassIndex[T](sources: String*)(f: ClassIndex => T): T =
     withClassIndex { index =>
       val entities = sources.flatMap(extractAll).collect { case t: ClassEntity => t }
       index.addEntities(entities).get
       f(index)
     }
 
-  def withModuleIndex(f: ModuleIndex => Unit): Unit =
+  def withModuleIndex[T](f: ModuleIndex => T): T =
     withDir { dir =>
       val index = new ModuleIndex(dir)
       f(index)
-    }.get
+    }
 }

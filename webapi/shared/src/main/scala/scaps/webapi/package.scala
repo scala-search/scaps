@@ -105,7 +105,8 @@ case class ClassEntity(
   typeParameters: List[TypeParameterEntity],
   baseTypes: List[TypeEntity],
   referencedFrom: Set[Module] = Set(),
-  comment: String = "")
+  comment: String = "",
+  typeFrequency: Map[Variance, Int] = Map())
   extends Entity {
 
   override def toString() = {
@@ -119,6 +120,9 @@ case class ClassEntity(
   }
 
   def isFunction = typeParameters.length > 0 && name == TypeEntity.Function.name(typeParameters.length - 1)
+
+  def frequency(v: Variance) =
+    typeFrequency.get(v).getOrElse(0)
 }
 
 case class TermEntity(
@@ -253,7 +257,9 @@ object TypeEntity {
   object Int extends PrimitiveType("scala.Int")
   object Char extends PrimitiveType("scala.Char")
   object String extends PrimitiveType("java.lang.String")
-  object Nothing extends PrimitiveType("scala.Nothing")
+  object Nothing extends PrimitiveType("scala.Nothing") {
+    val cls = ClassEntity(name, Nil, Nil)
+  }
 
   object Unknown extends PrimitiveType("<unknown>")
 

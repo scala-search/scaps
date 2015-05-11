@@ -3,9 +3,7 @@ package scaps.searchEngine
 import java.io.File
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scaps.webapi.ClassEntity
-import scaps.webapi.Entity
-import scaps.webapi.TermEntity
+import scaps.webapi._
 import scaps.searchEngine.index.ClassIndex
 import scaps.searchEngine.index.TermsIndex
 import scaps.searchEngine.queries.QueryAnalyzer
@@ -23,6 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.apache.lucene.store.RAMDirectory
 import scaps.searchEngine.queries.RawQuery
+import scaps.searchEngine.index.TypeFrequencyAccumulator
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -91,7 +90,29 @@ class SearchEngine private[searchEngine] (
 
       Await.result(f, settings.index.timeout)
 
+      updateTypeFrequencies()
+
       moduleIndex.addEntities(Seq(module)).get
+    }
+
+  def updateTypeFrequencies(): Try[Unit] =
+    Try {
+      logger.info(s"Begin update type frequencies for modules ${moduleIndex.allModules().get}")
+
+      val acc = TypeFrequencyAccumulator(termsIndex, classesIndex)
+
+      val tfs = acc()
+
+      val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
+        def freq(v: Variance) = tfs((v, cls.name))
+
+        cls.copy(typeFrequency = Map(
+          Covariant -> freq(Covariant),
+          Contravariant -> freq(Contravariant),
+          Invariant -> freq(Invariant)))
+      }
+
+      classesIndex.addEntities(classesWithFrequencies).get
     }
 
   def deleteModule(module: Module): Try[Unit] = Try {
@@ -129,6 +150,20 @@ class SearchEngine private[searchEngine] (
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
       classesIndex.findSubClasses(_).get)
 
-    analyzer(raw)
+    analyzer(raw).map { analyzed =>
+      def getFrequency(v: Variance, t: String) =
+        classesIndex.findClassBySuffix(t).get.head.frequency(v)
+
+      val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name).toDouble
+
+      val typesWithFrequencyBoost = analyzed.types.map { t =>
+        val freq = getFrequency(t.variance, t.typeName)
+        val itf = Math.log(maxFrequency / (freq + 1))
+
+        t.copy(boost = t.boost * itf.toFloat)
+      }
+
+      analyzed.copy(types = typesWithFrequencyBoost)
+    }
   }
 }
