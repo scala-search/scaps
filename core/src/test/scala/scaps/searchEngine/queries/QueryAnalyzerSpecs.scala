@@ -183,13 +183,13 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   }
 
   def expectSuccess(s: String) = {
-    val res = analyzer(QueryParser(s).getOrElse(???)).get
+    val res = analyzer(QueryParser(s).getOrElse(???))
     res should be('right)
     res.getOrElse(???)
   }
 
   def expectFailure(s: String) = {
-    val res = analyzer(QueryParser(s).getOrElse(???)).get
+    val res = analyzer(QueryParser(s).getOrElse(???))
     res should be('left)
     res.swap.getOrElse(???)
   }
@@ -197,14 +197,13 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   val analyzer = {
     val classEntities = extractAllClasses(env)
 
-    def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, Try[List[V]]] = ps
+    def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, List[V]] = ps
       .distinct
       .foldLeft(Map[K, List[V]]()) { (acc, keyAndValue) =>
         val values = acc.getOrElse(keyAndValue._1, Nil)
         acc + (keyAndValue._1 -> (keyAndValue._2 :: values))
       }
-      .mapValues(sub => Try(sub))
-      .withDefaultValue(Try(Nil))
+      .withDefaultValue(Nil)
 
     val findClassesBySuffix = toMultiMap(for {
       cls <- classEntities

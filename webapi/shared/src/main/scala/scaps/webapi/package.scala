@@ -248,8 +248,10 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
 
 object TypeEntity {
   object Any extends PrimitiveType("scala.Any")
+  object AnyVal extends PrimitiveType("scala.AnyVal")
   object AnyRef extends PrimitiveType("java.lang.Object")
   object Int extends PrimitiveType("scala.Int")
+  object Char extends PrimitiveType("scala.Char")
   object String extends PrimitiveType("java.lang.String")
   object Nothing extends PrimitiveType("scala.Nothing")
 

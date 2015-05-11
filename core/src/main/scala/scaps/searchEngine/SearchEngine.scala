@@ -22,6 +22,7 @@ import scaps.webapi.TypeEntity
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.apache.lucene.store.RAMDirectory
+import scaps.searchEngine.queries.RawQuery
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -49,23 +50,20 @@ object SearchEngine {
    * Names from the `scala` root package are favored over other names and all names in
    * the `scala` namespace have a higher priority. This allows queries like `List => Future`.
    */
-  def favorScalaStdLib(results: Try[Seq[ClassEntity]]) =
-    for {
-      candidates <- results
-    } yield {
-      // classes in root `scala` namespace and java.lang.String are always favored
-      val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
-      // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
-      val secondPrioPattern = """scala\..*"""
+  def favorScalaStdLib(candidates: Seq[ClassEntity]) = {
+    // classes in root `scala` namespace and java.lang.String are always favored
+    val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
+    // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
+    val secondPrioPattern = """scala\..*"""
 
-      candidates.filter(_.name.matches(firstPrioPattern)) match {
+    candidates.filter(_.name.matches(firstPrioPattern)) match {
+      case Seq(fav) => Seq(fav)
+      case _ => candidates.filter(_.name.matches(secondPrioPattern)) match {
         case Seq(fav) => Seq(fav)
-        case _ => candidates.filter(_.name.matches(secondPrioPattern)) match {
-          case Seq(fav) => Seq(fav)
-          case _        => candidates
-        }
+        case _        => candidates
       }
     }
+  }
 }
 
 class SearchEngine private[searchEngine] (
@@ -105,7 +103,7 @@ class SearchEngine private[searchEngine] (
   def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[TermEntity]] = Try {
     for {
       parsed <- QueryParser(query)
-      analyzed <- analyzer(moduleIds)(parsed).get
+      analyzed <- analyzeQuery(moduleIds, parsed).get
       results <- termsIndex.find(analyzed, moduleIds).get
     } yield {
       logger.debug(s"""query "${query}" expanded to "${analyzed.fingerprint.mkString(" ")}" """)
@@ -122,13 +120,15 @@ class SearchEngine private[searchEngine] (
     _ <- moduleIndex.resetIndex()
   } yield ()
 
-  private def analyzer(moduleIds: Set[String]) = {
+  private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
     def findClassBySuffix(suffix: String) =
-      (classesIndex.findClassBySuffix(suffix, moduleIds))
+      (classesIndex.findClassBySuffix(suffix, moduleIds).get)
 
-    new QueryAnalyzer(
+    val analyzer = new QueryAnalyzer(
       settings.query,
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
-      classesIndex.findSubClasses _)
+      classesIndex.findSubClasses(_).get)
+
+    analyzer(raw)
   }
 }

@@ -35,51 +35,48 @@ private[queries] object ResolvedQuery {
  */
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
-  findClassesBySuffix: (String) => Try[Seq[ClassEntity]],
-  findSubClasses: (TypeEntity) => Try[Seq[ClassEntity]]) {
+  findClassesBySuffix: (String) => Seq[ClassEntity],
+  findSubClasses: (TypeEntity) => Seq[ClassEntity]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
    *
    * Fails when `findClassesBySuffix` or `findSubClasses` fails.
    */
-  def apply(raw: RawQuery): Try[SemanticError \/ APIQuery] =
-    Try {
-      resolveNames(raw.tpe).get.map(
-        (toType _) andThen
-          (_.normalize(Nil)) andThen
-          (tpe => Fingerprint(fingerprintWithAlternatives(tpe).get)) andThen
-          (toApiQuery _) andThen
-          { apiQuery => apiQuery.copy(keywords = raw.keywords) })
-    }
+  def apply(raw: RawQuery): SemanticError \/ APIQuery =
+    resolveNames(raw.tpe).map(
+      (toType _) andThen
+        (_.normalize(Nil)) andThen
+        (tpe => Fingerprint(fingerprintWithAlternatives(tpe))) andThen
+        (toApiQuery _) andThen
+        { apiQuery => apiQuery.copy(keywords = raw.keywords) })
 
   /**
    * Resolves all type names in the query and assigns the according class entities.
    *
    * Names that cannot be resolved and have length 1 are treated as type parameters.
    */
-  private def resolveNames(raw: RawQuery.Type): Try[SemanticError \/ ResolvedQuery] =
-    Try {
-      val resolvedArgs: SemanticError \/ List[ResolvedQuery] =
-        raw.args.map(arg => resolveNames(arg).get).sequenceU
+  private def resolveNames(raw: RawQuery.Type): SemanticError \/ ResolvedQuery = {
+    val resolvedArgs: SemanticError \/ List[ResolvedQuery] =
+      raw.args.map(arg => resolveNames(arg)).sequenceU
 
-      resolvedArgs.flatMap { resolvedArgs =>
-        findClassesBySuffix(raw.name).get match {
-          case Seq() if isTypeParam(raw.name) =>
-            \/.right(ResolvedQuery.Wildcard)
-          case Seq() =>
-            \/.left(NameNotFound(raw.name))
-          case Seq(cls) if resolvedArgs.length == cls.typeParameters.length =>
-            \/.right(ResolvedQuery.Type(cls, resolvedArgs))
-          case Seq(cls) if raw.args.length == 0 =>
-            \/.right(ResolvedQuery.Type(cls, cls.typeParameters.map(_ => ResolvedQuery.Wildcard)))
-          case Seq(cls) =>
-            \/.left(UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length))
-          case candidates =>
-            \/.left(NameAmbiguous(raw.name, candidates))
-        }
+    resolvedArgs.flatMap { resolvedArgs =>
+      findClassesBySuffix(raw.name) match {
+        case Seq() if isTypeParam(raw.name) =>
+          \/.right(ResolvedQuery.Wildcard)
+        case Seq() =>
+          \/.left(NameNotFound(raw.name))
+        case Seq(cls) if resolvedArgs.length == cls.typeParameters.length =>
+          \/.right(ResolvedQuery.Type(cls, resolvedArgs))
+        case Seq(cls) if raw.args.length == 0 =>
+          \/.right(ResolvedQuery.Type(cls, cls.typeParameters.map(_ => ResolvedQuery.Wildcard)))
+        case Seq(cls) =>
+          \/.left(UnexpectedNumberOfTypeArgs(raw.name, cls.typeParameters.length))
+        case candidates =>
+          \/.left(NameAmbiguous(raw.name, candidates))
       }
     }
+  }
 
   private def isTypeParam(name: String): Boolean =
     name.length() == 1
@@ -106,31 +103,29 @@ class QueryAnalyzer private[searchEngine] (
     rec(resolved, Covariant)
   }
 
-  private def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int = 0): Try[List[Fingerprint.Type]] =
-    Try {
-      tpe match {
-        case TypeEntity.Ignored(args, _) =>
-          args.flatMap(fingerprintWithAlternatives(_, depth + 1).get)
-        case tpe: TypeEntity =>
-          val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth, 0)
+  private def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int = 0): List[Fingerprint.Type] =
+    tpe match {
+      case TypeEntity.Ignored(args, _) =>
+        args.flatMap(fingerprintWithAlternatives(_, depth + 1))
+      case tpe: TypeEntity =>
+        val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth, 0)
 
-          val alternatives = tpe.variance match {
-            case Covariant =>
-              val subTypes = findSubClasses(tpe).get.toList
-                .map(subCls => thisFpt.copy(name = subCls.name, distance = subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
+        val alternatives = tpe.variance match {
+          case Covariant =>
+            val subTypes = findSubClasses(tpe).toList
+              .map(subCls => thisFpt.copy(name = subCls.name, distance = subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
 
-              subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name, distance = (0 :: subTypes.map(_.distance)).max + 1)
-            case Contravariant =>
-              findClassesBySuffix(tpe.name).get.headOption.toList
-                .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
-            case Invariant if tpe.name != TypeEntity.Unknown.name =>
-              thisFpt.copy(name = TypeEntity.Unknown.name, distance = 1) :: Nil
-            case Invariant =>
-              Nil
-          }
+            subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name, distance = (0 :: subTypes.map(_.distance)).max + 1)
+          case Contravariant =>
+            findClassesBySuffix(tpe.name).headOption.toList
+              .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
+          case Invariant if tpe.name != TypeEntity.Unknown.name =>
+            thisFpt.copy(name = TypeEntity.Unknown.name, distance = 1) :: Nil
+          case Invariant =>
+            Nil
+        }
 
-          thisFpt :: alternatives ::: tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1).get)
-      }
+        thisFpt :: alternatives ::: tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1))
     }
 
   private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
