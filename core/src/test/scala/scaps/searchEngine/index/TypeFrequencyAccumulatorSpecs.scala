@@ -132,7 +132,7 @@ class TypeFrequencyAccumulatorSpecs extends FlatSpec with IndexUtils {
 
         val acc = TypeFrequencyAccumulator(termIndex, classIndex)
 
-        acc().withDefaultValue(0)
+        acc()
       }
     }
   }

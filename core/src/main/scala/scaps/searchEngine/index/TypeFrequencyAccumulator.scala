@@ -9,17 +9,26 @@ class TypeFrequencyAccumulator(
   baseTypes: String => Seq[TypeEntity],
   subClasses: TypeEntity => Seq[ClassEntity]) {
 
-  def apply(): Map[(Variance, String), Int] = {
-    val entries = terms.flatMap(getEntries)
+  import TypeFrequencyAccumulator.Memo
 
-    entries
+  var getEntriesCached = getEntries _
+
+  def apply(): Map[(Variance, String), Int] = {
+    getEntriesCached = Memo { getEntries _ }
+
+    val res = terms
+      .flatMap(getEntriesForTerm)
       .groupBy(identity)
       .mapValues(_.length)
       .withDefaultValue(0)
+
+    getEntriesCached = getEntries _
+
+    res
   }
 
-  def getEntries(term: TermEntity): Set[(Variance, String)] =
-    typesInTerm(term).flatMap(getEntries)
+  def getEntriesForTerm(term: TermEntity): Set[(Variance, String)] =
+    typesInTerm(term).flatMap(getEntriesCached)
 
   def typesInTerm(term: TermEntity): Set[TypeEntity] = {
     def removeArgs(tpe: TypeEntity) =
@@ -59,9 +68,8 @@ object TypeFrequencyAccumulator {
     val getBaseTypes = (name: String) =>
       classIndex.findClassBySuffix(name).get.flatMap(_.baseTypes)
 
-    val getSubClasses = Memo {
-      (tpe: TypeEntity) => classIndex.findStrictSubclass(tpe).get
-    }
+    val getSubClasses = (tpe: TypeEntity) =>
+      classIndex.findStrictSubclass(tpe).get
 
     new TypeFrequencyAccumulator(
       termIndex.allTerms().get,
