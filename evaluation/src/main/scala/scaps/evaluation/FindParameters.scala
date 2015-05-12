@@ -20,13 +20,14 @@ object FindParameters extends App {
 
   val lengthNormWeights = Rng.oneof(0.7) //RngExtensions.normalSample(1d, 0.05d).map(d => (d * 10).round / 10d)
 
-  val distanceBoostGradients = Rng.choosedouble(0, 2)
+  val distanceBoostGradients = Rng.oneof(0)
   val depthBoostGradients = Rng.choosedouble(0, 2)
-  val idfWeights = Rng.oneof(0.35)
-  val nameBoosts = Rng.oneof(0.2)
-  val docBoosts = Rng.oneof(0.1)
+  val typeFrequencyWeight = Rng.choosedouble(0, 2)
+  val idfWeights = Rng.oneof(0)
+  val nameBoosts = Rng.choosedouble(0, 1)
+  val docBoosts = Rng.choosedouble(0, 1)
 
-  val noConfigurations = 200
+  val noConfigurations = 10000
 
   val settings = Settings.fromApplicationConf
   val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = true)
@@ -34,7 +35,7 @@ object FindParameters extends App {
   var engine = Common.initSearchEngine(settings, evaluationSettings)
 
   using(new FileWriter(outputFile)) { writer =>
-    writer.write("lengthNormWeight; distanceBoostGradient; depthBoostGradient; idfWeight; nameBoost; docBoost; MAP;\n")
+    writer.write("lengthNormWeight; distanceBoostGradient; depthBoostGradient; typeFrequencyWeight; idfWeight; nameBoost; docBoost; MAP; R10;\n")
 
     generateConfs(noConfigurations, Math.pow(42d, 42d).toLong, settings).zipWithIndex.foreach {
       case (settings, idx) =>
@@ -54,10 +55,12 @@ object FindParameters extends App {
               settings.index.lengthNormWeight,
               settings.query.distanceBoostGradient,
               settings.query.depthBoostGradient,
+              settings.query.typeFrequencyWeight,
               settings.query.idfWeight,
               settings.query.nameBoost,
               settings.query.docBoost,
-              stats.meanAveragePrecision)
+              stats.meanAveragePrecision,
+              stats.meanRecallAt10)
             writer.write(cells.mkString("", "; ", ";\n"))
           })
     }
@@ -79,10 +82,17 @@ object FindParameters extends App {
     for {
       dist <- distanceBoostGradients
       depth <- depthBoostGradients
+      tf <- typeFrequencyWeight
       idf <- idfWeights
       nb <- nameBoosts
       db <- docBoosts
-    } yield settings.copy(distanceBoostGradient = dist, depthBoostGradient = depth, idfWeight = idf, nameBoost = nb, docBoost = db)
+    } yield settings.copy(
+      distanceBoostGradient = dist,
+      depthBoostGradient = depth,
+      typeFrequencyWeight = tf,
+      idfWeight = idf,
+      nameBoost = nb,
+      docBoost = db)
 
   def randomize(settings: IndexSettings): Rng[IndexSettings] =
     for {
