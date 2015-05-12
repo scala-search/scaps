@@ -2,8 +2,20 @@ package scaps.webapi
 
 import scala.concurrent.Future
 
-case class IndexStatus(workQueue: Seq[Module], indexedModules: Seq[Module], indexErrors: Seq[String]) {
+sealed trait IndexStatus {
+  def workQueue: Seq[Module]
+  def indexedModules: Seq[Module]
+  def indexErrors: Seq[String]
+  def isReady: Boolean
+
   def allModules = workQueue ++ indexedModules
+}
+case class IndexReady(indexedModules: Seq[Module], indexErrors: Seq[String]) extends IndexStatus {
+  val workQueue = Nil
+  val isReady = true
+}
+case class IndexBusy(workQueue: Seq[Module], indexedModules: Seq[Module], indexErrors: Seq[String]) extends IndexStatus {
+  val isReady = false
 }
 
 /**

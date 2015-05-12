@@ -194,6 +194,10 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     res.swap.getOrElse(???)
   }
 
+  val settings = Settings.fromApplicationConf.query.copy(
+    distanceBoostGradient = 1,
+    depthBoostGradient = 1)
+
   val analyzer = {
     val classEntities = extractAllClasses(env)
 
@@ -215,6 +219,6 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       base <- cls.baseTypes
     } yield (base, cls))
 
-    new QueryAnalyzer(Settings.fromApplicationConf.query, findClassesBySuffix, findSubClasses)
+    new QueryAnalyzer(settings, findClassesBySuffix, findSubClasses)
   }
 }

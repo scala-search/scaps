@@ -14,6 +14,7 @@ import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
+import org.apache.lucene.search.DocIdSetIterator
 
 trait Index[E] {
   private[index] def dir: Directory
@@ -33,8 +34,13 @@ trait Index[E] {
     withSearcher { searcher =>
       val docs = searcher.search(query, maxResults)
 
-      docs.scoreDocs.map(scoreDoc =>
-        toEntity(searcher.doc(scoreDoc.doc)))
+      for {
+        i <- 0 until docs.scoreDocs.length
+        docId = docs.scoreDocs(i).doc
+        if docId != DocIdSetIterator.NO_MORE_DOCS
+      } yield {
+        toEntity(searcher.doc(docId))
+      }
     }
 
   private[index] def withWriter[A](f: IndexWriter => A): Try[A] = {

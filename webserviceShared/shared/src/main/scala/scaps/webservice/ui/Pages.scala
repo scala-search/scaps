@@ -92,7 +92,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     div(
       h1(pageTitle),
-      if (status.workQueue.isEmpty) Seq(
+      if (status.isReady) Seq(
         p("""Scaps is a Scala API search engine for discovering functionality in Scala libraries. You can use both
               type signatures and keywords in your search queries."""),
         p("""Some examples you might want to try:"""),

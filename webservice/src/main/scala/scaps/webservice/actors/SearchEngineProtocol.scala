@@ -7,6 +7,8 @@ import scaps.webapi.Module
 object SearchEngineProtocol {
   case class Index(module: Module, sourceFile: String, classpath: Seq[String], forceReindex: Boolean)
   case class Indexed(job: Index, error: Option[Throwable])
+  case object UpdateTypeFrequencies
+  case object Updated
   case object Reset
 
   case class Search(query: String, moduleIds: Set[String], noResults: Int, offset: Int)

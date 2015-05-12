@@ -119,8 +119,6 @@ class QueryAnalyzer private[searchEngine] (
           case Contravariant =>
             findClassesBySuffix(tpe.name).headOption.toList
               .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
-          case Invariant if tpe.name != TypeEntity.Unknown.name =>
-            thisFpt.copy(name = TypeEntity.Unknown.name, distance = 1) :: Nil
           case Invariant =>
             Nil
         }
@@ -130,7 +128,8 @@ class QueryAnalyzer private[searchEngine] (
 
   private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
     val tpes = fingerprint.typesWithOccurrenceIndex(Ordering[Float].on(fpt => -boost(fpt))).map {
-      case (tpe, idx) => APIQuery.Type(tpe.variance, tpe.name, idx, boost(tpe))
+      case (tpe, idx) =>
+        APIQuery.Type(tpe.variance, tpe.name, idx, boost(tpe))
     }
 
     APIQuery(Nil, tpes.toList.sortBy(-_.boost))
@@ -139,6 +138,6 @@ class QueryAnalyzer private[searchEngine] (
   private def boost(tpe: Fingerprint.Type): Float =
     distanceBoost(tpe.distance) * depthBoost(tpe.depth)
 
-  private def distanceBoost(dist: Int): Float = (1d / (Math.pow(dist, settings.distanceBoostGradient) + 1d)).toFloat
-  private def depthBoost(dist: Int): Float = (1d / (Math.pow(dist, settings.depthBoostGradient) + 1d)).toFloat
+  private def distanceBoost(dist: Int): Float = (1d / (math.pow(dist, settings.distanceBoostGradient) + 1)).toFloat
+  private def depthBoost(depth: Int): Float = (1d / (math.pow(depth, settings.depthBoostGradient) + 1)).toFloat
 }

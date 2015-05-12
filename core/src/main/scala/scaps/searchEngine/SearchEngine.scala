@@ -71,7 +71,7 @@ class SearchEngine private[searchEngine] (
   private[scaps] val classesIndex: ClassIndex,
   private[scaps] val moduleIndex: ModuleIndex) extends Logging {
 
-  def indexEntities(module: Module, entities: Seq[Entity])(implicit ec: ExecutionContext): Try[Unit] =
+  def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false)(implicit ec: ExecutionContext): Try[Unit] =
     Try {
       deleteModule(module).get
 
@@ -90,7 +90,9 @@ class SearchEngine private[searchEngine] (
 
       Await.result(f, settings.index.timeout)
 
-      updateTypeFrequencies().get
+      if (!batchMode) {
+        updateTypeFrequencies().get
+      }
 
       moduleIndex.addEntities(Seq(module)).get
     }
@@ -161,8 +163,9 @@ class SearchEngine private[searchEngine] (
       val typesWithFrequencyBoost = analyzed.types.map { t =>
         val freq = getFrequency(t.variance, t.typeName)
         val itf = Math.log(maxFrequency / (freq + 1))
+        val adjustedItf = (itf - 1) * settings.query.typeFrequencyWeight + 1
 
-        t.copy(boost = t.boost * itf.toFloat)
+        t.copy(boost = t.boost * adjustedItf.toFloat)
       }
 
       analyzed.copy(types = typesWithFrequencyBoost)

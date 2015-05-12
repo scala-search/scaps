@@ -66,8 +66,10 @@ object Common extends Logging {
 
           val entities = ExtractionError.logErrors(extractor(jar), logger.info(_))
 
-          engine.indexEntities(Module("", project.name, ""), entities).get
+          engine.indexEntities(Module("", project.name, ""), entities, batchMode = true).get
         }
+
+        engine.updateTypeFrequencies().get
       }
     }
     engine

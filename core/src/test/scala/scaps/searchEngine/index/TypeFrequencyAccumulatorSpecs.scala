@@ -96,6 +96,30 @@ class TypeFrequencyAccumulatorSpecs extends FlatSpec with IndexUtils {
     tfC should be(0)
   }
 
+  it should "calculate type frequencies of generic types" in {
+    val tfs = typeFrequencies("""
+      package p
+
+      class A[+T]
+      class B extends A[Int]
+      class C[+T] extends A[T]
+
+      object O {
+        def m1: A[Char] = ???
+        def m2: A[Int] = ???
+        def m3: B = ???
+        def m4: B = ???
+        def m5: C[Float] = ???
+      }
+      """)
+
+    val tfA = tfs((Covariant, "p.A"))
+    val tfB = tfs((Covariant, "p.B"))
+
+    tfA should be(4) // from new A, m1, m2, O
+    tfB should be(5) // from new B, m2, m3, m4, O
+  }
+
   def typeFrequencies(source: String) = {
     val entities = extractAll(source)
     val terms = entities.collect { case t: TermEntity => t }

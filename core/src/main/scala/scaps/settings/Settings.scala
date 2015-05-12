@@ -57,6 +57,7 @@ case class QuerySettings(
   maxResults: Int,
   distanceBoostGradient: Double,
   depthBoostGradient: Double,
+  typeFrequencyWeight: Double,
   idfWeight: Double,
   nameBoost: Double,
   docBoost: Double) {
@@ -65,6 +66,7 @@ case class QuerySettings(
 
   assertPositive(distanceBoostGradient)
   assertPositive(depthBoostGradient)
+  assertPositive(typeFrequencyWeight)
   assertPositive(idfWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
@@ -76,6 +78,7 @@ object QuerySettings {
       conf.getInt("max-results"),
       conf.getDouble("distance-boost-weight"),
       conf.getDouble("depth-boost-weight"),
+      conf.getDouble("type-frequency-weight"),
       conf.getDouble("idf-weight"),
       conf.getDouble("name-boost"),
       conf.getDouble("doc-boost"))

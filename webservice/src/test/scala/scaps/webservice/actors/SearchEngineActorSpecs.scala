@@ -65,7 +65,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
     awaitIndexReady()
 
     awaitStatus() should matchPattern {
-      case IndexStatus(Nil, Nil, Seq(_)) =>
+      case IndexReady(Nil, Seq(_)) =>
     }
   }
 
@@ -75,7 +75,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
     awaitIndexReady()
 
     awaitStatus() should matchPattern {
-      case IndexStatus(Nil, Seq(indexModule1.module), Nil) =>
+      case IndexReady(Seq(indexModule1.module), Nil) =>
     }
   }
 
@@ -165,6 +165,22 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
     awaitStatus(searchEngine).allModules should be('empty)
   }
 
+  it should "update type frequencies after indexing" in {
+    val (searchEngine, indexWorker) = searchEngineWithMockedIndexWorker()
+
+    searchEngine ! indexModule1
+
+    awaitStatus(searchEngine)
+
+    indexWorker ! "continue"
+
+    awaitIndexReady(searchEngine)
+
+    val received = await(indexWorker ? "receivedMessages").asInstanceOf[Seq[Any]]
+
+    received should contain(UpdateTypeFrequencies)
+  }
+
   def await[T](f: Future[T]): T = {
     Await.result(f, 10.seconds)
   }
@@ -172,7 +188,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
   def awaitIndexReady(se: ActorRef = searchEngine) =
     awaitAssert({
       val status = await(se ? GetStatus).asInstanceOf[IndexStatus]
-      status.workQueue should be('empty)
+      status should be('ready)
     }, 5.second, 10.millis)
 
   def awaitStatus(se: ActorRef = searchEngine) =
@@ -192,10 +208,25 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 }
 
 class MockedIndexWorker() extends Actor {
+  val received = Seq.newBuilder[Any]
   var job: (ActorRef, Index) = null
 
-  def receive = {
-    case i: Index   => job = (sender, i)
-    case "continue" => job._1 ! Indexed(job._2, None)
+  val log = new Receive {
+    def isDefinedAt(x: Any) = {
+      received += x
+      false
+    }
+    def apply(x: Any) = ???
+  }
+
+  def receive = log orElse {
+    case i: Index =>
+      job = (sender, i)
+    case UpdateTypeFrequencies =>
+      sender ! Updated
+    case "continue" =>
+      job._1 ! Indexed(job._2, None)
+    case "receivedMessages" =>
+      sender ! received.result()
   }
 }

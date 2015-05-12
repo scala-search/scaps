@@ -93,7 +93,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       def argPerms(args: List[TypeEntity]): List[List[TypeEntity]] = args match {
         case Nil => List(Nil)
         case as if as.length > 3 =>
-          // prevent from combinatorial explosion
+          // prevent combinatorial explosion
           List(as)
         case a :: as =>
           for {
@@ -111,6 +111,10 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     }
 
     search(q)
+  }
+
+  def findStrictSubclass(tpe: TypeEntity): Try[Seq[ClassEntity]] = {
+    search(new TermQuery(new Term(fields.baseClass, tpe.signature)))
   }
 
   def allClasses(): Try[Seq[ClassEntity]] =

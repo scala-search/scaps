@@ -10,38 +10,24 @@ class TypeFrequencyAccumulator(
   subClasses: TypeEntity => Seq[ClassEntity]) {
 
   def apply(): Map[(Variance, String), Int] = {
-    val typesB = Seq.newBuilder[TypeEntity]
+    val entries = terms.flatMap(getEntries)
 
-    terms.foreach { term =>
-      typesB ++= typesInTerm(term)
-    }
-
-    val types = typesB.result()
-
-    //    val mapB = Map.newBuilder[(Variance, String), Int]
-    //
-    //    typesB.result().groupBy(identity).foreach{
-    //      case (tpe, tpes) =>
-    //        val entries = getEntries(tpe).map((_, tpes.length))
-    //        entries.groupBy(_._1).foreach{
-    //          case (entry, entries) =>
-    //            val count = entries.map(_._2).sum
-    //
-    //
-    //        }
-    //    }
-
-    val entriesWithCount = types.groupBy(identity).view.flatMap {
-      case (tpe, tpes) => getEntries(tpe).map((_, tpes.length))
-    }
-
-    entriesWithCount
-      .groupBy(_._1)
-      .mapValues(_.map(_._2).sum)
+    entries
+      .groupBy(identity)
+      .mapValues(_.length)
       .withDefaultValue(0)
   }
 
+  def getEntries(term: TermEntity): Set[(Variance, String)] =
+    typesInTerm(term).flatMap(getEntries)
+
   def typesInTerm(term: TermEntity): Set[TypeEntity] = {
+    def removeArgs(tpe: TypeEntity) =
+      tpe.copy(args = Nil)
+
+    def removeNestedArgs(tpe: TypeEntity) =
+      tpe.copy(args = tpe.args.map(removeArgs))
+
     def rec(tpe: TypeEntity): Set[TypeEntity] = tpe match {
       case TypeEntity("", _, _) =>
         Set()
@@ -49,13 +35,13 @@ class TypeFrequencyAccumulator(
         rec(owner) ++ rec(member)
       case TypeEntity.MethodInvocation(args, res, _) =>
         rec(res) ++ args.flatMap(rec)
-      case TypeEntity.Refinement(args, Covariant) =>
-        args.toSet.flatMap(rec)
-      case TypeEntity(name, v, args) =>
-        args.toSet.flatMap(rec) + TypeEntity(name, v, Nil)
+      case t @ TypeEntity(name, v @ (Contravariant | Invariant), args) =>
+        args.toSet.flatMap(rec) + removeArgs(t)
+      case t @ TypeEntity(_, Covariant, args) =>
+        args.toSet.flatMap(rec) + removeNestedArgs(t)
     }
 
-    rec(term.tpe.renameTypeParams(term.typeParameters, _ => ""))
+    rec(term.tpe.renameTypeParams(term.typeParameters, _ => "_"))
   }
 
   def getEntries(tpe: TypeEntity): Seq[(Variance, String)] =
@@ -64,7 +50,7 @@ class TypeFrequencyAccumulator(
         (tpe +: TypeEntity.Nothing.cls +: subClasses(tpe)).map(t => (Covariant, t.name))
       case Contravariant =>
         (tpe +: baseTypes(tpe.name)).map(t => (Contravariant, t.name))
-      case v => Seq((v, tpe.name))
+      case Invariant => Seq((Invariant, tpe.name), (Invariant, TypeEntity.Unknown.name))
     }
 }
 
@@ -73,12 +59,25 @@ object TypeFrequencyAccumulator {
     val getBaseTypes = (name: String) =>
       classIndex.findClassBySuffix(name).get.flatMap(_.baseTypes)
 
-    val getSubClasses = (tpe: TypeEntity) =>
-      classIndex.findSubClasses(tpe).get
+    val getSubClasses = Memo {
+      (tpe: TypeEntity) => classIndex.findStrictSubclass(tpe).get
+    }
 
     new TypeFrequencyAccumulator(
       termIndex.allTerms().get,
       getBaseTypes,
       getSubClasses)
+  }
+
+  case class Memo[T, R](f: T => R) extends (T => R) {
+    val results = scala.collection.mutable.Map[T, R]()
+
+    def apply(t: T) = {
+      results.get(t).fold {
+        val r = f(t)
+        results += (t -> r)
+        r
+      } { identity }
+    }
   }
 }

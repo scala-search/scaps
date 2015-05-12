@@ -20,6 +20,8 @@ import scalaz.\/
 import scalaz.std.stream._
 import java.util.concurrent.TimeoutException
 import scaps.webapi.IndexStatus
+import scaps.webapi.IndexReady
+import scaps.webapi.IndexBusy
 import scaps.webapi.Module
 import scala.util.control.NonFatal
 import akka.event.LoggingReceive
@@ -55,7 +57,7 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
         case s: Search =>
           searcher.tell(s, sender)
         case GetStatus =>
-          sender ! IndexStatus(Nil, indexedModules.toSeq, indexErrors)
+          sender ! IndexReady(indexedModules.toSeq, indexErrors)
         case Reset =>
           searchEngine.resetIndexes().get
           become(ready(Set(), Nil))
@@ -73,7 +75,8 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
           (if (error.isDefined) Nil else Seq(indexJob.module))
 
         if (queue.tail.isEmpty) {
-          become(ready(indexed, errors))
+          indexWorker ! UpdateTypeFrequencies
+          become(updatingTypeFrequencies(indexed, errors))
         } else {
           indexWorker ! queue.tail.head
           become(indexing(queue.tail, indexed, errors))
@@ -83,17 +86,28 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
       case _: Search =>
         sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
       case GetStatus =>
-        sender ! IndexStatus(queue.map(_.module), indexedModules.toSeq, indexErrors)
+        sender ! IndexBusy(queue.map(_.module), indexedModules.toSeq, indexErrors)
       case Reset =>
         become(resetting(queue))
+    }
+
+    def updatingTypeFrequencies(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
+      case Updated =>
+        become(ready(indexedModules, indexErrors))
+      case _: Search =>
+        sender ! \/.left(s"Cannot search while index is updating.")
+      case GetStatus =>
+        sender ! IndexBusy(Nil, indexedModules.toSeq, indexErrors)
     }
 
     def resetting(queue: Seq[Index]): Receive = {
       case i: Indexed =>
         searchEngine.resetIndexes().get
         become(ready(Set(), Nil))
+      case _: Search =>
+        sender ! \/.left(s"Cannot search while index is resetting.")
       case GetStatus =>
-        sender ! IndexStatus(queue.map(_.module), Nil, Nil)
+        sender ! IndexBusy(queue.map(_.module), Nil, Nil)
     }
 
     def enqueueJob(indexJob: Index, queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]) = {
@@ -137,6 +151,10 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
   val logger = Logging(context.system, this)
 
   def receive = {
+    case UpdateTypeFrequencies =>
+      searchEngine.updateTypeFrequencies().get
+      sender ! Updated
+
     case i @ Index(module, sourceFile, classpath, _) =>
       val requestor = sender
 
@@ -148,7 +166,7 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
 
           val entityStream = ExtractionError.logErrors(extractor(new File(sourceFile)), logger.info(_))
 
-          searchEngine.indexEntities(module, entityStream).get
+          searchEngine.indexEntities(module, entityStream, batchMode = true).get
           logger.info(s"${module.moduleId} has been indexed successfully")
           None
         }

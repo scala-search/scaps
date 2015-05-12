@@ -150,8 +150,10 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
             settings, termIndex, classIndex, moduleIndex)
 
           for ((module, entities) <- modulesWithEntities) {
-            se.indexEntities(module, entities).get
+            se.indexEntities(module, entities, batchMode = true).get
           }
+
+          se.updateTypeFrequencies().get
 
           block(se)
         }
