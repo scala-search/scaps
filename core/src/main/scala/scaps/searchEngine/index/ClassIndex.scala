@@ -1,7 +1,6 @@
 package scaps.searchEngine.index
 
 import scala.util.Try
-
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
@@ -13,12 +12,12 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
-
 import scaps.settings.Settings
 import scaps.webapi.ClassEntity
 import scaps.webapi.Covariant
 import scaps.webapi.Module
 import scaps.webapi.TypeEntity
+import scala.annotation.tailrec
 
 /**
  * Persists class entities and provides lookup for classes by name.
@@ -93,9 +92,12 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     def partialTypes(tpe: TypeEntity): List[TypeEntity] = {
       def argPerms(args: List[TypeEntity]): List[List[TypeEntity]] = args match {
         case Nil => List(Nil)
+        case as if as.length > 3 =>
+          // prevent from combinatorial explosion
+          List(as)
         case a :: as =>
           for {
-            aPerm <- TypeEntity("_", Covariant, Nil) :: partialTypes(a)
+            aPerm <- TypeEntity("_", a.variance, Nil) :: partialTypes(a)
             asPerm <- argPerms(as)
           } yield aPerm :: asPerm
       }

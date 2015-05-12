@@ -51,24 +51,21 @@ class TypeFrequencyAccumulator(
         rec(res) ++ args.flatMap(rec)
       case TypeEntity.Refinement(args, Covariant) =>
         args.toSet.flatMap(rec)
-      case TypeEntity(name, v @ (Contravariant | Invariant), args) =>
+      case TypeEntity(name, v, args) =>
         args.toSet.flatMap(rec) + TypeEntity(name, v, Nil)
-      case t @ TypeEntity(_, Covariant, args) =>
-        args.toSet.flatMap(rec) + t
     }
 
     rec(term.tpe.renameTypeParams(term.typeParameters, _ => ""))
   }
 
   def getEntries(tpe: TypeEntity): Seq[(Variance, String)] =
-    scaps.utils.printval(s"entries for $tpe",
-      tpe.variance match {
-        case Covariant =>
-          (tpe +: TypeEntity.Nothing.cls +: subClasses(tpe)).map(t => (Covariant, t.name))
-        case Contravariant =>
-          (tpe +: baseTypes(tpe.name)).map(t => (Contravariant, t.name))
-        case v => Seq((v, tpe.name))
-      })
+    tpe.variance match {
+      case Covariant =>
+        (tpe +: TypeEntity.Nothing.cls +: subClasses(tpe)).map(t => (Covariant, t.name))
+      case Contravariant =>
+        (tpe +: baseTypes(tpe.name)).map(t => (Contravariant, t.name))
+      case v => Seq((v, tpe.name))
+    }
 }
 
 object TypeFrequencyAccumulator {

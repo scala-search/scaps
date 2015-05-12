@@ -90,9 +90,9 @@ class SearchEngine private[searchEngine] (
 
       Await.result(f, settings.index.timeout)
 
-      moduleIndex.addEntities(Seq(module)).get
-
       updateTypeFrequencies().get
+
+      moduleIndex.addEntities(Seq(module)).get
     }
 
   def updateTypeFrequencies(): Try[Unit] =
@@ -129,7 +129,7 @@ class SearchEngine private[searchEngine] (
       analyzed <- analyzeQuery(moduleIds, parsed).get
       results <- termsIndex.find(analyzed, moduleIds).get
     } yield {
-      logger.debug(s"""query "${query}" expanded to "${analyzed.fingerprint.mkString(" ")}" """)
+      logger.debug(s"""query "${query}" expanded to "${analyzed}" """)
       results
     }
   }

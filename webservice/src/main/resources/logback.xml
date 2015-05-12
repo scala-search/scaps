@@ -1,5 +1,11 @@
 <configuration>
 
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%date{ISO8601} %-5level %logger{36} %X{sourceThread} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
   <appender name="LOGFILE" class="ch.qos.logback.core.FileAppender">
   	<file>scapsWebservice.log</file>
     <encoder>
@@ -14,8 +20,9 @@
     </encoder>
   </appender>
 
-  <root level="warn">
-    <appender-ref ref="LOGFILE" />
+  <root level="debug">
+    <!-- <appender-ref ref="LOGFILE" /> -->
+    <appender-ref ref="STDOUT" />
   </root>
   
   <logger level="info" name="scaps.webservice.actors.UserInteractionLogger">
