@@ -82,11 +82,14 @@ class SearchEngine private[searchEngine] (
           t.copy(module = module)
 
       val termsWithModule = entities.collect { case t: TermEntity => setModule(t) }
-      val classesWithModule = entities.collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
+      val classesWithModule = entities
+        .collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
+
+      val allClasses = classesWithModule :+ ClassEntity(TypeEntity.Unknown.name, Nil, Nil)
 
       val f = Future.sequence(List(
         Future { termsIndex.addEntities(termsWithModule).get },
-        Future { classesIndex.addEntities(classesWithModule).get }))
+        Future { classesIndex.addEntities(allClasses).get }))
 
       Await.result(f, settings.index.timeout)
 
@@ -159,13 +162,14 @@ class SearchEngine private[searchEngine] (
         classesIndex.findClassBySuffix(t).get.headOption.map(_.frequency(v)).getOrElse(0)
 
       val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name).toDouble
+      val referenceItf = math.log(maxFrequency / getFrequency(Contravariant, TypeEntity.Int.name))
 
       val typesWithFrequencyBoost = analyzed.types.map { t =>
-        val freq = getFrequency(t.variance, t.typeName)
-        val itf = Math.log(maxFrequency / (freq + 1))
-        val adjustedItf = (itf - 1) * settings.query.typeFrequencyWeight + 1
+        val freq = math.min(getFrequency(t.variance, t.typeName), maxFrequency)
+        val itf = math.log((maxFrequency) / (freq))
+        val adjustedItf = itf / referenceItf
 
-        t.copy(boost = t.boost * adjustedItf.toFloat)
+        t.copy(boost = t.boost * itf.toFloat * settings.query.typeFrequencyWeight.toFloat)
       }
 
       analyzed.copy(types = typesWithFrequencyBoost)
