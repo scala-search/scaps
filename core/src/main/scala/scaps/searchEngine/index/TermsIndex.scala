@@ -36,6 +36,7 @@ import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.webapi.Module
 import org.apache.lucene.analysis.core.KeywordAnalyzer
+import scaps.searchEngine.Fingerprint
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -143,7 +144,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
-    entity.fingerprint.bagOfTypes.foreach { tpe =>
+    Fingerprint(entity).bagOfTypes.foreach { tpe =>
       add(fields.fingerprint, tpe)
     }
     add(fields.doc, entity.comment)

@@ -156,9 +156,6 @@ case class TermEntity(
     s"$name$params: ${tpe.signature}"
   }
 
-  def fingerprint =
-    Fingerprint(tpe.normalize(typeParameters).fingerprintTypes())
-
   def withoutComment = copy(comment = "")
 }
 
@@ -190,14 +187,6 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
     transform { tpe =>
       if (typeParams.exists(_.name == tpe.name)) tpe.copy(name = getName(name))
       else tpe
-    }
-
-  def fingerprintTypes(depth: Int = 0): List[Fingerprint.Type] =
-    this match {
-      case TypeEntity.Ignored(args, _) =>
-        args.flatMap(_.fingerprintTypes(depth + 1))
-      case tpe =>
-        Fingerprint.Type(tpe.variance, tpe.name, depth) :: tpe.args.flatMap(_.fingerprintTypes(depth + 1))
     }
 
   def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity = {

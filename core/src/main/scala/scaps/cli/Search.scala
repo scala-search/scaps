@@ -1,7 +1,6 @@
 package scaps.cli
 
 import scala.io.Source
-
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
@@ -9,6 +8,7 @@ import scaps.searchEngine.SyntaxError
 import scaps.searchEngine.TooUnspecific
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
+import scaps.searchEngine.Fingerprint
 
 object Search extends App {
   val engine = SearchEngine(Settings.fromApplicationConf).get
@@ -31,7 +31,7 @@ object Search extends App {
       results => results.take(10).foreach { term =>
         println(term.signature)
         println(term.tpe.normalize(term.typeParameters))
-        println(term.fingerprint)
+        println(Fingerprint(term))
         println()
       })
   }

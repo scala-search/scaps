@@ -4,7 +4,6 @@ import scala.Ordering
 import scaps.webapi.ClassEntity
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
-import scaps.webapi.Fingerprint
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
 import scaps.searchEngine.APIQuery
@@ -20,6 +19,7 @@ import scalaz.syntax.either.ToEitherOps
 import scalaz.syntax.traverse.ToTraverseOps
 import scaps.webapi.Invariant
 import scaps.webapi.ClassEntity
+import scaps.searchEngine.Fingerprint
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
