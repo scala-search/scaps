@@ -48,12 +48,12 @@ class QueryAnalyzer private[searchEngine] (
     resolveNames(raw.tpe).map(
       (toType _) andThen
         (_.normalize(Nil)) andThen
-        (tpe => Fingerprint.queryFingerprint(findBaseTypes _, findSubClasses, tpe)) andThen
+        (tpe => Fingerprint.queryFingerprint(
+          (name: String) => findClassesBySuffix(name).headOption,
+          findSubClasses,
+          tpe)) andThen
         (toApiQuery _) andThen
         { apiQuery => apiQuery.copy(keywords = raw.keywords) })
-
-  private def findBaseTypes(tpe: TypeEntity): Seq[TypeEntity] =
-    findClassesBySuffix(tpe.name).headOption.toSeq.flatMap(_.baseTypes)
 
   /**
    * Resolves all type names in the query and assigns the according class entities.
@@ -119,20 +119,20 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def boost(tpe: Fingerprint.Type): Double = {
-    val freq = math.min(getFrequency(tpe.variance, tpe.name), maxFrequency(tpe.variance))
-    val itf = math.log(maxFrequency(tpe.variance) / freq)
+    val freq = math.min(getFrequency(tpe.variance, tpe.name), maxFrequency)
+    val itf = math.log(maxFrequency / freq)
 
-    weightedMean(itf -> settings.typeFrequencyWeight, 1d / (tpe.depth + 1) -> settings.depthBoostWeight)
+    weightedMean(
+      itf -> settings.typeFrequencyWeight,
+      1d / (tpe.depth + 1) -> settings.depthBoostWeight,
+      1d / (tpe.distance + 1) -> settings.distanceBoostWeight)
   }
 
   private def weightedMean(elemsWithWeight: (Double, Double)*) =
     elemsWithWeight.map { case (e, w) => e * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
 
   private def getFrequency(v: Variance, t: String) =
-    findClassesBySuffix(t).headOption.map(_.frequency(v)).getOrElse(1)
+    findClassesBySuffix(t).headOption.map(_.frequency(v)).filter(_ > 0).getOrElse(1)
 
-  private val maxFrequency = Map[Variance, Int](
-    Contravariant -> getFrequency(Contravariant, TypeEntity.Any.name),
-    Covariant -> getFrequency(Covariant, TypeEntity.Nothing.name),
-    Invariant -> getFrequency(Invariant, TypeEntity.Unknown.name))
+  private val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name)
 }

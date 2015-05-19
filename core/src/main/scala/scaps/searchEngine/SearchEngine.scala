@@ -85,7 +85,7 @@ class SearchEngine private[searchEngine] (
       val classesWithModule = entities
         .collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
 
-      val allClasses = classesWithModule :+ ClassEntity(TypeEntity.Unknown.name, Nil, Nil)
+      val allClasses = classesWithModule :+ ClassEntity(TypeEntity.Unknown.name, Nil, Nil, referencedFrom = Set(module))
 
       val f = Future.sequence(List(
         Future { termsIndex.addEntities(termsWithModule).get },
@@ -105,8 +105,9 @@ class SearchEngine private[searchEngine] (
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 
       val tfs = TypeFrequencies(
-        classesIndex.findBaseTypes(_).get, classesIndex.findSubClasses(_).get)(
-          termsIndex.allTerms().get)
+        classesIndex.findClass(_).get,
+        classesIndex.findSubClasses(_).get,
+        termsIndex.allTerms().get)
 
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
         def freq(v: Variance) = tfs((v, cls.name))

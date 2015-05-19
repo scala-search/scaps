@@ -24,7 +24,9 @@ case class Fingerprint(types: List[Fingerprint.Type]) {
 }
 
 object Fingerprint {
-  case class Type(variance: Variance, name: String, depth: Int)
+  case class Type(variance: Variance, name: String, depth: Int, distance: Double = 0) {
+    assert(distance >= 0d && distance <= 1d, s"distance $distance of ${variance.prefix}$name was not between 0 and 1")
+  }
 
   def apply(term: TermEntity): Fingerprint =
     Fingerprint(term.tpe.normalize(term.typeParameters))
@@ -40,11 +42,11 @@ object Fingerprint {
         Fingerprint.Type(tpe.variance, tpe.name, depth) :: tpe.args.flatMap(fingerprintTypes(_, depth + 1))
     }
 
-  def queryFingerprint(findBaseTypes: TypeEntity => Seq[TypeEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
+  def queryFingerprint(findClass: String => Option[ClassEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
                        term: TermEntity): Fingerprint =
-    queryFingerprint(findBaseTypes, findSubClasses, term.tpe.normalize(term.typeParameters))
+    queryFingerprint(findClass, findSubClasses, term.tpe.normalize(term.typeParameters))
 
-  def queryFingerprint(findBaseTypes: TypeEntity => Seq[TypeEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
+  def queryFingerprint(findClass: String => Option[ClassEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
                        tpe: TypeEntity): Fingerprint = {
     def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int): List[Type] =
       tpe match {
@@ -55,14 +57,27 @@ object Fingerprint {
 
           val alternatives = tpe.variance match {
             case Covariant =>
-              val subTypes = findSubClasses(tpe).toList
-                .map(subCls => thisFpt.copy(name = subCls.name))
+              val subTypesWithDist = findSubClasses(tpe).toList
+                .map(subCls => (thisFpt.copy(name = subCls.name), subCls.baseTypes.indexWhere(_.name == tpe.name)))
 
-              subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name)
+              val maxDist = (1 :: subTypesWithDist.map(_._2)).max
+
+              val subTypes = subTypesWithDist.map {
+                case (subTpe, dist) => subTpe.copy(distance = dist.toDouble / maxDist)
+              }
+
+              subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name, distance = 1)
             case Contravariant =>
-              findBaseTypes(tpe).map(baseTpe => thisFpt.copy(name = baseTpe.name)).toList
+              (for {
+                cls <- findClass(tpe.name).toSeq
+                maxDist = cls.baseTypes.length
+                baseTpe <- cls.baseTypes
+              } yield {
+                val dist = cls.baseTypes.indexOf(baseTpe)
+                thisFpt.copy(name = baseTpe.name, distance = dist.toDouble / maxDist)
+              }).toList
             case Invariant if tpe.name != TypeEntity.Unknown.name =>
-              thisFpt.copy(name = TypeEntity.Unknown.name) :: Nil
+              thisFpt.copy(name = TypeEntity.Unknown.name, distance = 1) :: Nil
             case Invariant =>
               Nil
           }

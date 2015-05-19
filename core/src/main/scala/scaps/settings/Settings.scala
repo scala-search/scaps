@@ -58,6 +58,7 @@ object IndexSettings {
 case class QuerySettings(
   maxResults: Int,
   depthBoostWeight: Double,
+  distanceBoostWeight: Double,
   typeFrequencyWeight: Double,
   nameBoost: Double,
   docBoost: Double) {
@@ -66,6 +67,7 @@ case class QuerySettings(
 
   assertPositive(maxResults)
   assertPositive(depthBoostWeight)
+  assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
@@ -76,11 +78,14 @@ object QuerySettings {
     QuerySettings(
       conf.getInt("max-results"),
       conf.getDouble(depthBoostWeight),
+      conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
       conf.getDouble(nameBoost),
       conf.getDouble(docBoost))
 
   val depthBoostWeight = "depth-boost-weight"
+
+  val distanceBoostWeight = "distance-boost-weight"
 
   val typeFrequencyWeight = "type-frequency-weight"
 

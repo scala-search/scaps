@@ -20,7 +20,8 @@ object FindParameters extends App {
 
   val lengthNormWeights = Rng.oneof(0.7) //RngExtensions.normalSample(1d, 0.05d).map(d => (d * 10).round / 10d)
 
-  val depthBoostGradients = Rng.choosedouble(0, 2)
+  val depthBoostWeight = Rng.choosedouble(0, 2)
+  val distanceBoostWeight = Rng.choosedouble(0, 2)
   val typeFrequencyWeight = Rng.choosedouble(0, 2)
   val nameBoosts = Rng.choosedouble(0, 1)
   val docBoosts = Rng.choosedouble(0, 1)
@@ -36,6 +37,7 @@ object FindParameters extends App {
     val headers = List(
       IndexSettings.lengthNormWeight,
       QuerySettings.depthBoostWeight,
+      QuerySettings.distanceBoostWeight,
       QuerySettings.typeFrequencyWeight,
       QuerySettings.nameBoost,
       QuerySettings.docBoost,
@@ -61,6 +63,7 @@ object FindParameters extends App {
             val cells = List(
               settings.index.lengthNormWeight,
               settings.query.depthBoostWeight,
+              settings.query.distanceBoostWeight,
               settings.query.typeFrequencyWeight,
               settings.query.nameBoost,
               settings.query.docBoost,
@@ -85,12 +88,14 @@ object FindParameters extends App {
 
   def randomize(settings: QuerySettings): Rng[QuerySettings] =
     for {
-      depth <- depthBoostGradients
+      depth <- depthBoostWeight
+      dist <- distanceBoostWeight
       tf <- typeFrequencyWeight
       nb <- nameBoosts
       db <- docBoosts
     } yield settings.copy(
       depthBoostWeight = depth,
+      distanceBoostWeight = dist,
       typeFrequencyWeight = tf,
       nameBoost = nb,
       docBoost = db)

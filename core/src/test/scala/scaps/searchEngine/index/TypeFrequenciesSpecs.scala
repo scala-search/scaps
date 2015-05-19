@@ -69,7 +69,6 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     tfB should (
       be >= 2 and
       be > tfC)
-    //tfB2 should be(0)
     tfC should (
       be >= 1)
   }
@@ -130,7 +129,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       withClassIndex { classIndex =>
         classIndex.addEntities(classes)
 
-        TypeFrequencies(classIndex.findBaseTypes(_).get, classIndex.findSubClasses(_).get)(termIndex.allTerms().get)
+        TypeFrequencies(classIndex.findClass(_).get, classIndex.findSubClasses(_).get, termIndex.allTerms().get)
       }
     }
   }
