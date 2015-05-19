@@ -88,7 +88,7 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
       case GetStatus =>
         sender ! IndexBusy(queue.map(_.module), indexedModules.toSeq, indexErrors)
       case Reset =>
-        become(resetting(queue))
+        become(resetting())
     }
 
     def updatingTypeFrequencies(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
@@ -100,14 +100,14 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
         sender ! IndexBusy(Nil, indexedModules.toSeq, indexErrors)
     }
 
-    def resetting(queue: Seq[Index]): Receive = {
+    def resetting(): Receive = {
       case i: Indexed =>
         searchEngine.resetIndexes().get
         become(ready(Set(), Nil))
       case _: Search =>
         sender ! \/.left(s"Cannot search while index is resetting.")
       case GetStatus =>
-        sender ! IndexBusy(queue.map(_.module), Nil, Nil)
+        sender ! IndexBusy(Nil, Nil, Nil)
     }
 
     def enqueueJob(indexJob: Index, queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]) = {

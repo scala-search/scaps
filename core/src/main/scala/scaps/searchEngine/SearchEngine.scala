@@ -162,14 +162,12 @@ class SearchEngine private[searchEngine] (
         classesIndex.findClassBySuffix(t).get.headOption.map(_.frequency(v)).getOrElse(0)
 
       val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name).toDouble
-      val referenceItf = math.log(maxFrequency / getFrequency(Contravariant, TypeEntity.Int.name))
 
       val typesWithFrequencyBoost = analyzed.types.map { t =>
         val freq = math.min(getFrequency(t.variance, t.typeName), maxFrequency)
         val itf = math.log((maxFrequency) / (freq))
-        val adjustedItf = itf / referenceItf
 
-        t.copy(boost = t.boost * itf.toFloat * settings.query.typeFrequencyWeight.toFloat)
+        t.copy(boost = t.boost + itf.toFloat * settings.query.typeFrequencyWeight.toFloat)
       }
 
       analyzed.copy(types = typesWithFrequencyBoost)

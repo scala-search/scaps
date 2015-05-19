@@ -84,8 +84,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
       searchEngine ! indexModule1
     }
 
-    val status = awaitStatus()
-    status.allModules should be(Seq(indexModule1.module))
+    awaitStatus().allModules should be(Seq(indexModule1.module))
   }
 
   it should "ensure that Index is an idempotent operation when forcing reindexing" in {
@@ -95,8 +94,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
     awaitIndexReady()
 
-    val status = awaitStatus()
-    status.allModules should be(Seq(indexModule1.module))
+    awaitStatus().allModules should be(Seq(indexModule1.module))
   }
 
   it should "not overwrite modules when forceReindex is false" in {
@@ -151,12 +149,14 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
     val (searchEngine, indexWorker) = searchEngineWithMockedIndexWorker()
 
     searchEngine ! indexModule1
-    searchEngine ! indexModule2
 
     searchEngine ! Reset
 
-    awaitStatus(searchEngine).workQueue should be(
-      Seq(indexModule1.module, indexModule2.module))
+    awaitAssert({
+      awaitStatus(searchEngine) should matchPattern {
+        case _: IndexBusy =>
+      }
+    }, 1.second, 100.millis)
 
     indexWorker ! "continue"
 
@@ -189,7 +189,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
     awaitAssert({
       val status = await(se ? GetStatus).asInstanceOf[IndexStatus]
       status should be('ready)
-    }, 5.second, 10.millis)
+    }, 10.second, 100.millis)
 
   def awaitStatus(se: ActorRef = searchEngine) =
     await(se ? GetStatus).asInstanceOf[IndexStatus]
