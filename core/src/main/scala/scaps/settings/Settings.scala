@@ -55,19 +55,16 @@ object IndexSettings {
 
 case class QuerySettings(
   maxResults: Int,
-  distanceBoostGradient: Double,
   depthBoostGradient: Double,
   typeFrequencyWeight: Double,
-  idfWeight: Double,
   nameBoost: Double,
   docBoost: Double) {
 
   import Settings._
 
-  assertPositive(distanceBoostGradient)
+  assertPositive(maxResults)
   assertPositive(depthBoostGradient)
   assertPositive(typeFrequencyWeight)
-  assertPositive(idfWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
 }
@@ -76,10 +73,8 @@ object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getInt("max-results"),
-      conf.getDouble("distance-boost-weight"),
       conf.getDouble("depth-boost-weight"),
       conf.getDouble("type-frequency-weight"),
-      conf.getDouble("idf-weight"),
       conf.getDouble("name-boost"),
       conf.getDouble("doc-boost"))
 }

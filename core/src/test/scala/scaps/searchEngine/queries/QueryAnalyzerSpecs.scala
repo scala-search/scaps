@@ -9,6 +9,7 @@ import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.searchEngine.SearchEngine
+import scaps.webapi.TypeEntity
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
@@ -133,21 +134,12 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   }
 
   it should "yield a lower boost for types in deeper nested positions" in {
-    val res = expectSuccess("(Aa, (Bb, _))")
+    val res = expectSuccess("(Float, (Int, _))")
 
-    val Aa = res.types.find(_.typeName == "p.Aa").get
-    val Bb = res.types.find(_.typeName == "p.Bb").get
+    val Float = res.types.find(_.typeName == TypeEntity.Float.name).get
+    val Int = res.types.find(_.typeName == TypeEntity.Int.name).get
 
-    Aa.boost should be > (Bb.boost)
-  }
-
-  it should "yield a lower boost for types farther away from the original query type" in {
-    val res = expectSuccess("Aa")
-
-    val Aa = res.types.find(_.typeName == "p.Aa").get
-    val Bb = res.types.find(_.typeName == "p.Bb").get
-
-    Aa.boost should be > (Bb.boost)
+    Float.boost should be > (Int.boost)
   }
 
   it should "yield a boost of 1 for a single type" in {
@@ -194,9 +186,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     res.swap.getOrElse(???)
   }
 
-  val settings = Settings.fromApplicationConf.query.copy(
-    distanceBoostGradient = 1,
-    depthBoostGradient = 1)
+  val settings = Settings.fromApplicationConf.query
 
   val analyzer = {
     val classEntities = extractAllClasses(env)

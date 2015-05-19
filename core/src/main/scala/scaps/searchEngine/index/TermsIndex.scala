@@ -172,10 +172,9 @@ object TermsIndex {
   class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {
     val delegate = new DefaultSimilarity
 
-    // Reduce influence of IDF in order to cope with missing reflection
-    // of type hierarchies in doc frequencies
-    override def idf(docFreq: Long, numDocs: Long) =
-      settings.query.idfWeight.toFloat * (delegate.idf(docFreq, numDocs) - 1f) + 1f
+    // We use type frequencies instead of document term frequency to boost uncommon
+    // types in queries
+    override def idf(docFreq: Long, numDocs: Long) = 1
 
     // Override decoding to represent shorter documents with higher precision
     val prec = Long.MaxValue.toFloat

@@ -20,10 +20,8 @@ object FindParameters extends App {
 
   val lengthNormWeights = Rng.oneof(0.7) //RngExtensions.normalSample(1d, 0.05d).map(d => (d * 10).round / 10d)
 
-  val distanceBoostGradients = Rng.oneof(0)
   val depthBoostGradients = Rng.choosedouble(0, 2)
   val typeFrequencyWeight = Rng.choosedouble(0, 2)
-  val idfWeights = Rng.oneof(0)
   val nameBoosts = Rng.choosedouble(0, 1)
   val docBoosts = Rng.choosedouble(0, 1)
 
@@ -35,7 +33,7 @@ object FindParameters extends App {
   var engine = Common.initSearchEngine(settings, evaluationSettings)
 
   using(new FileWriter(outputFile)) { writer =>
-    writer.write("lengthNormWeight; distanceBoostGradient; depthBoostGradient; typeFrequencyWeight; idfWeight; nameBoost; docBoost; MAP; R10;\n")
+    writer.write("lengthNormWeight; depthBoostGradient; typeFrequencyWeight; nameBoost; docBoost; MAP; R10;\n")
 
     generateConfs(noConfigurations, Math.pow(42d, 42d).toLong, settings).zipWithIndex.foreach {
       case (settings, idx) =>
@@ -53,10 +51,8 @@ object FindParameters extends App {
 
             val cells = List(
               settings.index.lengthNormWeight,
-              settings.query.distanceBoostGradient,
               settings.query.depthBoostGradient,
               settings.query.typeFrequencyWeight,
-              settings.query.idfWeight,
               settings.query.nameBoost,
               settings.query.docBoost,
               stats.meanAveragePrecision,
@@ -80,17 +76,13 @@ object FindParameters extends App {
 
   def randomize(settings: QuerySettings): Rng[QuerySettings] =
     for {
-      dist <- distanceBoostGradients
       depth <- depthBoostGradients
       tf <- typeFrequencyWeight
-      idf <- idfWeights
       nb <- nameBoosts
       db <- docBoosts
     } yield settings.copy(
-      distanceBoostGradient = dist,
       depthBoostGradient = depth,
       typeFrequencyWeight = tf,
-      idfWeight = idf,
       nameBoost = nb,
       docBoost = db)
 

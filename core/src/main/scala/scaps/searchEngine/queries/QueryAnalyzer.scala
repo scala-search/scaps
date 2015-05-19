@@ -108,19 +108,19 @@ class QueryAnalyzer private[searchEngine] (
       case TypeEntity.Ignored(args, _) =>
         args.flatMap(fingerprintWithAlternatives(_, depth + 1))
       case tpe: TypeEntity =>
-        val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth, 0)
+        val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth)
 
         val alternatives = tpe.variance match {
           case Covariant =>
             val subTypes = findSubClasses(tpe).toList
-              .map(subCls => thisFpt.copy(name = subCls.name, distance = subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
+              .map(subCls => thisFpt.copy(name = subCls.name))
 
-            subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name, distance = (0 :: subTypes.map(_.distance)).max + 1)
+            subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name)
           case Contravariant =>
             findClassesBySuffix(tpe.name).headOption.toList
-              .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name, distance = idx + 1) })
+              .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name) })
           case Invariant if tpe.name != TypeEntity.Unknown.name =>
-            thisFpt.copy(name = TypeEntity.Unknown.name, distance = 1) :: Nil
+            thisFpt.copy(name = TypeEntity.Unknown.name) :: Nil
           case Invariant =>
             Nil
         }
@@ -139,11 +139,7 @@ class QueryAnalyzer private[searchEngine] (
     APIQuery(Nil, tpes.toList.sortBy(-_.boost))
   }
 
-  private def boost(tpe: Fingerprint.Type): Float =
-    distanceBoost(tpe.distance) * depthBoost(tpe.depth)
-
-  private def distanceBoost(dist: Int): Float = adjust(1d / (dist + 1), settings.distanceBoostGradient)
-  private def depthBoost(depth: Int): Float = adjust(1d / (depth + 1), settings.depthBoostGradient)
+  private def boost(tpe: Fingerprint.Type): Float = adjust(1d / (tpe.depth + 1), settings.depthBoostGradient)
 
   private def adjust(x: Double, factor: Double): Float = (((x - 1) * factor) + 1).toFloat
 }

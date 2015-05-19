@@ -26,7 +26,7 @@ case class Fingerprint(types: List[Fingerprint.Type]) {
 }
 
 object Fingerprint {
-  case class Type(variance: Variance, name: String, depth: Int, distance: Int = 0)
+  case class Type(variance: Variance, name: String, depth: Int)
 
   def apply(term: TermEntity): Fingerprint =
     Fingerprint(term.tpe.normalize(term.typeParameters))

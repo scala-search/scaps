@@ -244,6 +244,7 @@ object TypeEntity {
   object AnyVal extends PrimitiveType("scala.AnyVal")
   object AnyRef extends PrimitiveType("java.lang.Object")
   object Int extends PrimitiveType("scala.Int")
+  object Float extends PrimitiveType("scala.Float")
   object Char extends PrimitiveType("scala.Char")
   object String extends PrimitiveType("java.lang.String")
   object Nothing extends PrimitiveType("scala.Nothing") {
