@@ -13,7 +13,7 @@ case class APIQuery(keywords: List[String], types: List[APIQuery.Type]) {
 }
 
 object APIQuery {
-  case class Type(variance: Variance, typeName: String, occurrence: Int, boost: Float) {
+  case class Type(variance: Variance, typeName: String, occurrence: Int, boost: Double) {
     override def toString =
       s"${variance.prefix}${typeName}_$occurrence^${(boost * 100).round.toFloat / 100}"
   }

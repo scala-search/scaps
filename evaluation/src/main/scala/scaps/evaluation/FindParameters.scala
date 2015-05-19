@@ -33,7 +33,16 @@ object FindParameters extends App {
   var engine = Common.initSearchEngine(settings, evaluationSettings)
 
   using(new FileWriter(outputFile)) { writer =>
-    writer.write("lengthNormWeight; depthBoostGradient; typeFrequencyWeight; nameBoost; docBoost; MAP; R10;\n")
+    val headers = List(
+      IndexSettings.lengthNormWeight,
+      QuerySettings.depthBoostWeight,
+      QuerySettings.typeFrequencyWeight,
+      QuerySettings.nameBoost,
+      QuerySettings.docBoost,
+      "MAP",
+      "R@10")
+
+    writer.write(headers.mkString("", "; ", ";\n"))
 
     generateConfs(noConfigurations, Math.pow(42d, 42d).toLong, settings).zipWithIndex.foreach {
       case (settings, idx) =>
@@ -51,7 +60,7 @@ object FindParameters extends App {
 
             val cells = List(
               settings.index.lengthNormWeight,
-              settings.query.depthBoostGradient,
+              settings.query.depthBoostWeight,
               settings.query.typeFrequencyWeight,
               settings.query.nameBoost,
               settings.query.docBoost,
@@ -81,7 +90,7 @@ object FindParameters extends App {
       nb <- nameBoosts
       db <- docBoosts
     } yield settings.copy(
-      depthBoostGradient = depth,
+      depthBoostWeight = depth,
       typeFrequencyWeight = tf,
       nameBoost = nb,
       docBoost = db)

@@ -109,7 +109,7 @@ class QueryAnalyzer private[searchEngine] (
 
   private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
     val tpes = fingerprint
-      .typesWithOccurrenceIndex(Ordering[Float].on(fpt => -boost(fpt)))
+      .typesWithOccurrenceIndex(Ordering[Double].on(fpt => -boost(fpt)))
       .map {
         case (tpe, idx) =>
           APIQuery.Type(tpe.variance, tpe.name, idx, boost(tpe))
@@ -118,7 +118,21 @@ class QueryAnalyzer private[searchEngine] (
     APIQuery(Nil, tpes.toList.sortBy(-_.boost))
   }
 
-  private def boost(tpe: Fingerprint.Type): Float = adjust(1d / (tpe.depth + 1), settings.depthBoostGradient)
+  private def boost(tpe: Fingerprint.Type): Double = {
+    val freq = math.min(getFrequency(tpe.variance, tpe.name), maxFrequency(tpe.variance))
+    val itf = math.log(maxFrequency(tpe.variance) / freq)
 
-  private def adjust(x: Double, factor: Double): Float = (((x - 1) * factor) + 1).toFloat
+    weightedMean(itf -> settings.typeFrequencyWeight, 1d / (tpe.depth + 1) -> settings.depthBoostWeight)
+  }
+
+  private def weightedMean(elemsWithWeight: (Double, Double)*) =
+    elemsWithWeight.map { case (e, w) => e * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
+
+  private def getFrequency(v: Variance, t: String) =
+    findClassesBySuffix(t).headOption.map(_.frequency(v)).getOrElse(1)
+
+  private val maxFrequency = Map[Variance, Int](
+    Contravariant -> getFrequency(Contravariant, TypeEntity.Any.name),
+    Covariant -> getFrequency(Covariant, TypeEntity.Nothing.name),
+    Invariant -> getFrequency(Invariant, TypeEntity.Unknown.name))
 }

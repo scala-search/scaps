@@ -157,20 +157,6 @@ class SearchEngine private[searchEngine] (
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
       classesIndex.findSubClasses(_).get)
 
-    analyzer(raw).map { analyzed =>
-      def getFrequency(v: Variance, t: String) =
-        classesIndex.findClassBySuffix(t).get.headOption.map(_.frequency(v)).getOrElse(0)
-
-      val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name).toDouble
-
-      val typesWithFrequencyBoost = analyzed.types.map { t =>
-        val freq = math.min(getFrequency(t.variance, t.typeName), maxFrequency)
-        val itf = math.log((maxFrequency) / (freq))
-
-        t.copy(boost = t.boost + itf.toFloat * settings.query.typeFrequencyWeight.toFloat)
-      }
-
-      analyzed.copy(types = typesWithFrequencyBoost)
-    }
+    analyzer(raw)
   }
 }

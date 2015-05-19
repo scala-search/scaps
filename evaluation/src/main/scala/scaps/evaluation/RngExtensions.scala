@@ -1,7 +1,6 @@
 package scaps.evaluation
 
 import com.nicta.rng._
-import com.nicta.rng.SetSeed
 
 object RngExtensions {
   implicit class RichRng[A](rng: Rng[A]) {

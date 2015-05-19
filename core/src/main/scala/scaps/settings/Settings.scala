@@ -50,12 +50,14 @@ object IndexSettings {
       new File(conf.getString("terms-dir")),
       new File(conf.getString("modules-dir")),
       conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
-      conf.getDouble("length-norm-weight"))
+      conf.getDouble(lengthNormWeight))
+
+  val lengthNormWeight = "length-norm-weight"
 }
 
 case class QuerySettings(
   maxResults: Int,
-  depthBoostGradient: Double,
+  depthBoostWeight: Double,
   typeFrequencyWeight: Double,
   nameBoost: Double,
   docBoost: Double) {
@@ -63,7 +65,7 @@ case class QuerySettings(
   import Settings._
 
   assertPositive(maxResults)
-  assertPositive(depthBoostGradient)
+  assertPositive(depthBoostWeight)
   assertPositive(typeFrequencyWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
@@ -73,8 +75,16 @@ object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getInt("max-results"),
-      conf.getDouble("depth-boost-weight"),
-      conf.getDouble("type-frequency-weight"),
-      conf.getDouble("name-boost"),
-      conf.getDouble("doc-boost"))
+      conf.getDouble(depthBoostWeight),
+      conf.getDouble(typeFrequencyWeight),
+      conf.getDouble(nameBoost),
+      conf.getDouble(docBoost))
+
+  val depthBoostWeight = "depth-boost-weight"
+
+  val typeFrequencyWeight = "type-frequency-weight"
+
+  val nameBoost = "name-boost"
+
+  val docBoost = "doc-boost"
 }

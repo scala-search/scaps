@@ -147,7 +147,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
     val Aa = res.types.find(_.typeName == "p.Aa").get
 
-    Aa.boost should be(1f +- 0.01f)
+    Aa.boost should be(1d +- 0.01f)
   }
 
   it should "omit the outermost function application" in {

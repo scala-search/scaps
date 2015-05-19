@@ -105,7 +105,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       query.types.foreach { tpe =>
         val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
         val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
-        tq.setBoost(tpe.boost)
+        tq.setBoost(tpe.boost.toFloat)
         keysAndTypes.add(tq, Occur.SHOULD)
       }
 
