@@ -1,9 +1,7 @@
 package scaps.searchEngine
 
-import scaps.webapi.Variance
-import scaps.webapi.TermEntity
-import scaps.webapi.TypeEntity
 import scala.Ordering
+import scaps.webapi._
 
 case class Fingerprint(types: List[Fingerprint.Type]) {
   import Fingerprint._
@@ -41,4 +39,37 @@ object Fingerprint {
       case tpe =>
         Fingerprint.Type(tpe.variance, tpe.name, depth) :: tpe.args.flatMap(fingerprintTypes(_, depth + 1))
     }
+
+  def queryFingerprint(findBaseTypes: TypeEntity => Seq[TypeEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
+                       term: TermEntity): Fingerprint =
+    queryFingerprint(findBaseTypes, findSubClasses, term.tpe.normalize(term.typeParameters))
+
+  def queryFingerprint(findBaseTypes: TypeEntity => Seq[TypeEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
+                       tpe: TypeEntity): Fingerprint = {
+    def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int): List[Type] =
+      tpe match {
+        case TypeEntity.Ignored(args, _) =>
+          args.flatMap(fingerprintWithAlternatives(_, depth + 1))
+        case tpe: TypeEntity =>
+          val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth)
+
+          val alternatives = tpe.variance match {
+            case Covariant =>
+              val subTypes = findSubClasses(tpe).toList
+                .map(subCls => thisFpt.copy(name = subCls.name))
+
+              subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name)
+            case Contravariant =>
+              findBaseTypes(tpe).map(baseTpe => thisFpt.copy(name = baseTpe.name)).toList
+            case Invariant if tpe.name != TypeEntity.Unknown.name =>
+              thisFpt.copy(name = TypeEntity.Unknown.name) :: Nil
+            case Invariant =>
+              Nil
+          }
+
+          thisFpt :: alternatives ::: tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1))
+      }
+
+    Fingerprint(fingerprintWithAlternatives(tpe, 0))
+  }
 }

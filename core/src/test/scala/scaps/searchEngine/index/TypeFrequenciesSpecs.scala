@@ -3,7 +3,7 @@ package scaps.searchEngine.index
 import org.scalatest.FlatSpec
 import scaps.webapi._
 
-class TypeFrequencyAccumulatorSpecs extends FlatSpec with IndexUtils {
+class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {
     val tfs = typeFrequencies("""
       package p
@@ -116,8 +116,8 @@ class TypeFrequencyAccumulatorSpecs extends FlatSpec with IndexUtils {
     val tfA = tfs((Covariant, "p.A"))
     val tfB = tfs((Covariant, "p.B"))
 
-    tfA should be(4) // from new A, m1, m2, O
-    tfB should be(5) // from new B, m2, m3, m4, O
+    tfA should be(3) // from new A, m1, m2
+    tfB should be(4) // from new B, m2, m3, m4
   }
 
   def typeFrequencies(source: String) = {
@@ -130,9 +130,7 @@ class TypeFrequencyAccumulatorSpecs extends FlatSpec with IndexUtils {
       withClassIndex { classIndex =>
         classIndex.addEntities(classes)
 
-        val acc = TypeFrequencyAccumulator(termIndex, classIndex)
-
-        acc()
+        TypeFrequencies(classIndex.findBaseTypes(_).get, classIndex.findSubClasses(_).get)(termIndex.allTerms().get)
       }
     }
   }

@@ -20,6 +20,7 @@ import scalaz.syntax.traverse.ToTraverseOps
 import scaps.webapi.Invariant
 import scaps.webapi.ClassEntity
 import scaps.searchEngine.Fingerprint
+import scaps.webapi.TermEntity
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -47,9 +48,12 @@ class QueryAnalyzer private[searchEngine] (
     resolveNames(raw.tpe).map(
       (toType _) andThen
         (_.normalize(Nil)) andThen
-        (tpe => Fingerprint(fingerprintWithAlternatives(tpe))) andThen
+        (tpe => Fingerprint.queryFingerprint(findBaseTypes _, findSubClasses, tpe)) andThen
         (toApiQuery _) andThen
         { apiQuery => apiQuery.copy(keywords = raw.keywords) })
+
+  private def findBaseTypes(tpe: TypeEntity): Seq[TypeEntity] =
+    findClassesBySuffix(tpe.name).headOption.toSeq.flatMap(_.baseTypes)
 
   /**
    * Resolves all type names in the query and assigns the according class entities.
@@ -102,31 +106,6 @@ class QueryAnalyzer private[searchEngine] (
 
     rec(resolved, Covariant)
   }
-
-  private def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int = 0): List[Fingerprint.Type] =
-    tpe match {
-      case TypeEntity.Ignored(args, _) =>
-        args.flatMap(fingerprintWithAlternatives(_, depth + 1))
-      case tpe: TypeEntity =>
-        val thisFpt = Fingerprint.Type(tpe.variance, tpe.name, depth)
-
-        val alternatives = tpe.variance match {
-          case Covariant =>
-            val subTypes = findSubClasses(tpe).toList
-              .map(subCls => thisFpt.copy(name = subCls.name))
-
-            subTypes :+ thisFpt.copy(name = TypeEntity.Nothing.name)
-          case Contravariant =>
-            findClassesBySuffix(tpe.name).headOption.toList
-              .flatMap(cls => cls.baseTypes.zipWithIndex.map { case (baseCls, idx) => thisFpt.copy(name = baseCls.name) })
-          case Invariant if tpe.name != TypeEntity.Unknown.name =>
-            thisFpt.copy(name = TypeEntity.Unknown.name) :: Nil
-          case Invariant =>
-            Nil
-        }
-
-        thisFpt :: alternatives ::: tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1))
-    }
 
   private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
     val tpes = fingerprint

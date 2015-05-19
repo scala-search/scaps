@@ -88,6 +88,10 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     search(query)
   }
 
+  def findBaseTypes(tpe: TypeEntity): Try[Seq[TypeEntity]] = Try {
+    search(new TermQuery(new Term(fields.name, tpe.name))).get.headOption.toSeq.flatMap(_.baseTypes)
+  }
+
   def findSubClasses(tpe: TypeEntity): Try[Seq[ClassEntity]] = {
     def partialTypes(tpe: TypeEntity): List[TypeEntity] = {
       def argPerms(args: List[TypeEntity]): List[List[TypeEntity]] = args match {

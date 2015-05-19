@@ -21,7 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.apache.lucene.store.RAMDirectory
 import scaps.searchEngine.queries.RawQuery
-import scaps.searchEngine.index.TypeFrequencyAccumulator
+import scaps.searchEngine.index.TypeFrequencies
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -104,9 +104,9 @@ class SearchEngine private[searchEngine] (
     Try {
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 
-      val acc = TypeFrequencyAccumulator(termsIndex, classesIndex)
-
-      val tfs = acc()
+      val tfs = TypeFrequencies(
+        classesIndex.findBaseTypes(_).get, classesIndex.findSubClasses(_).get)(
+          termsIndex.allTerms().get)
 
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
         def freq(v: Variance) = tfs((v, cls.name))
