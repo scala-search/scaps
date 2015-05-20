@@ -3,8 +3,12 @@ package scaps.searchEngine.index
 import scalaz._
 import scaps.searchEngine.Fingerprint
 import scaps.webapi._
+import scala.util.Random
+import scaps.utils._
 
 object TypeFrequencies {
+  val termsSampleSize = 100000
+
   def apply(findClass: String => Option[ClassEntity], findSubClasses: TypeEntity => Seq[ClassEntity], terms: Seq[TermEntity]) = {
     // use weak hash map to avoid out of memory exceptions
     val findClassCached = Memo.weakHashMapMemo { findClass }
@@ -16,39 +20,10 @@ object TypeFrequencies {
         .distinct
 
     terms
-      .filterNot(mayBeInheritedFromAnyRef)
+      .sample(termsSampleSize)
       .flatMap(typesReferencedFromTerm)
       .groupBy(identity)
       .mapValues(_.length)
       .withDefaultValue(0)
   }
-
-  /**
-   * Extremely simplified heuristic for fast checks whether a term might be inherited from
-   * Any, AnyVal or AnyRef. False positives due to terms with an identical name are ok
-   * because this is only used to estimate type frequencies.
-   */
-  def mayBeInheritedFromAnyRef(term: TermEntity): Boolean =
-    term.shortName match {
-      case "!=" |
-        "##" |
-        "==" |
-        "asInstanceOf" |
-        "eq" |
-        "equals" |
-        "getClass" |
-        "hashCode" |
-        "isInstanceOf" |
-        "ne" |
-        "notify" |
-        "notifyAll" |
-        "synchronized" |
-        "toString" |
-        "wait" |
-        "$asInstanceOf" |
-        "$isInstanceOf" =>
-        true
-      case _ =>
-        false
-    }
 }

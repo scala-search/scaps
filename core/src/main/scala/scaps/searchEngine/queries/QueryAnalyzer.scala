@@ -10,6 +10,7 @@ import scaps.searchEngine.APIQuery
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SemanticError
+import scaps.searchEngine.index.TypeFrequencies
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.QuerySettings
 import scala.util.Try
@@ -119,8 +120,10 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def boost(tpe: Fingerprint.Type): Double = {
+    val maxFrequency = TypeFrequencies.termsSampleSize
+
     val freq = math.min(getFrequency(tpe.variance, tpe.name), maxFrequency)
-    val itf = math.log(maxFrequency / freq)
+    val itf = math.log((maxFrequency.toDouble + 1) / (freq + 1))
 
     weightedMean(
       itf -> settings.typeFrequencyWeight,
@@ -133,6 +136,4 @@ class QueryAnalyzer private[searchEngine] (
 
   private def getFrequency(v: Variance, t: String) =
     findClassesBySuffix(t).headOption.map(_.frequency(v)).filter(_ > 0).getOrElse(1)
-
-  private val maxFrequency = getFrequency(Contravariant, TypeEntity.Any.name)
 }
