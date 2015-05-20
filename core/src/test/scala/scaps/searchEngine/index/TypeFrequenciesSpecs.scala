@@ -50,6 +50,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       class C extends B
 
       object O {
+       /** m1 */
        def m1(x: A) = ???
        def m2(x: B) = ???
        def m3(x: C) = ???
@@ -62,7 +63,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfB2 = tfs((Contravariant, "p.B2"))
     val tfC = tfs((Contravariant, "p.C"))
 
-    tfAny should be > tfA
+    tfAny should be >= tfA
     tfA should (
       be >= 3 and
       be > tfB)
