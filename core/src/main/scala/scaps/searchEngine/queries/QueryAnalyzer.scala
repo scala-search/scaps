@@ -125,14 +125,21 @@ class QueryAnalyzer private[searchEngine] (
     val freq = math.min(getFrequency(tpe.variance, tpe.name), maxFrequency)
     val itf = math.log((maxFrequency.toDouble + 1) / (freq + 1))
 
-    weightedMean(
+    weightedGeometricMean(
       itf -> settings.typeFrequencyWeight,
       1d / (tpe.depth + 1) -> settings.depthBoostWeight,
       1d / (tpe.distance + 1) -> settings.distanceBoostWeight)
   }
 
-  private def weightedMean(elemsWithWeight: (Double, Double)*) =
-    elemsWithWeight.map { case (e, w) => e * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
+  /**
+   * Implements http://en.wikipedia.org/wiki/Weighted_geometric_mean
+   */
+  private def weightedGeometricMean(elemsWithWeight: (Double, Double)*) =
+    math.exp(
+      elemsWithWeight.map { case (x, w) => w * math.log(x) }.sum / elemsWithWeight.map { case (_, w) => w }.sum)
+
+  private def weightedArithmeticMean(elemsWithWeight: (Double, Double)*) =
+    elemsWithWeight.map { case (x, w) => x * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
 
   private def getFrequency(v: Variance, t: String) =
     findClassesBySuffix(t).headOption.map(_.frequency(v)).filter(_ > 0).getOrElse(1)
