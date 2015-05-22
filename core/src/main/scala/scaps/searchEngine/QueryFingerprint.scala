@@ -27,11 +27,7 @@ object QueryFingerprint {
               val subTypesWithDist = findSubClasses(tpe).toList
                 .map(subCls => Alternative(subCls.name, subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
 
-              val maxDist = (0 :: subTypesWithDist.map(_.distance)).max
-
-              Alternative(TypeEntity.Nothing.name, maxDist + 1) :: subTypesWithDist
-            case Contravariant if tpe.name == TypeEntity.Nothing.name =>
-              Nil
+              subTypesWithDist
             case Contravariant =>
               (for {
                 cls <- findClass(tpe.name).toSeq
