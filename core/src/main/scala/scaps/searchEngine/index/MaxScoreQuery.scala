@@ -15,10 +15,8 @@ import org.apache.lucene.util.Bits
  * This matches the same documents as a boolean OR query but does not accumulate
  * the scores of the matching sub queries.
  */
-case class MaxScoreQuery(subQueriesHead: Query, subQueriesTail: Query*) extends Query {
+case class MaxScoreQuery(subQueries: Query*) extends Query {
   query =>
-
-  val subQueries = subQueriesHead +: subQueriesTail
 
   override def createWeight(searcher: IndexSearcher): Weight = {
     val subWeights = subQueries.map(_.createWeight(searcher))
@@ -110,6 +108,6 @@ case class MaxScoreQuery(subQueriesHead: Query, subQueriesTail: Query*) extends 
   }
 
   override def toString(field: String) = {
-    s"MaxScore(${subQueries.map(_.toString(field)).mkString(", ")})"
+    s"max(${subQueries.map(_.toString(field)).mkString(", ")})"
   }
 }

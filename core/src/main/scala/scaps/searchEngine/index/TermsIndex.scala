@@ -3,7 +3,7 @@ package scaps.searchEngine.index
 import java.io.Reader
 import scala.collection.JavaConverters._
 import scaps.webapi.TermEntity
-import scaps.searchEngine.APIQuery
+import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
@@ -77,10 +77,14 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       writer.addDocuments(docs.asJava)
     }
 
-  def find(query: APIQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
+  def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
       toLuceneQuery(query, moduleIds).map(
-        lq => search(lq, settings.query.maxResults).get)
+        lq => {
+          val r = search(lq, settings.query.maxResults, true).get
+          println(Fingerprint(r.head))
+          r
+        })
     }
 
   def deleteEntitiesIn(module: Module): Try[Unit] =
@@ -88,7 +92,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
 
-  private def toLuceneQuery(query: APIQuery, moduleIds: Set[String]): ProcessingError \/ Query = {
+  private def toLuceneQuery(query: ApiQuery, moduleIds: Set[String]): ProcessingError \/ Query = {
     try {
       val keysAndTypes = new BooleanQuery
 
@@ -102,11 +106,16 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         keysAndTypes.add(docQuery, Occur.SHOULD)
       }
 
-      query.types.foreach { tpe =>
-        val fingerprint = s"${tpe.variance.prefix}${tpe.typeName}_${tpe.occurrence}"
-        val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
-        tq.setBoost(tpe.boost.toFloat)
-        keysAndTypes.add(tq, Occur.SHOULD)
+      for { tpe <- query.types } {
+        val alternativeQueries = tpe.alternatives.map { alt =>
+          val fingerprint = s"${alt.variance.prefix}${alt.typeName}_${alt.occurrence}"
+          val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
+          tq.setBoost(alt.boost.toFloat)
+          tq
+        }
+
+        val maxScoreQuery = MaxScoreQuery(alternativeQueries: _*)
+        keysAndTypes.add(maxScoreQuery, Occur.SHOULD)
       }
 
       val modules = new BooleanQuery
@@ -123,6 +132,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       val q = new BooleanQuery
       q.add(keysAndTypes, Occur.MUST)
       q.add(modules, Occur.MUST)
+
+      println(q)
 
       q.right
     } catch {

@@ -30,7 +30,7 @@ trait Index[E] {
   private[index] def toDocument(e: E): Document
   private[index] def toEntity(d: Document): E
 
-  private[index] def search(query: Query, maxResults: Int = Int.MaxValue): Try[Seq[E]] =
+  private[index] def search(query: Query, maxResults: Int = Int.MaxValue, explain: Boolean = false): Try[Seq[E]] =
     withSearcher { searcher =>
       val docs = searcher.search(query, maxResults)
 
@@ -39,6 +39,9 @@ trait Index[E] {
         docId = docs.scoreDocs(i).doc
         if docId != DocIdSetIterator.NO_MORE_DOCS
       } yield {
+        if (i == 0 && explain) {
+          println(searcher.explain(query, docId))
+        }
         toEntity(searcher.doc(docId))
       }
     }

@@ -6,7 +6,7 @@ import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
-import scaps.searchEngine.APIQuery
+import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SemanticError
@@ -22,6 +22,7 @@ import scaps.webapi.Invariant
 import scaps.webapi.ClassEntity
 import scaps.searchEngine.Fingerprint
 import scaps.webapi.TermEntity
+import scaps.searchEngine.QueryFingerprint
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -45,11 +46,11 @@ class QueryAnalyzer private[searchEngine] (
    *
    * Fails when `findClassesBySuffix` or `findSubClasses` fails.
    */
-  def apply(raw: RawQuery): SemanticError \/ APIQuery =
+  def apply(raw: RawQuery): SemanticError \/ ApiQuery =
     resolveNames(raw.tpe).map(
       (toType _) andThen
         (_.normalize(Nil)) andThen
-        (tpe => Fingerprint.queryFingerprint(
+        (tpe => QueryFingerprint(
           (name: String) => findClassesBySuffix(name).headOption,
           findSubClasses,
           tpe)) andThen
@@ -108,27 +109,38 @@ class QueryAnalyzer private[searchEngine] (
     rec(resolved, Covariant)
   }
 
-  private def toApiQuery(fingerprint: Fingerprint): APIQuery = {
-    val tpes = fingerprint
-      .typesWithOccurrenceIndex(Ordering[Double].on(fpt => -boost(fpt)))
-      .map {
-        case (tpe, idx) =>
-          APIQuery.Type(tpe.variance, tpe.name, idx, boost(tpe))
-      }
+  private def toApiQuery(fingerprint: QueryFingerprint): ApiQuery = {
+    val flattenedTypes = fingerprint.types.zipWithIndex.flatMap {
+      case (tpe, idx) => tpe.alternatives.map(alt =>
+        (idx, tpe.variance, alt.typeName, boost(tpe, alt)))
+    }
 
-    APIQuery(Nil, tpes.toList.sortBy(-_.boost))
+    val typesByVarianceAndName = flattenedTypes.groupBy(t => (t._2 /* variance */ , t._3 /* name */ )).values
+
+    val withOccurrenceIndex = typesByVarianceAndName.map { types =>
+      types.sortBy(-_._4 /* boost */ ).zipWithIndex.map {
+        case ((tpeIndex, variance, altName, boost), occIndex) =>
+          (tpeIndex, ApiQuery.Alternative(variance, altName, occIndex, boost))
+      }
+    }.flatten
+
+    val queryTypes = withOccurrenceIndex.groupBy(t => (t._1 /* original type index */ )).map {
+      case (tpeIndex, alts) => ApiQuery.Type(alts.map(_._2).toList)
+    }
+
+    ApiQuery(Nil, queryTypes.toList)
   }
 
-  private def boost(tpe: Fingerprint.Type): Double = {
+  private def boost(tpe: QueryFingerprint.Type, alt: QueryFingerprint.Alternative): Double = {
     val maxFrequency = TypeFrequencies.termsSampleSize
 
-    val freq = math.min(getFrequency(tpe.variance, tpe.name), maxFrequency)
+    val freq = math.min(getFrequency(tpe.variance, alt.typeName), maxFrequency)
     val itf = math.log((maxFrequency.toDouble + 1) / (freq + 1))
 
     weightedGeometricMean(
       itf -> settings.typeFrequencyWeight,
       1d / (tpe.depth + 1) -> settings.depthBoostWeight,
-      1d / (tpe.distance + 1) -> settings.distanceBoostWeight)
+      1d / (alt.distance + 1) -> settings.distanceBoostWeight)
   }
 
   /**
