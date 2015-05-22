@@ -25,23 +25,25 @@ object QueryFingerprint {
           val alternatives = tpe.variance match {
             case Covariant =>
               val subTypesWithDist = findSubClasses(tpe).toList
-                .map(subCls => Alternative(subCls.name, subCls.baseTypes.indexWhere(_.name == tpe.name)))
+                .map(subCls => Alternative(subCls.name, subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
 
-              val maxDist = (1 :: subTypesWithDist.map(_.distance)).max
+              val maxDist = (0 :: subTypesWithDist.map(_.distance)).max
 
               Alternative(TypeEntity.Nothing.name, maxDist + 1) :: subTypesWithDist
+            case Contravariant if tpe.name == TypeEntity.Nothing.name =>
+              Nil
             case Contravariant =>
               (for {
                 cls <- findClass(tpe.name).toSeq
                 baseTpe <- cls.baseTypes
               } yield {
-                val dist = cls.baseTypes.indexOf(baseTpe)
+                val dist = cls.baseTypes.indexOf(baseTpe) + 1
                 Alternative(baseTpe.name, dist)
               }).toList
-            case Invariant if tpe.name != TypeEntity.Unknown.name =>
-              Alternative(TypeEntity.Unknown.name, 1) :: Nil
-            case Invariant =>
+            case Invariant if tpe.name == TypeEntity.Unknown.name =>
               Nil
+            case Invariant =>
+              Alternative(TypeEntity.Unknown.name, 1) :: Nil
           }
 
           Type(tpe.variance, thisTpe :: alternatives, depth) ::

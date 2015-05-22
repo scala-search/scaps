@@ -1,15 +1,14 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-import scala.collection.JavaConverters._
-import scaps.webapi.TermEntity
-import scaps.searchEngine.ApiQuery
-import scaps.searchEngine.ProcessingError
-import scaps.searchEngine.TooUnspecific
-import scaps.settings.Settings
+
+import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
+import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.analysis.core.LowerCaseFilter
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.analysis.core.WhitespaceTokenizer
@@ -24,6 +23,7 @@ import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
@@ -32,11 +32,16 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
+
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
-import scaps.webapi.Module
-import org.apache.lucene.analysis.core.KeywordAnalyzer
+import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.Fingerprint
+import scaps.searchEngine.ProcessingError
+import scaps.searchEngine.TooUnspecific
+import scaps.settings.Settings
+import scaps.webapi.Module
+import scaps.webapi.TermEntity
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -80,11 +85,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
   def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
       toLuceneQuery(query, moduleIds).map(
-        lq => {
-          val r = search(lq, settings.query.maxResults, true).get
-          println(Fingerprint(r.head))
-          r
-        })
+        lq => search(lq, settings.query.maxResults).get)
     }
 
   def deleteEntitiesIn(module: Module): Try[Unit] =
@@ -107,15 +108,16 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       }
 
       for { tpe <- query.types } {
-        val alternativeQueries = tpe.alternatives.map { alt =>
+        val disMaxQ = new DisjunctionMaxQuery(0)
+
+        tpe.alternatives.foreach { alt =>
           val fingerprint = s"${alt.variance.prefix}${alt.typeName}_${alt.occurrence}"
           val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
           tq.setBoost(alt.boost.toFloat)
-          tq
+          disMaxQ.add(tq)
         }
 
-        val maxScoreQuery = MaxScoreQuery(alternativeQueries: _*)
-        keysAndTypes.add(maxScoreQuery, Occur.SHOULD)
+        keysAndTypes.add(disMaxQ, Occur.SHOULD)
       }
 
       val modules = new BooleanQuery
@@ -132,8 +134,6 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       val q = new BooleanQuery
       q.add(keysAndTypes, Occur.MUST)
       q.add(modules, Occur.MUST)
-
-      println(q)
 
       q.right
     } catch {
