@@ -1,28 +1,21 @@
 package scaps.searchEngine.queries
 
-import scala.Ordering
-import scaps.webapi.ClassEntity
-import scaps.webapi.Contravariant
-import scaps.webapi.Covariant
-import scaps.webapi.TypeEntity
-import scaps.webapi.Variance
+import scalaz.{ \/ => \/ }
+import scalaz.std.list.listInstance
+import scalaz.syntax.traverse.ToTraverseOps
 import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
-import scaps.searchEngine.SemanticError
-import scaps.searchEngine.index.TypeFrequencies
-import scaps.searchEngine.UnexpectedNumberOfTypeArgs
-import scaps.settings.QuerySettings
-import scala.util.Try
-import scalaz.{ \/ => \/ }
-import scalaz.std.list.listInstance
-import scalaz.syntax.either.ToEitherOps
-import scalaz.syntax.traverse.ToTraverseOps
-import scaps.webapi.Invariant
-import scaps.webapi.ClassEntity
-import scaps.searchEngine.Fingerprint
-import scaps.webapi.TermEntity
 import scaps.searchEngine.QueryFingerprint
+import scaps.searchEngine.SemanticError
+import scaps.searchEngine.UnexpectedNumberOfTypeArgs
+import scaps.settings.Settings
+import scaps.webapi.ClassEntity
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.Invariant
+import scaps.webapi.TypeEntity
+import scaps.webapi.Variance
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -37,7 +30,7 @@ private[queries] object ResolvedQuery {
  * `findClassesBySuffix` and `findSubClasses`
  */
 class QueryAnalyzer private[searchEngine] (
-  settings: QuerySettings,
+  settings: Settings,
   findClassesBySuffix: (String) => Seq[ClassEntity],
   findSubClasses: (TypeEntity) => Seq[ClassEntity]) {
 
@@ -132,15 +125,15 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def boost(tpe: QueryFingerprint.Type, alt: QueryFingerprint.Alternative): Double = {
-    val maxFrequency = TypeFrequencies.termsSampleSize
+    val maxFrequency = settings.index.typeFrequenciesSampleSize
 
     val freq = math.min(getFrequency(tpe.variance, alt.typeName), maxFrequency)
     val itf = math.log((maxFrequency.toDouble + 1) / (freq + 1))
 
     weightedGeometricMean(
-      itf -> settings.typeFrequencyWeight,
-      1d / (tpe.depth + 1) -> settings.depthBoostWeight,
-      1d / (alt.distance + 1) -> settings.distanceBoostWeight)
+      itf -> settings.query.typeFrequencyWeight,
+      1d / (tpe.depth + 1) -> settings.query.depthBoostWeight,
+      1d / (alt.distance + 1) -> settings.query.distanceBoostWeight)
   }
 
   /**

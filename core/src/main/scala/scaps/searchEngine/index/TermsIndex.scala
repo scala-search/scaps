@@ -155,8 +155,9 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
-    Fingerprint(entity).bagOfTypes.foreach { tpe =>
-      add(fields.fingerprint, tpe)
+    Fingerprint(entity).typesWithOccurrenceIndex.foreach {
+      case (tpe, idx) =>
+        add(fields.fingerprint, s"${tpe.variance.prefix}${tpe.name}_${idx}")
     }
     add(fields.doc, entity.comment)
     doc.add(new StoredField(fields.entity, upickle.write(entity)))

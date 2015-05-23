@@ -1,14 +1,15 @@
 package scaps.searchEngine.queries
 
 import scala.collection.immutable.Map
-import scaps.featureExtraction.ExtractionUtils
-import scaps.settings.Settings
-import scala.util.Try
+
 import org.scalatest.FlatSpec
-import scaps.searchEngine.NameNotFound
+
+import scaps.featureExtraction.ExtractionUtils
 import scaps.searchEngine.NameAmbiguous
-import scaps.searchEngine.UnexpectedNumberOfTypeArgs
+import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
+import scaps.searchEngine.UnexpectedNumberOfTypeArgs
+import scaps.settings.Settings
 import scaps.webapi.TypeEntity
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
@@ -124,6 +125,13 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("p.Dd"))
   }
 
+  it should "not use the bottom type as a sub class of every type" in {
+    val res = expectSuccess("_ => Aa")
+
+    res.allAlternatives.mkString(" ") should (
+      not include ("scala.Nothing"))
+  }
+
   it should "include base classes of types at contravariant positions" in {
     val res = expectSuccess("Cc => _")
 
@@ -186,7 +194,11 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     res.swap.getOrElse(???)
   }
 
-  val settings = Settings.fromApplicationConf.query.copy(typeFrequencyWeight = 0)
+  val settings = {
+    val s = Settings.fromApplicationConf
+    val query = s.query.copy(typeFrequencyWeight = 0)
+    s.copy(query = query)
+  }
 
   val analyzer = {
     val classEntities = extractAllClasses(env)

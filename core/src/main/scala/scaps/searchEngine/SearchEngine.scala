@@ -1,27 +1,35 @@
 package scaps.searchEngine
 
 import java.io.File
+
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scaps.webapi._
+import scala.util.Try
+
+import org.apache.lucene.store.FSDirectory
+import org.apache.lucene.store.RAMDirectory
+
+import scalaz.{ \/ => \/ }
 import scaps.searchEngine.index.ClassIndex
+import scaps.searchEngine.index.ModuleIndex
 import scaps.searchEngine.index.TermsIndex
+import scaps.searchEngine.index.TypeFrequencies
 import scaps.searchEngine.queries.QueryAnalyzer
 import scaps.searchEngine.queries.QueryParser
+import scaps.searchEngine.queries.RawQuery
 import scaps.settings.Settings
 import scaps.utils.Logging
-import scala.util.Try
-import org.apache.lucene.store.FSDirectory
-import scalaz.\/
-import scaps.webapi.Module
-import scaps.searchEngine.index.ModuleIndex
+import scaps.utils.SampleSeqOps
 import scaps.webapi.ClassEntity
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.Entity
+import scaps.webapi.Invariant
+import scaps.webapi.Module
+import scaps.webapi.TermEntity
 import scaps.webapi.TypeEntity
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import org.apache.lucene.store.RAMDirectory
-import scaps.searchEngine.queries.RawQuery
-import scaps.searchEngine.index.TypeFrequencies
+import scaps.webapi.Variance
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -107,7 +115,7 @@ class SearchEngine private[searchEngine] (
       val tfs = TypeFrequencies(
         classesIndex.findClass(_).get,
         classesIndex.findSubClasses(_).get,
-        termsIndex.allTerms().get)
+        termsIndex.allTerms().get.sample(settings.index.typeFrequenciesSampleSize))
 
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
         def freq(v: Variance) = tfs((v, cls.name))
@@ -154,7 +162,7 @@ class SearchEngine private[searchEngine] (
       (classesIndex.findClassBySuffix(suffix, moduleIds).get)
 
     val analyzer = new QueryAnalyzer(
-      settings.query,
+      settings,
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
       classesIndex.findSubClasses(_).get)
 

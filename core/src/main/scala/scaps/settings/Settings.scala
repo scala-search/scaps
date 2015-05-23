@@ -37,10 +37,12 @@ case class IndexSettings(
   termsDir: File,
   modulesDir: File,
   timeout: Duration,
-  lengthNormWeight: Double) {
+  lengthNormWeight: Double,
+  typeFrequenciesSampleSize: Int) {
 
   import Settings._
   assertPositive(lengthNormWeight)
+  assertPositive(typeFrequenciesSampleSize)
 }
 
 object IndexSettings {
@@ -50,7 +52,8 @@ object IndexSettings {
       new File(conf.getString("terms-dir")),
       new File(conf.getString("modules-dir")),
       conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
-      conf.getDouble(lengthNormWeight))
+      conf.getDouble(lengthNormWeight),
+      conf.getInt("type-frequencies-sample-size"))
 
   val lengthNormWeight = "length-norm-weight"
 }
