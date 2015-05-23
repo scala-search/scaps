@@ -6,10 +6,18 @@ import scaps.webapi._
 case class Fingerprint(types: List[Fingerprint.Type]) {
   import Fingerprint._
 
-  def typesWithOccurrenceIndex: List[(Type, Int)] =
+  def typesWithOccurrenceIndex(): List[(Type, Int)] =
     types.groupBy(fpt => (fpt.variance, fpt.name))
       .toList
       .flatMap { case (_, values) => values.zipWithIndex }
+
+  override def toString =
+    typesWithOccurrenceIndex()
+      .map {
+        case (tpe, idx) => {
+          s"${tpe.variance.prefix}${tpe.name}_${idx}"
+        }
+      }.mkString(" ")
 }
 
 object Fingerprint {
