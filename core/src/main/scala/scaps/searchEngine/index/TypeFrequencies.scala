@@ -5,16 +5,16 @@ import scaps.searchEngine.QueryFingerprint
 import scaps.webapi._
 import scala.util.Random
 import scaps.utils._
+import scaps.searchEngine.View
 
 object TypeFrequencies {
-  def apply(findClass: String => Option[ClassEntity], findSubClasses: TypeEntity => Seq[ClassEntity], terms: Seq[TermEntity]) = {
+  def apply(findView: TypeEntity => Seq[View], terms: Seq[TermEntity]) = {
     // use weak hash map to avoid out of memory exceptions
-    val findClassCached = Memo.weakHashMapMemo { findClass }
-    val findSubClassesCached = Memo.weakHashMapMemo { findSubClasses }
+    val findViewCached = Memo.weakHashMapMemo { findView }
 
     def typesReferencedFromTerm(term: TermEntity): Seq[(Variance, String)] =
       for {
-        tpe <- QueryFingerprint(findClassCached, findSubClassesCached, term).types
+        tpe <- QueryFingerprint(findViewCached, term).types
         alt <- tpe.alternatives
       } yield (tpe.variance, alt.typeName)
 

@@ -1,9 +1,7 @@
 package scaps.searchEngine.queries
 
 import scala.collection.immutable.Map
-
 import org.scalatest.FlatSpec
-
 import scaps.featureExtraction.ExtractionUtils
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
@@ -11,6 +9,12 @@ import scaps.searchEngine.SearchEngine
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
 import scaps.webapi.TypeEntity
+import scaps.searchEngine.View
+import scaps.webapi.Covariant
+import scaps.webapi.Contravariant
+import scaps.webapi.Invariant
+import org.apache.lucene.store.RAMDirectory
+import scaps.searchEngine.index.ViewIndex
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
@@ -202,6 +206,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
   val analyzer = {
     val classEntities = extractAllClasses(env)
+    val views = classEntities.flatMap(View.fromClass(_))
 
     def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, List[V]] = ps
       .distinct
@@ -216,11 +221,9 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       suffix <- cls.name.split("\\.").toList.tails.filterNot(_ == Nil).map(_.mkString("."))
     } yield (suffix, cls)) andThen (SearchEngine.favorScalaStdLib _)
 
-    val findSubClasses = toMultiMap(for {
-      cls <- classEntities
-      base <- cls.baseTypes
-    } yield (base, cls))
+    val viewsIndex = new ViewIndex(new RAMDirectory)
+    viewsIndex.addEntities(views)
 
-    new QueryAnalyzer(settings, findClassesBySuffix, findSubClasses)
+    new QueryAnalyzer(settings, findClassesBySuffix, viewsIndex.findViews(_).get)
   }
 }

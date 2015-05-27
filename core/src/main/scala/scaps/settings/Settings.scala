@@ -36,6 +36,7 @@ case class IndexSettings(
   classesDir: File,
   termsDir: File,
   modulesDir: File,
+  viewsDir: File,
   timeout: Duration,
   lengthNormWeight: Double,
   typeFrequenciesSampleSize: Int) {
@@ -51,6 +52,7 @@ object IndexSettings {
       new File(conf.getString("classes-dir")),
       new File(conf.getString("terms-dir")),
       new File(conf.getString("modules-dir")),
+      new File(conf.getString("views-dir")),
       conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
       conf.getDouble(lengthNormWeight),
       conf.getInt("type-frequencies-sample-size"))

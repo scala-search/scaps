@@ -144,18 +144,20 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
     withTermIndex { termIndex =>
       withClassIndex { classIndex =>
         withModuleIndex { moduleIndex =>
-          val settings = Settings.fromApplicationConf
+          withViewIndex { viewIndex =>
+            val settings = Settings.fromApplicationConf
 
-          val se = new SearchEngine(
-            settings, termIndex, classIndex, moduleIndex)
+            val se = new SearchEngine(
+              settings, termIndex, classIndex, moduleIndex, viewIndex)
 
-          for ((module, entities) <- modulesWithEntities) {
-            se.indexEntities(module, entities, batchMode = true).get
+            for ((module, entities) <- modulesWithEntities) {
+              se.indexEntities(module, entities, batchMode = true).get
+            }
+
+            se.updateTypeFrequencies().get
+
+            block(se)
           }
-
-          se.updateTypeFrequencies().get
-
-          block(se)
         }
       }
     }

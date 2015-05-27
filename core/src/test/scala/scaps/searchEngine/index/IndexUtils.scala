@@ -47,4 +47,9 @@ trait IndexUtils extends ExtractionUtils {
       val index = new ModuleIndex(dir)
       f(index)
     }
+
+  def withViewIndex[T](f: ViewIndex => T): T =
+    withDir { dir =>
+      f(new ViewIndex(dir))
+    }
 }

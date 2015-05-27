@@ -9,12 +9,10 @@ object QueryFingerprint {
 
   case class Alternative(typeName: String, distance: Int)
 
-  def apply(findClass: String => Option[ClassEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
-            term: TermEntity): QueryFingerprint =
-    apply(findClass, findSubClasses, term.tpe.normalize(term.typeParameters))
+  def apply(findView: TypeEntity => Seq[View], term: TermEntity): QueryFingerprint =
+    apply(findView, term.tpe.normalize(term.typeParameters))
 
-  def apply(findClass: String => Option[ClassEntity], findSubClasses: TypeEntity => Seq[ClassEntity],
-            tpe: TypeEntity): QueryFingerprint = {
+  def apply(findView: TypeEntity => Seq[View], tpe: TypeEntity): QueryFingerprint = {
     def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int): List[Type] =
       tpe match {
         case TypeEntity.Ignored(args, _) =>
@@ -22,27 +20,12 @@ object QueryFingerprint {
         case tpe: TypeEntity =>
           val thisTpe = Alternative(tpe.name, 0)
 
-          val alternatives = tpe.variance match {
-            case Covariant =>
-              val subTypesWithDist = findSubClasses(tpe).toList
-                .map(subCls => Alternative(subCls.name, subCls.baseTypes.indexWhere(_.name == tpe.name) + 1))
+          val views = findView(tpe)
+          val maxDistance = (0 +: views.flatMap(_.distance)).max
+          val alternatives = views.map(view =>
+            Alternative(view.otherEnd(tpe).name, (view.relativeDistance(maxDistance) * 10).toInt))
 
-              subTypesWithDist
-            case Contravariant =>
-              (for {
-                cls <- findClass(tpe.name).toSeq
-                baseTpe <- cls.baseTypes
-              } yield {
-                val dist = cls.baseTypes.indexOf(baseTpe) + 1
-                Alternative(baseTpe.name, dist)
-              }).toList
-            case Invariant if tpe.name == TypeEntity.Unknown.name =>
-              Nil
-            case Invariant =>
-              Alternative(TypeEntity.Unknown.name, 1) :: Nil
-          }
-
-          Type(tpe.variance, thisTpe :: alternatives, depth) ::
+          Type(tpe.variance, thisTpe :: alternatives.toList, depth) ::
             tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1))
       }
 

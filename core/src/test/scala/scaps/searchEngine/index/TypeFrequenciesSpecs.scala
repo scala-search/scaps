@@ -2,6 +2,7 @@ package scaps.searchEngine.index
 
 import org.scalatest.FlatSpec
 import scaps.webapi._
+import scaps.searchEngine.View
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {
@@ -124,13 +125,16 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val entities = extractAll(source)
     val terms = entities.collect { case t: TermEntity => t }
     val classes = entities.collect { case c: ClassEntity => c }
+    val views = scaps.utils.printval("views", classes.flatMap(View.fromClass(_)).sortBy(_.from.name))
 
     withTermIndex { termIndex =>
       termIndex.addEntities(terms)
-      withClassIndex { classIndex =>
-        classIndex.addEntities(classes)
+      withViewIndex { viewIndex =>
+        viewIndex.addEntities(views)
 
-        TypeFrequencies(classIndex.findClass(_).get, classIndex.findSubClasses(_).get, termIndex.allTerms().get)
+        println(termIndex.allTerms().get.size)
+
+        scaps.utils.printval("tfs", TypeFrequencies(viewIndex.findViews(_).get, termIndex.allTerms().get))
       }
     }
   }

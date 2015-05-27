@@ -16,6 +16,7 @@ import scaps.webapi.Covariant
 import scaps.webapi.Invariant
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
+import scaps.searchEngine.View
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -32,7 +33,7 @@ private[queries] object ResolvedQuery {
 class QueryAnalyzer private[searchEngine] (
   settings: Settings,
   findClassesBySuffix: (String) => Seq[ClassEntity],
-  findSubClasses: (TypeEntity) => Seq[ClassEntity]) {
+  findViews: (TypeEntity) => Seq[View]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
@@ -44,8 +45,7 @@ class QueryAnalyzer private[searchEngine] (
       (toType _) andThen
         (_.normalize(Nil)) andThen
         (tpe => QueryFingerprint(
-          (name: String) => findClassesBySuffix(name).headOption,
-          findSubClasses,
+          findViews,
           tpe)) andThen
         (toApiQuery _) andThen
         { apiQuery => apiQuery.copy(keywords = raw.keywords) })

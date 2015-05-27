@@ -14,6 +14,7 @@ import scalaz.{ \/ => \/ }
 import scaps.searchEngine.index.ClassIndex
 import scaps.searchEngine.index.ModuleIndex
 import scaps.searchEngine.index.TermsIndex
+import scaps.searchEngine.index.ViewIndex
 import scaps.searchEngine.index.TypeFrequencies
 import scaps.searchEngine.queries.QueryAnalyzer
 import scaps.searchEngine.queries.QueryParser
@@ -41,16 +42,18 @@ object SearchEngine {
     val terms = new TermsIndex(createDir(settings.index.termsDir), settings)
     val classes = new ClassIndex(createDir(settings.index.classesDir), settings)
     val modules = new ModuleIndex(createDir(settings.index.modulesDir))
+    val views = new ViewIndex(createDir(settings.index.viewsDir))
 
-    new SearchEngine(settings, terms, classes, modules)
+    new SearchEngine(settings, terms, classes, modules, views)
   }
 
   def inMemory(settings: Settings): SearchEngine = {
     val terms = new TermsIndex(new RAMDirectory, settings)
     val classes = new ClassIndex(new RAMDirectory, settings)
     val modules = new ModuleIndex(new RAMDirectory)
+    val views = new ViewIndex(new RAMDirectory)
 
-    new SearchEngine(settings, terms, classes, modules)
+    new SearchEngine(settings, terms, classes, modules, views)
   }
 
   /**
@@ -77,7 +80,10 @@ class SearchEngine private[searchEngine] (
   val settings: Settings,
   private[scaps] val termsIndex: TermsIndex,
   private[scaps] val classesIndex: ClassIndex,
-  private[scaps] val moduleIndex: ModuleIndex) extends Logging {
+  private[scaps] val moduleIndex: ModuleIndex,
+  private[scaps] val viewIndex: ViewIndex) extends Logging {
+
+  private val indexes = List(termsIndex, classesIndex, moduleIndex, viewIndex)
 
   def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false)(implicit ec: ExecutionContext): Try[Unit] =
     Try {
@@ -95,9 +101,12 @@ class SearchEngine private[searchEngine] (
 
       val allClasses = classesWithModule :+ ClassEntity(TypeEntity.Unknown.name, Nil, Nil, referencedFrom = Set(module))
 
+      val views = allClasses.flatMap(View.fromClass)
+
       val f = Future.sequence(List(
         Future { termsIndex.addEntities(termsWithModule).get },
-        Future { classesIndex.addEntities(allClasses).get }))
+        Future { classesIndex.addEntities(allClasses).get },
+        Future { viewIndex.addEntities(views).get }))
 
       Await.result(f, settings.index.timeout)
 
@@ -113,8 +122,7 @@ class SearchEngine private[searchEngine] (
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 
       val tfs = TypeFrequencies(
-        classesIndex.findClass(_).get,
-        classesIndex.findSubClasses(_).get,
+        viewIndex.findViews(_).get,
         termsIndex.allTerms().get.sample(settings.index.typeFrequenciesSampleSize))
 
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
@@ -151,11 +159,11 @@ class SearchEngine private[searchEngine] (
   def indexedModules(): Try[Seq[Module]] =
     moduleIndex.allModules()
 
-  def resetIndexes(): Try[Unit] = for {
-    _ <- termsIndex.resetIndex()
-    _ <- classesIndex.resetIndex()
-    _ <- moduleIndex.resetIndex()
-  } yield ()
+  def resetIndexes(): Try[Unit] = Try {
+    for {
+      index <- indexes
+    } index.resetIndex().get
+  }
 
   private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
     def findClassBySuffix(suffix: String) =
@@ -164,7 +172,7 @@ class SearchEngine private[searchEngine] (
     val analyzer = new QueryAnalyzer(
       settings,
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
-      classesIndex.findSubClasses(_).get)
+      viewIndex.findViews(_).get)
 
     analyzer(raw)
   }
