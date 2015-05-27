@@ -25,16 +25,15 @@ sealed trait View {
 
 object View {
   def fromClass(cls: ClassEntity): Seq[View] = {
-    val clsTpe = TypeEntity(cls.name, Covariant,
-      cls.typeParameters.map(param => TypeEntity(param.name, param.variance, Nil)))
-
+    val clsTpe = cls.toType
+    
     cls.baseTypes.zipWithIndex.map {
       case (base, idx) => SubType(clsTpe, base, idx + 1)
     }
   }
 
   def key(tpe: TypeEntity) =
-    tpe.signature
+    tpe.renameTypeParams(_ => "_").signature
 }
 
 case class SubType(cls: TypeEntity, baseType: TypeEntity, dist: Int) extends View {

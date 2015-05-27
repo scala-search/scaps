@@ -133,7 +133,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     val res = expectSuccess("_ => Aa")
 
     res.allAlternatives.mkString(" ") should (
-      not include ("scala.Nothing"))
+      not include ("+scala.Nothing"))
   }
 
   it should "include base classes of types at contravariant positions" in {

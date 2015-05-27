@@ -117,7 +117,10 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         val a = 1
       }
       """)(
-      ("p.O.a", _.tpe should be(TypeEntity("scala.Int", Covariant, Nil))))
+      ("p.O.a", m => {
+        m.tpe should be(TypeEntity("scala.Int", Covariant, Nil))
+        m.tpe.args.foreach(_.isTypeParam should be(false))
+      }))
   }
 
   it should "extract method types" in {
@@ -215,6 +218,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("q.O.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("T", Invariant)))
         m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
+        m.tpe.args.foreach(_.isTypeParam should be(true))
       }))
   }
 
@@ -231,6 +235,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("q.O.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("T", Invariant, lowerBound = "scala.Nothing", upperBound = "q.Up")))
         m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
+        m.tpe.args.foreach(_.isTypeParam should be(true))
       }))
   }
 
@@ -245,8 +250,14 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("p.C#m1", _.typeParameters should be(List(TypeParameterEntity("T", Invariant)))),
-      ("p.C#m2", _.typeParameters should be(List(TypeParameterEntity("T", Invariant)))),
-      ("p.C#m3", _.typeParameters should be(List(TypeParameterEntity("T", Invariant), TypeParameterEntity("A", Invariant)))))
+      ("p.C#m2", m => {
+        m.typeParameters should be(List(TypeParameterEntity("T", Invariant)))
+        m.tpe.args(1).args.foreach(_.isTypeParam should be(true))
+      }),
+      ("p.C#m3", m => {
+        m.typeParameters should be(List(TypeParameterEntity("T", Invariant), TypeParameterEntity("A", Invariant)))
+        m.tpe.args(1).args.foreach(_.isTypeParam should be(true))
+      }))
   }
 
   it should "extract type parameters from nested classes" in {
@@ -259,7 +270,10 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         }
       }
       """)(
-      ("p.Outer#Inner#m", _.typeParameters should be(List(TypeParameterEntity("A", Invariant), TypeParameterEntity("B", Invariant)))))
+      ("p.Outer#Inner#m", m => {
+        m.typeParameters should be(List(TypeParameterEntity("A", Invariant), TypeParameterEntity("B", Invariant)))
+        m.tpe.args(1).args.foreach(_.isTypeParam should be(true))
+      }))
   }
 
   it should "extract constructors as 'static' method named '<init>'" in {
@@ -474,7 +488,11 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class D[B] extends T[B]
       """)(
       ("p.C", _.baseTypes.mkString(", ") should include("p.T[scala.Int]")),
-      ("p.D", _.baseTypes.mkString(", ") should include("p.T[B]")))
+      ("p.D", cls => {
+        cls.baseTypes.mkString(", ") should include("p.T[B]")
+        val tBase = cls.baseTypes.find(_.name == "p.T").get
+        tBase.args.foreach(_.isTypeParam should be(true))
+      }))
   }
 
   it should "yield referenced types as class entities" in {

@@ -123,6 +123,9 @@ case class ClassEntity(
 
   def frequency(v: Variance) =
     typeFrequency.get(v).getOrElse(0)
+
+  def toType: TypeEntity =
+    TypeEntity(name, Covariant, typeParameters.map(p => TypeEntity(p.name, p.variance, Nil, true)))
 }
 
 case class TermEntity(
@@ -159,7 +162,7 @@ case class TermEntity(
   def withoutComment = copy(comment = "")
 }
 
-case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) extends EntityLike {
+case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], isTypeParam: Boolean = false) extends EntityLike {
   import TypeEntity._
 
   override def toString() = {
@@ -183,11 +186,17 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity]) 
   def transform(f: TypeEntity => TypeEntity): TypeEntity =
     f(this.copy(args = args.map(_.transform(f))))
 
-  def renameTypeParams(typeParams: List[TypeParameterEntity], getName: String => String): TypeEntity =
+  def renameTypeParams(getName: String => String): TypeEntity =
     transform { tpe =>
-      if (typeParams.exists(_.name == tpe.name)) tpe.copy(name = getName(name))
+      if (tpe.isTypeParam) tpe.copy(name = getName(name))
       else tpe
     }
+
+  def withParamsAsArgs: TypeEntity =
+    copy(args = args.zipWithIndex.map {
+      case (arg, idx) =>
+        TypeEntity(s"$$$idx", arg.variance, Nil, true)
+    })
 
   def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity = {
     def loop(tpe: TypeEntity): TypeEntity =

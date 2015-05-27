@@ -147,7 +147,7 @@ trait EntityFactory extends Logging {
       assert(args.length == 1)
       TypeEntity.Repeated(args.head, variance)
     } else {
-      TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args)
+      TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args, tpe.typeSymbol.isTypeParameter)
     }
   }
 

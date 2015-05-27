@@ -40,17 +40,24 @@ class ViewIndex(val dir: Directory) extends Index[View] {
     }
   }
 
-  def findViewsFrom(tpe: TypeEntity) = {
-    val q = new TermQuery(new Term(fields.from, View.key(tpe)))
+  def findViewsFrom(tpe: TypeEntity) =
+    findViews(tpe, fields.from)
 
-    search(q)
-  }
+  def findViewsTo(tpe: TypeEntity) =
+    findViews(tpe, fields.to)
 
-  def findViewsTo(tpe: TypeEntity) = {
-    val q = new TermQuery(new Term(fields.to, View.key(tpe)))
+  private def findViews(tpe: TypeEntity, field: String): Try[Seq[View]] =
+    Try {
+      val q = new TermQuery(new Term(field, View.key(tpe)))
 
-    search(q)
-  }
+      val res = search(q).get
+
+      if (res.isEmpty && tpe.args.exists(!_.isTypeParam)) {
+        findViews(tpe.withParamsAsArgs, field).get
+      } else {
+        res
+      }
+    }
 
   private def viewId(v: View) =
     s"{${v.fromKey}}->{${v.toKey}}"

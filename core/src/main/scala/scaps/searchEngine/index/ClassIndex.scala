@@ -92,35 +92,6 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     search(new TermQuery(new Term(fields.name, name))).get.headOption
   }
 
-  def findSubClasses(tpe: TypeEntity): Try[Seq[ClassEntity]] = {
-    def partialTypes(tpe: TypeEntity): List[TypeEntity] = {
-      def argPerms(args: List[TypeEntity]): List[List[TypeEntity]] = args match {
-        case Nil => List(Nil)
-        case as if as.length > 3 =>
-          // prevent combinatorial explosion
-          List(as)
-        case a :: as =>
-          for {
-            aPerm <- TypeEntity("_", a.variance, Nil) :: partialTypes(a)
-            asPerm <- argPerms(as)
-          } yield aPerm :: asPerm
-      }
-
-      argPerms(tpe.args).map(perm => tpe.copy(args = perm))
-    }
-
-    val q = new BooleanQuery
-    for (perm <- partialTypes(tpe).take(BooleanQuery.getMaxClauseCount)) {
-      q.add(new TermQuery(new Term(fields.baseClass, perm.signature)), Occur.SHOULD)
-    }
-
-    search(q)
-  }
-
-  def findStrictSubclass(tpe: TypeEntity): Try[Seq[ClassEntity]] = {
-    search(new TermQuery(new Term(fields.baseClass, tpe.signature)))
-  }
-
   def allClasses(): Try[Seq[ClassEntity]] =
     search(new MatchAllDocsQuery)
 
@@ -131,11 +102,6 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
 
     for (suffix <- suffixes(entity.name)) {
       doc.add(new TextField(fields.suffix, suffix, Field.Store.NO))
-    }
-
-    for (baseClass <- entity.baseTypes) {
-      val withWildcards = baseClass.renameTypeParams(entity.typeParameters, _ => "_")
-      doc.add(new TextField(fields.baseClass, withWildcards.signature, Field.Store.YES))
     }
 
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
@@ -167,7 +133,6 @@ object ClassIndex {
   object fields {
     val name = "name"
     val suffix = "suffix"
-    val baseClass = "baseClass"
     val entity = "entity"
     val modules = "modules"
   }
