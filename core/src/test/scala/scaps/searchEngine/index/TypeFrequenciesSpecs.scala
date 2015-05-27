@@ -132,7 +132,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       withViewIndex { viewIndex =>
         viewIndex.addEntities(views)
 
-        TypeFrequencies(viewIndex.findViews(_).get, termIndex.allTerms().get)
+        TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get, termIndex.allTerms().get)
       }
     }
   }

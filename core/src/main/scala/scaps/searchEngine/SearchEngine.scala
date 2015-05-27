@@ -122,7 +122,7 @@ class SearchEngine private[searchEngine] (
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 
       val tfs = TypeFrequencies(
-        viewIndex.findViews(_).get,
+        viewIndex.findAlternativesWithDistance(_).get,
         termsIndex.allTerms().get.sample(settings.index.typeFrequenciesSampleSize))
 
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
@@ -172,7 +172,7 @@ class SearchEngine private[searchEngine] (
     val analyzer = new QueryAnalyzer(
       settings,
       (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
-      viewIndex.findViews(_).get)
+      viewIndex.findAlternativesWithDistance(_).get)
 
     analyzer(raw)
   }

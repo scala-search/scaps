@@ -9,10 +9,10 @@ object QueryFingerprint {
 
   case class Alternative(typeName: String, distance: Int)
 
-  def apply(findView: TypeEntity => Seq[View], term: TermEntity): QueryFingerprint =
-    apply(findView, term.tpe.normalize(term.typeParameters))
+  def apply(findAlternativesWithDistance: TypeEntity => Seq[(TypeEntity, Int)], term: TermEntity): QueryFingerprint =
+    apply(findAlternativesWithDistance, term.tpe.normalize(term.typeParameters))
 
-  def apply(findView: TypeEntity => Seq[View], tpe: TypeEntity): QueryFingerprint = {
+  def apply(findAlternativesWithDistance: TypeEntity => Seq[(TypeEntity, Int)], tpe: TypeEntity): QueryFingerprint = {
     def fingerprintWithAlternatives(tpe: TypeEntity, depth: Int): List[Type] =
       tpe match {
         case TypeEntity.Ignored(args, _) =>
@@ -20,10 +20,8 @@ object QueryFingerprint {
         case tpe: TypeEntity =>
           val thisTpe = Alternative(tpe.name, 0)
 
-          val views = findView(tpe)
-          val maxDistance = (0 +: views.flatMap(_.distance)).max
-          val alternatives = views.map(view =>
-            Alternative(view.otherEnd(tpe).name, (view.relativeDistance(maxDistance) * 10).toInt))
+          val alternatives = findAlternativesWithDistance(tpe)
+            .map { case (altTpe, dist) => Alternative(altTpe.name, dist) }
 
           Type(tpe.variance, thisTpe :: alternatives.toList, depth) ::
             tpe.args.flatMap(arg => fingerprintWithAlternatives(arg, depth + 1))

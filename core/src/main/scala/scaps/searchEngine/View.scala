@@ -11,22 +11,13 @@ sealed trait View {
   def fromKey = key(from)
   def toKey = key(to)
 
-  def distance: Option[Int]
-
-  def relativeDistance(maxDistance: Int): Double =
-    distance.fold(0.5) { dist => dist.toDouble / maxDistance }
-
-  def otherEnd(fromOrTo: TypeEntity) =
-    if (key(fromOrTo) == key(from))
-      to
-    else
-      from
+  def distance: Int
 }
 
 object View {
   def fromClass(cls: ClassEntity): Seq[View] = {
     val clsTpe = cls.toType
-    
+
     cls.baseTypes.zipWithIndex.map {
       case (base, idx) => SubType(clsTpe, base, idx + 1)
     }
@@ -36,18 +27,16 @@ object View {
     tpe.renameTypeParams(_ => "_").signature
 }
 
-case class SubType(cls: TypeEntity, baseType: TypeEntity, dist: Int) extends View {
+case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Int) extends View {
   def from = cls
   def to = baseType
 
-  def distance = Some(dist)
-
   override def toString =
-    s"$fromKey is subtype of $toKey ($dist)"
+    s"$fromKey is subtype of $toKey ($distance)"
 }
 
 case class ImplicitConversion(from: TypeEntity, to: TypeEntity, evidence: String) extends View {
-  def distance = None
+  def distance = 1
 
   override def toString =
     s"$fromKey converts implicitly to $toKey ($evidence)"
@@ -57,7 +46,7 @@ case class TypeClassImplementation(subject: TypeEntity, implementedClass: TypeEn
   def from = subject
   def to = implementedClass
 
-  def distance = None
+  def distance = 1
 
   override def toString =
     s"$fromKey implements type class $toKey ($evidence)"

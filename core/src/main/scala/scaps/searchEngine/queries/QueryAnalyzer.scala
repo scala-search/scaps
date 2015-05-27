@@ -33,7 +33,7 @@ private[queries] object ResolvedQuery {
 class QueryAnalyzer private[searchEngine] (
   settings: Settings,
   findClassesBySuffix: (String) => Seq[ClassEntity],
-  findViews: (TypeEntity) => Seq[View]) {
+  findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Int)]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
@@ -45,7 +45,7 @@ class QueryAnalyzer private[searchEngine] (
       (toType _) andThen
         (_.normalize(Nil)) andThen
         (tpe => QueryFingerprint(
-          findViews,
+          findAlternativesWithDistance,
           tpe)) andThen
         (toApiQuery _) andThen
         { apiQuery => apiQuery.copy(keywords = raw.keywords) })

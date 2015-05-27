@@ -27,14 +27,14 @@ class ViewIndex(val dir: Directory) extends Index[View] {
       }
     }
 
-  def findViews(tpe: TypeEntity): Try[Seq[View]] = Try {
+  def findAlternativesWithDistance(tpe: TypeEntity): Try[Seq[(TypeEntity, Int)]] = Try {
     tpe.variance match {
       case Covariant =>
-        findViewsTo(tpe).get
+        findViewsTo(tpe).get.map(view => (view.from, view.distance))
       case Contravariant =>
-        findViewsFrom(tpe).get
+        findViewsFrom(tpe).get.map(view => (view.to, view.distance))
       case Invariant if tpe.name != TypeEntity.Unknown.name =>
-        List(ImplicitConversion(tpe, TypeEntity.Unknown(Invariant), ""))
+        List((TypeEntity.Unknown(Invariant), 1))
       case Invariant =>
         Nil
     }

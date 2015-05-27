@@ -8,13 +8,13 @@ import scaps.utils._
 import scaps.searchEngine.View
 
 object TypeFrequencies {
-  def apply(findView: TypeEntity => Seq[View], terms: Seq[TermEntity]) = {
+  def apply(findAlternativesWithDistance: TypeEntity => Seq[(TypeEntity, Int)], terms: Seq[TermEntity]) = {
     // use weak hash map to avoid out of memory exceptions
-    val findViewCached = Memo.weakHashMapMemo { findView }
+    val findAlternativesWithDistanceCached = Memo.weakHashMapMemo { findAlternativesWithDistance }
 
     def typesReferencedFromTerm(term: TermEntity): Seq[(Variance, String)] =
       for {
-        tpe <- QueryFingerprint(findViewCached, term).types
+        tpe <- QueryFingerprint(findAlternativesWithDistanceCached, term).types
         alt <- tpe.alternatives
       } yield (tpe.variance, alt.typeName)
 
