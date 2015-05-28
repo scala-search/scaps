@@ -1,6 +1,7 @@
 package scaps.searchEngine.index
 
 import scala.util.Try
+import scala.collection.JavaConverters._
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
@@ -47,6 +48,13 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       }
     }.get
   }
+
+  def replaceAllEntities(entities: Seq[ClassEntity]): Try[Unit] =
+    withWriter { writer =>
+      val docs = entities.map(toDocument)
+      writer.deleteAll()
+      writer.addDocuments(docs.asJavaCollection)
+    }
 
   def deleteEntitiesIn(module: Module): Try[Unit] = Try {
     val q = new TermQuery(new Term(fields.modules, module.moduleId))

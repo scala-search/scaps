@@ -95,17 +95,18 @@ class SearchEngine private[searchEngine] (
         else
           t.copy(module = module)
 
-      val termsWithModule = entities.collect { case t: TermEntity => setModule(t) }
-      val classesWithModule = entities
+      val entitiesWithUnknown = ClassEntity(TypeEntity.Unknown.name, Nil, Nil) +: entities
+
+      val termsWithModule = entitiesWithUnknown
+        .collect { case t: TermEntity => setModule(t) }
+      val classesWithModule = entitiesWithUnknown
         .collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
 
-      val allClasses = classesWithModule :+ ClassEntity(TypeEntity.Unknown.name, Nil, Nil, referencedFrom = Set(module))
-
-      val views = allClasses.flatMap(View.fromClass)
+      val views = classesWithModule.flatMap(View.fromClass)
 
       val f = Future.sequence(List(
         Future { termsIndex.addEntities(termsWithModule).get },
-        Future { classesIndex.addEntities(allClasses).get },
+        Future { classesIndex.addEntities(classesWithModule).get },
         Future { viewIndex.addEntities(views).get }))
 
       Await.result(f, settings.index.timeout)
@@ -134,7 +135,7 @@ class SearchEngine private[searchEngine] (
           Invariant -> freq(Invariant)))
       }
 
-      classesIndex.addEntities(classesWithFrequencies).get
+      classesIndex.replaceAllEntities(classesWithFrequencies)
 
       logger.info(s"Type frequencies have been updated")
     }
