@@ -109,8 +109,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
         Sum(
           Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
           Max(
-            Leaf(B(Contravariant), 1, 1),
-            Leaf(A(Contravariant), 1, 2))))))
+            Leaf(B(Contravariant), 1, 0),
+            Leaf(A(Contravariant), 1, 1))))))
   }
 
   it should "handle alternatives with additional args" in {
@@ -124,8 +124,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
         Sum(
           Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
           Max(
-            Leaf(C(Contravariant), 1, 1),
-            Leaf(A(Contravariant), 1, 2))))))
+            Leaf(C(Contravariant), 1, 0),
+            Leaf(A(Contravariant), 1, 1))))))
   }
 
   it should "handle alternatives with unrelated args" in {
@@ -140,8 +140,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
         Sum(
           Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
           Max(
-            Leaf(C(Contravariant), 1, 1),
-            Leaf(A(Contravariant), 1, 2))))))
+            Leaf(C(Contravariant), 1, 0),
+            Leaf(A(Contravariant), 1, 1))))))
   }
 
   it should "expand nested types" in {
@@ -160,18 +160,18 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
             Sum(
               Leaf(MyBox(Wildcard(Covariant)), 1, 1),
               Max(
-                Leaf(B(Covariant), 2, 1))))),
+                Leaf(B(Covariant), 2, 0))))),
         Sum(
           Leaf(MyBox(Wildcard(Covariant)), 0, 1),
           Max(
             Sum(
-              Leaf(Box(Wildcard(Covariant)), 1, 1),
+              Leaf(Box(Wildcard(Covariant)), 1, 0),
               Max(
-                Leaf(B(Covariant), 2, 1))),
+                Leaf(B(Covariant), 2, 0))),
             Sum(
-              Leaf(MyBox(Wildcard(Covariant)), 1, 2),
+              Leaf(MyBox(Wildcard(Covariant)), 1, 1),
               Max(
-                Leaf(B(Covariant), 2, 2))))))))
+                Leaf(B(Covariant), 2, 0))))))))
   }
 
   val viewIndex = {

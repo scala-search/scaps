@@ -152,15 +152,15 @@ class QueryAnalyzer private[searchEngine] (
 
     def parts(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
       Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
-        tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1, dist)))
+        tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1)))
     }
 
-    def alternatives(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
-      val originalTypeParts = parts(tpe, depth, dist)
+    def alternatives(tpe: TypeEntity, depth: Int): ExpandedQuery = {
+      val originalTypeParts = parts(tpe, depth, 0)
       val alternativesParts =
         findAlternativesWithDistance(tpe).toList.map {
-          case (alt, altDist) =>
-            parts(alt, depth, dist + altDist)
+          case (alt, dist) =>
+            parts(alt, depth, dist)
         }
 
       Max(originalTypeParts :: alternativesParts)
@@ -168,7 +168,7 @@ class QueryAnalyzer private[searchEngine] (
 
     Sum(for {
       arg <- tpe.args
-    } yield alternatives(arg, 0, 0))
+    } yield alternatives(arg, 0))
   }
 
   private def toApiQuery(fingerprint: QueryFingerprint): ApiQuery = {
