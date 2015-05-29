@@ -24,6 +24,48 @@ private[queries] object ResolvedQuery {
   case class Type(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
 }
 
+sealed trait ExpandedQuery {
+  def children: List[ExpandedQuery]
+  def withChildren(children: List[ExpandedQuery]): ExpandedQuery
+}
+
+private[queries] object ExpandedQuery {
+  case class Sum(parts: List[ExpandedQuery]) extends ExpandedQuery {
+    def children = parts
+    def withChildren(children: List[ExpandedQuery]) =
+      copy(parts = children)
+
+    override def toString =
+      parts.mkString("sum(", ", ", ")")
+  }
+  object Sum {
+    def apply(parts: ExpandedQuery*): Sum =
+      Sum(parts.toList)
+  }
+
+  case class Max(alternatives: List[ExpandedQuery]) extends ExpandedQuery {
+    def children = alternatives
+    def withChildren(children: List[ExpandedQuery]) =
+      copy(alternatives = children)
+
+    override def toString =
+      alternatives.mkString("max(", ", ", ")")
+  }
+  object Max {
+    def apply(alts: ExpandedQuery*): Max =
+      Max(alts.toList)
+  }
+
+  case class Leaf(tpe: TypeEntity, depth: Int, dist: Int) extends ExpandedQuery {
+    def children = Nil
+    def withChildren(children: List[ExpandedQuery]) =
+      this
+
+    override def toString =
+      s"$tpe^($depth, $dist)"
+  }
+}
+
 /**
  * Analyzes parsed queries.
  *
@@ -100,6 +142,31 @@ class QueryAnalyzer private[searchEngine] (
       }
 
     rec(resolved, Covariant)
+  }
+
+  /**
+   * Builds the query structure of parts and alternatives for a type.
+   */
+  def expandQuery(tpe: TypeEntity): ExpandedQuery = {
+    import ExpandedQuery._
+
+    def parts(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
+      Sum(Leaf(tpe, depth, dist) ::
+        tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1, dist)))
+    }
+
+    def alternatives(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
+      Max(parts(tpe, depth, dist) ::
+        findAlternativesWithDistance(tpe).toList.map {
+          case (alt, altDist) =>
+            val currDist = dist + altDist
+            parts(alt, depth, currDist)
+        })
+    }
+
+    Sum(for {
+      arg <- tpe.args
+    } yield alternatives(arg, 0, 0))
   }
 
   private def toApiQuery(fingerprint: QueryFingerprint): ApiQuery = {

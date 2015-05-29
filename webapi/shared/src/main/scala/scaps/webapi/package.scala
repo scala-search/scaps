@@ -183,6 +183,10 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
 
   def toList: List[TypeEntity] = this :: args.flatMap(_.toList)
 
+  def withVariance(v: Variance): TypeEntity =
+    if (variance == v) this
+    else copy(variance = variance * v, args = args.map(arg => arg.withVariance(arg.variance * v)))
+
   def transform(f: TypeEntity => TypeEntity): TypeEntity =
     f(this.copy(args = args.map(_.transform(f))))
 
