@@ -26,43 +26,46 @@ private[queries] object ResolvedQuery {
 
 sealed trait ExpandedQuery {
   def children: List[ExpandedQuery]
-  def withChildren(children: List[ExpandedQuery]): ExpandedQuery
 }
 
 private[queries] object ExpandedQuery {
-  case class Sum(parts: List[ExpandedQuery]) extends ExpandedQuery {
-    def children = parts
-    def withChildren(children: List[ExpandedQuery]) =
-      copy(parts = children)
+  sealed trait Part extends ExpandedQuery
+  sealed trait Alternative extends ExpandedQuery
+
+  case class Sum(parts: List[Part]) extends Alternative {
+    val children = parts
 
     override def toString =
       parts.mkString("sum(", ", ", ")")
   }
   object Sum {
-    def apply(parts: ExpandedQuery*): Sum =
+    def apply(parts: Part*): Sum =
       Sum(parts.toList)
   }
 
-  case class Max(alternatives: List[ExpandedQuery]) extends ExpandedQuery {
-    def children = alternatives
-    def withChildren(children: List[ExpandedQuery]) =
-      copy(alternatives = children)
+  case class Max(alternatives: List[Alternative]) extends Part {
+    val children = alternatives
 
     override def toString =
       alternatives.mkString("max(", ", ", ")")
   }
   object Max {
-    def apply(alts: ExpandedQuery*): Max =
+    def apply(alts: Alternative*): Max =
       Max(alts.toList)
   }
 
-  case class Leaf(tpe: TypeEntity, depth: Int, dist: Int) extends ExpandedQuery {
-    def children = Nil
-    def withChildren(children: List[ExpandedQuery]) =
-      this
+  case class Leaf(tpe: TypeEntity, depth: Int, dist: Int) extends Part with Alternative {
+    val children = Nil
 
     override def toString =
       s"$tpe^($depth, $dist)"
+  }
+
+  def minimizeClauses(q: ExpandedQuery): ExpandedQuery = q match {
+    case l: Leaf => l
+    case _       => q
+    //    case Sum(parts) => Sum(parts.map(minimizeClauses))
+    //    case Max(alts)  => Max(alts.map(minimizeClauses))
   }
 }
 
@@ -147,15 +150,15 @@ class QueryAnalyzer private[searchEngine] (
   /**
    * Builds the query structure of parts and alternatives for a type.
    */
-  def expandQuery(tpe: TypeEntity): ExpandedQuery = {
+  def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
-    def parts(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
+    def parts(tpe: TypeEntity, depth: Int, dist: Int): Alternative = {
       Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
         tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1)))
     }
 
-    def alternatives(tpe: TypeEntity, depth: Int): ExpandedQuery = {
+    def alternatives(tpe: TypeEntity, depth: Int): Part = {
       val originalTypeParts = parts(tpe, depth, 0)
       val alternativesParts =
         findAlternativesWithDistance(tpe).toList.map {

@@ -66,11 +66,12 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val q = TypeEntity.Ignored(A(Covariant) :: Nil)
 
     expand(q) should be(unified(
-      Max(
-        Leaf(A(Covariant), 0, 0),
-        Leaf(B(Covariant), 0, 1),
-        Leaf(C(Covariant), 0, 1),
-        Leaf(D(Covariant), 0, 2))))
+      Sum(
+        Max(
+          Leaf(A(Covariant), 0, 0),
+          Leaf(B(Covariant), 0, 1),
+          Leaf(C(Covariant), 0, 1),
+          Leaf(D(Covariant), 0, 2)))))
   }
 
   it should "use alternative types at contravariant positions" in {
@@ -78,10 +79,11 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val q = TypeEntity.Ignored(D(Contravariant) :: Nil)
 
     expand(q) should be(unified(
-      Max(
-        Leaf(D(Contravariant), 0, 0),
-        Leaf(C(Contravariant), 0, 1),
-        Leaf(A(Contravariant), 0, 2))))
+      Sum(
+        Max(
+          Leaf(D(Contravariant), 0, 0),
+          Leaf(C(Contravariant), 0, 1),
+          Leaf(A(Contravariant), 0, 2)))))
   }
 
   it should "split types with args into a sum query" in {
@@ -89,10 +91,11 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val q = TypeEntity.Ignored(Box(A(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
-      Max(
-        Sum(
-          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 0),
-          Leaf(A(Contravariant), 1, 0)))))
+      Sum(
+        Max(
+          Sum(
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 0),
+            Leaf(A(Contravariant), 1, 0))))))
   }
 
   it should "handle alternatives of types with args" in {
@@ -100,17 +103,18 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val q = TypeEntity.Ignored(MyBox(B(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
-      Max(
-        Sum(
-          Leaf(MyBox(Wildcard(Contravariant), Contravariant), 0, 0),
-          Max(
-            Leaf(B(Contravariant), 1, 0),
-            Leaf(A(Contravariant), 1, 1))),
-        Sum(
-          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
-          Max(
-            Leaf(B(Contravariant), 1, 0),
-            Leaf(A(Contravariant), 1, 1))))))
+      Sum(
+        Max(
+          Sum(
+            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 0, 0),
+            Max(
+              Leaf(B(Contravariant), 1, 0),
+              Leaf(A(Contravariant), 1, 1))),
+          Sum(
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
+            Max(
+              Leaf(B(Contravariant), 1, 0),
+              Leaf(A(Contravariant), 1, 1)))))))
   }
 
   it should "handle alternatives with additional args" in {
@@ -118,14 +122,15 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val q = TypeEntity.Ignored(CBox(Contravariant) :: Nil)
 
     expand(q) should be(unified(
-      Max(
-        Sum(
-          Leaf(CBox(Contravariant), 0, 0)),
-        Sum(
-          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
-          Max(
-            Leaf(C(Contravariant), 1, 0),
-            Leaf(A(Contravariant), 1, 1))))))
+      Sum(
+        Max(
+          Sum(
+            Leaf(CBox(Contravariant), 0, 0)),
+          Sum(
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
+            Max(
+              Leaf(C(Contravariant), 1, 0),
+              Leaf(A(Contravariant), 1, 1)))))))
   }
 
   it should "handle alternatives with unrelated args" in {
@@ -133,45 +138,42 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val q = TypeEntity.Ignored(GenericCBox(X(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
-      Max(
-        Sum(
-          Leaf(GenericCBox(Wildcard(Contravariant), Contravariant), 0, 0),
-          Leaf(X(Contravariant), 1, 0)),
-        Sum(
-          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
-          Max(
-            Leaf(C(Contravariant), 1, 0),
-            Leaf(A(Contravariant), 1, 1))))))
+      Sum(
+        Max(
+          Sum(
+            Leaf(GenericCBox(Wildcard(Contravariant), Contravariant), 0, 0),
+            Leaf(X(Contravariant), 1, 0)),
+          Sum(
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
+            Max(
+              Leaf(C(Contravariant), 1, 0),
+              Leaf(A(Contravariant), 1, 1)))))))
   }
 
   it should "expand nested types" in {
     // () => Box[Box[B]]
     val q = TypeEntity.Ignored(Box(Box(B(Covariant), Covariant), Covariant) :: Nil)
 
-    expand(q) should be(unified(
+    val innerBoxParts =
       Max(
         Sum(
-          Leaf(Box(Wildcard(Covariant)), 0, 0),
+          Leaf(Box(Wildcard(Covariant)), 1, 0),
           Max(
-            Sum(
-              Leaf(Box(Wildcard(Covariant)), 1, 0),
-              Max(
-                Leaf(B(Covariant), 2, 0))),
-            Sum(
-              Leaf(MyBox(Wildcard(Covariant)), 1, 1),
-              Max(
-                Leaf(B(Covariant), 2, 0))))),
+            Leaf(B(Covariant), 2, 0))),
         Sum(
-          Leaf(MyBox(Wildcard(Covariant)), 0, 1),
+          Leaf(MyBox(Wildcard(Covariant)), 1, 1),
           Max(
-            Sum(
-              Leaf(Box(Wildcard(Covariant)), 1, 0),
-              Max(
-                Leaf(B(Covariant), 2, 0))),
-            Sum(
-              Leaf(MyBox(Wildcard(Covariant)), 1, 1),
-              Max(
-                Leaf(B(Covariant), 2, 0))))))))
+            Leaf(B(Covariant), 2, 0))))
+
+    expand(q) should be(unified(
+      Sum(
+        Max(
+          Sum(
+            Leaf(Box(Wildcard(Covariant)), 0, 0),
+            innerBoxParts),
+          Sum(
+            Leaf(MyBox(Wildcard(Covariant)), 0, 1),
+            innerBoxParts)))))
   }
 
   val viewIndex = {
@@ -193,14 +195,30 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     case s: Sum  => (2, s.hashCode())
     case m: Max  => (3, m.hashCode())
   }
+  implicit val partOrdering: Ordering[Part] = Ordering[ExpandedQuery].on(identity)
+  implicit val altOrdering: Ordering[Alternative] = Ordering[ExpandedQuery].on(identity)
 
-  def unified(q: ExpandedQuery): ExpandedQuery = q.children match {
-    case Nil => q match {
-      case Leaf(t, depth, dist) =>
-        Leaf(t.renameTypeParams(_ => "_"), depth, dist)
-      case _ => q
-    }
-    case Seq(child) => unified(child)
-    case cs         => q.withChildren(cs.map(unified).sorted)
-  }
+  def unified(q: Part): Part = (q match {
+    case Max(Sum(Max(children) :: Nil) :: Nil) =>
+      Max(children.map(unified))
+    case Max(children) =>
+      children.map(unified).sorted match {
+        case (child: Leaf) :: Nil => child
+        case cs                   => Max(cs)
+      }
+    case Leaf(t, depth, dist) =>
+      Leaf(t.renameTypeParams(_ => "_"), depth, dist)
+  })
+
+  def unified(q: Alternative): Alternative = (q match {
+    case Sum(Max(Sum(children) :: Nil) :: Nil) =>
+      Sum(children.map(unified))
+    case Sum(children) =>
+      children.map(unified).sorted match {
+        case (child: Leaf) :: Nil => child
+        case cs                   => Sum(cs)
+      }
+    case Leaf(t, depth, dist) =>
+      Leaf(t.renameTypeParams(_ => "_"), depth, dist)
+  })
 }
