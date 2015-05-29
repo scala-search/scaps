@@ -196,10 +196,10 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
       else tpe
     }
 
-  def withParamsAsArgs: TypeEntity =
+  def withArgsAsParams: TypeEntity =
     copy(args = args.zipWithIndex.map {
       case (arg, idx) =>
-        TypeEntity(s"$$$idx", arg.variance, Nil, true)
+        TypeEntity(s"$$$idx", arg.variance, Nil, isTypeParam = true)
     })
 
   def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity = {

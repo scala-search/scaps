@@ -151,17 +151,19 @@ class QueryAnalyzer private[searchEngine] (
     import ExpandedQuery._
 
     def parts(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
-      Sum(Leaf(tpe, depth, dist) ::
+      Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
         tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1, dist)))
     }
 
     def alternatives(tpe: TypeEntity, depth: Int, dist: Int): ExpandedQuery = {
-      Max(parts(tpe, depth, dist) ::
+      val originalTypeParts = parts(tpe, depth, dist)
+      val alternativesParts =
         findAlternativesWithDistance(tpe).toList.map {
           case (alt, altDist) =>
-            val currDist = dist + altDist
-            parts(alt, depth, currDist)
-        })
+            parts(alt, depth, dist + altDist)
+        }
+
+      Max(originalTypeParts :: alternativesParts)
     }
 
     Sum(for {

@@ -15,10 +15,10 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]
-   *        ^                       ^            ^
-   *    /---|---\                   |            |
-   *    B       C                MyBox[+T]      CBox
+   *        A          X          Box[+T]      Box[C]       Box[C]
+   *        ^                       ^            ^            ^
+   *    /---|---\                   |            |            |
+   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]
    *            ^
    *            |
    *            D
@@ -30,9 +30,11 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val X = new TypeEntity.PrimitiveType("X")
 
   val T = (v: Variance) => TypeEntity("T", v, Nil, isTypeParam = true)
+  val Wildcard = (v: Variance) => TypeEntity("_", v, Nil, isTypeParam = true)
   val Box = new TypeEntity.GenericType("Box")
   val MyBox = new TypeEntity.GenericType("MyBox")
   val CBox = new TypeEntity.PrimitiveType("CBox")
+  val GenericCBox = new TypeEntity.GenericType("GenericCBox")
 
   val views = {
     def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
@@ -44,7 +46,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       isSubTypeOf(D(_), C(_), 1),
       isSubTypeOf(D(_), A(_), 2),
       isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
-      isSubTypeOf(CBox(_), v => Box(C(v), v), 1))
+      isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
+      isSubTypeOf(v => GenericCBox(T(v), v), v => Box(C(v), v), 1))
   }
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {
@@ -88,8 +91,87 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     expand(q) should be(unified(
       Max(
         Sum(
-          Leaf(Box(A(Contravariant), Contravariant), 0, 0),
+          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 0),
           Leaf(A(Contravariant), 1, 0)))))
+  }
+
+  it should "handle alternatives of types with args" in {
+    // MyBox[B] => _
+    val q = TypeEntity.Ignored(MyBox(B(Contravariant), Contravariant) :: Nil)
+
+    expand(q) should be(unified(
+      Max(
+        Sum(
+          Leaf(MyBox(Wildcard(Contravariant), Contravariant), 0, 0),
+          Max(
+            Leaf(B(Contravariant), 1, 0),
+            Leaf(A(Contravariant), 1, 1))),
+        Sum(
+          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
+          Max(
+            Leaf(B(Contravariant), 1, 1),
+            Leaf(A(Contravariant), 1, 2))))))
+  }
+
+  it should "handle alternatives with additional args" in {
+    // CBox => _
+    val q = TypeEntity.Ignored(CBox(Contravariant) :: Nil)
+
+    expand(q) should be(unified(
+      Max(
+        Sum(
+          Leaf(CBox(Contravariant), 0, 0)),
+        Sum(
+          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
+          Max(
+            Leaf(C(Contravariant), 1, 1),
+            Leaf(A(Contravariant), 1, 2))))))
+  }
+
+  it should "handle alternatives with unrelated args" in {
+    // GenericCBox[X] => _
+    val q = TypeEntity.Ignored(GenericCBox(X(Contravariant), Contravariant) :: Nil)
+
+    expand(q) should be(unified(
+      Max(
+        Sum(
+          Leaf(GenericCBox(Wildcard(Contravariant), Contravariant), 0, 0),
+          Leaf(X(Contravariant), 1, 0)),
+        Sum(
+          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 1),
+          Max(
+            Leaf(C(Contravariant), 1, 1),
+            Leaf(A(Contravariant), 1, 2))))))
+  }
+
+  it should "expand nested types" in {
+    // () => Box[Box[B]]
+    val q = TypeEntity.Ignored(Box(Box(B(Covariant), Covariant), Covariant) :: Nil)
+
+    expand(q) should be(unified(
+      Max(
+        Sum(
+          Leaf(Box(Wildcard(Covariant)), 0, 0),
+          Max(
+            Sum(
+              Leaf(Box(Wildcard(Covariant)), 1, 0),
+              Max(
+                Leaf(B(Covariant), 2, 0))),
+            Sum(
+              Leaf(MyBox(Wildcard(Covariant)), 1, 1),
+              Max(
+                Leaf(B(Covariant), 2, 1))))),
+        Sum(
+          Leaf(MyBox(Wildcard(Covariant)), 0, 1),
+          Max(
+            Sum(
+              Leaf(Box(Wildcard(Covariant)), 1, 1),
+              Max(
+                Leaf(B(Covariant), 2, 1))),
+            Sum(
+              Leaf(MyBox(Wildcard(Covariant)), 1, 2),
+              Max(
+                Leaf(B(Covariant), 2, 2))))))))
   }
 
   val viewIndex = {
@@ -113,7 +195,11 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   }
 
   def unified(q: ExpandedQuery): ExpandedQuery = q.children match {
-    case Nil        => q
+    case Nil => q match {
+      case Leaf(t, depth, dist) =>
+        Leaf(t.renameTypeParams(_ => "_"), depth, dist)
+      case _ => q
+    }
     case Seq(child) => unified(child)
     case cs         => q.withChildren(cs.map(unified).sorted)
   }

@@ -28,35 +28,53 @@ class ViewIndex(val dir: Directory) extends Index[View] {
     }
 
   def findAlternativesWithDistance(tpe: TypeEntity): Try[Seq[(TypeEntity, Int)]] = Try {
-    tpe.variance match {
+    def alignVariance(alt: TypeEntity) =
+      alt.withVariance(tpe.variance)
+
+    def alignTypeArgs(alt: TypeEntity, source: TypeEntity) = {
+      val alignedArgs = alt.args.map { arg =>
+        source.args.indexOf(arg) match {
+          case -1     => arg
+          case argIdx => tpe.args(argIdx)
+        }
+      }
+
+      alt.copy(args = alignedArgs)
+    }
+
+    val (sources, alternatives, distances) = (tpe.variance match {
       case Covariant =>
-        findViewsTo(tpe).get.map(view => (view.from.withVariance(Covariant), view.distance))
+        findViewsTo(tpe).get.map(view => (view.to, view.from, view.distance))
       case Contravariant =>
-        findViewsFrom(tpe).get.map(view => (view.to.withVariance(Contravariant), view.distance))
+        findViewsFrom(tpe).get.map(view => (view.from, view.to, view.distance))
       case Invariant if tpe.name != TypeEntity.Unknown.name =>
-        List((TypeEntity.Unknown(Invariant), 1))
+        List((tpe, TypeEntity.Unknown(Invariant), 1))
       case Invariant =>
         Nil
-    }
+    }).unzip3
+
+    alternatives
+      .map(alignVariance)
+      .zip(sources.map(alignVariance))
+      .map((alignTypeArgs _).tupled)
+      .zip(distances)
   }
 
-  def findViewsFrom(tpe: TypeEntity) =
+  private def findViewsFrom(tpe: TypeEntity): Try[Seq[View]] =
     findViews(tpe, fields.from)
 
-  def findViewsTo(tpe: TypeEntity) =
+  private def findViewsTo(tpe: TypeEntity): Try[Seq[View]] =
     findViews(tpe, fields.to)
 
   private def findViews(tpe: TypeEntity, field: String): Try[Seq[View]] =
     Try {
-      val q = new TermQuery(new Term(field, View.key(tpe)))
+      val altsOfGenericTpe =
+        if (tpe.args.exists(!_.isTypeParam))
+          findViews(tpe.withArgsAsParams, field).get
+        else
+          Seq()
 
-      val res = search(q).get
-
-      if (res.isEmpty && tpe.args.exists(!_.isTypeParam)) {
-        findViews(tpe.withParamsAsArgs, field).get
-      } else {
-        res
-      }
+      altsOfGenericTpe ++ search(new TermQuery(new Term(field, View.key(tpe)))).get
     }
 
   private def viewId(v: View) =
