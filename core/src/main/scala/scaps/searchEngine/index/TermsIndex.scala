@@ -1,11 +1,9 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -32,7 +30,6 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
-
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.searchEngine.ApiQuery
@@ -42,6 +39,7 @@ import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
+import org.apache.lucene.search.ConstantScoreQuery
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -107,18 +105,17 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         keysAndTypes.add(docQuery, Occur.SHOULD)
       }
 
-      for { tpe <- query.types } {
-        val disMaxQ = new DisjunctionMaxQuery(0)
-
-        tpe.alternatives.foreach { alt =>
-          val fingerprint = s"${alt.variance.prefix}${alt.typeName}_${alt.occurrence}"
-          val tq = new TermQuery(new Term(fields.fingerprint, fingerprint))
-          tq.setBoost(alt.boost.toFloat)
-          disMaxQ.add(tq)
+      val types = {
+        val q = new BooleanQuery
+        for { tpe <- query.tpe.allTypes } {
+          val term = s"${tpe.variance.prefix}${tpe.typeName}"
+          q.add(new TermQuery(new Term(fields.fingerprint, term)), Occur.SHOULD)
         }
-
-        keysAndTypes.add(disMaxQ, Occur.SHOULD)
+        val cq = new ConstantScoreQuery(q)
+        cq.setBoost(0.01f)
+        cq
       }
+      keysAndTypes.add(types, Occur.SHOULD)
 
       val modules = new BooleanQuery
 
@@ -130,6 +127,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       } else {
         modules.add(new MatchAllDocsQuery, Occur.SHOULD)
       }
+      modules.setBoost(0.01f)
 
       val q = new BooleanQuery
       q.add(keysAndTypes, Occur.MUST)
@@ -155,9 +153,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
-    Fingerprint(entity).typesWithOccurrenceIndex.foreach {
-      case (tpe, idx) =>
-        add(fields.fingerprint, s"${tpe.variance.prefix}${tpe.name}_${idx}")
+    Fingerprint(entity).types.foreach { tpe =>
+      add(fields.fingerprint, s"${tpe.variance.prefix}${tpe.name}")
     }
     add(fields.doc, entity.comment)
     doc.add(new StoredField(fields.entity, upickle.write(entity)))

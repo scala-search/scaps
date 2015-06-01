@@ -4,6 +4,7 @@ import scalaz.{ \/ => \/ }
 import scalaz.std.list.listInstance
 import scalaz.syntax.traverse.ToTraverseOps
 import scaps.searchEngine.ApiQuery
+import scaps.searchEngine.ApiTypeQuery
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.QueryFingerprint
@@ -25,6 +26,8 @@ private[queries] object ResolvedQuery {
 }
 
 sealed trait ExpandedQuery {
+  import ExpandedQuery._
+
   def children: List[ExpandedQuery]
 }
 
@@ -62,10 +65,9 @@ private[queries] object ExpandedQuery {
   }
 
   def minimizeClauses(q: ExpandedQuery): ExpandedQuery = q match {
-    case l: Leaf => l
-    case _       => q
-    //    case Sum(parts) => Sum(parts.map(minimizeClauses))
-    //    case Max(alts)  => Max(alts.map(minimizeClauses))
+    case l: Leaf           => l
+    case Sum(parts)        => q
+    case Max(alternatives) => q
   }
 }
 
@@ -89,11 +91,9 @@ class QueryAnalyzer private[searchEngine] (
     resolveNames(raw.tpe).map(
       (toType _) andThen
         (_.normalize(Nil)) andThen
-        (tpe => QueryFingerprint(
-          findAlternativesWithDistance,
-          tpe)) andThen
-        (toApiQuery _) andThen
-        { apiQuery => apiQuery.copy(keywords = raw.keywords) })
+        (expandQuery _) andThen
+        (toApiTypeQuery _) andThen
+        { typeQuery => ApiQuery(raw.keywords, typeQuery) })
 
   /**
    * Resolves all type names in the query and assigns the according class entities.
@@ -153,9 +153,12 @@ class QueryAnalyzer private[searchEngine] (
   def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
-    def parts(tpe: TypeEntity, depth: Int, dist: Int): Alternative = {
-      Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
-        tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1)))
+    def parts(tpe: TypeEntity, depth: Int, dist: Int): Alternative = tpe match {
+      case TypeEntity.Ignored(args, v) =>
+        Sum(args.map(alternatives(_, depth)))
+      case tpe =>
+        Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
+          tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1)))
     }
 
     def alternatives(tpe: TypeEntity, depth: Int): Part = {
@@ -169,43 +172,25 @@ class QueryAnalyzer private[searchEngine] (
       Max(originalTypeParts :: alternativesParts)
     }
 
-    Sum(for {
-      arg <- tpe.args
-    } yield alternatives(arg, 0))
+    parts(tpe, 0, 0)
   }
 
-  private def toApiQuery(fingerprint: QueryFingerprint): ApiQuery = {
-    val flattenedTypes = fingerprint.types.zipWithIndex.flatMap {
-      case (tpe, idx) => tpe.alternatives.map(alt =>
-        (idx, tpe.variance, alt.typeName, boost(tpe, alt)))
-    }
-
-    val typesByVarianceAndName = flattenedTypes.groupBy(t => (t._2 /* variance */ , t._3 /* name */ )).values
-
-    val withOccurrenceIndex = typesByVarianceAndName.map { types =>
-      types.sortBy(-_._4 /* boost */ ).zipWithIndex.map {
-        case ((tpeIndex, variance, altName, boost), occIndex) =>
-          (tpeIndex, ApiQuery.Alternative(variance, altName, occIndex, boost))
-      }
-    }.flatten
-
-    val queryTypes = withOccurrenceIndex.groupBy(t => (t._1 /* original type index */ )).map {
-      case (tpeIndex, alts) => ApiQuery.Type(alts.map(_._2).toList)
-    }
-
-    ApiQuery(Nil, queryTypes.toList)
+  private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {
+    case ExpandedQuery.Sum(parts) => ApiTypeQuery.Sum(parts.map(toApiTypeQuery))
+    case ExpandedQuery.Max(alts)  => ApiTypeQuery.Max(alts.map(toApiTypeQuery))
+    case l: ExpandedQuery.Leaf    => ApiTypeQuery.Type(l.tpe.variance, l.tpe.name, boost(l))
   }
 
-  private def boost(tpe: QueryFingerprint.Type, alt: QueryFingerprint.Alternative): Double = {
+  private def boost(l: ExpandedQuery.Leaf): Double = {
     val maxFrequency = settings.index.typeFrequenciesSampleSize
 
-    val freq = math.min(getFrequency(tpe.variance, alt.typeName), maxFrequency)
+    val freq = math.min(getFrequency(l.tpe.variance, l.tpe.name), maxFrequency)
     val itf = math.log((maxFrequency.toDouble + 1) / (freq + 1))
 
     weightedGeometricMean(
       itf -> settings.query.typeFrequencyWeight,
-      1d / (tpe.depth + 1) -> settings.query.depthBoostWeight,
-      1d / (alt.distance + 1) -> settings.query.distanceBoostWeight)
+      1d / (l.depth + 1) -> settings.query.depthBoostWeight,
+      1d / (l.dist + 1) -> settings.query.distanceBoostWeight)
   }
 
   /**

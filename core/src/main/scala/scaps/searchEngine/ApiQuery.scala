@@ -2,21 +2,43 @@ package scaps.searchEngine
 
 import scaps.webapi.Variance
 
-case class ApiQuery(keywords: List[String], types: List[ApiQuery.Type]) {
-  lazy val allAlternatives = types.flatMap(_.alternatives)
-
+case class ApiQuery(keywords: List[String], tpe: ApiTypeQuery) {
   override def toString =
-    s"${keywords.mkString(" ")}: ${types.mkString(" ")}"
+    s"${keywords.mkString(" ")}: $tpe"
+
+  def allTypes = tpe.allTypes
 }
 
-object ApiQuery {
-  case class Type(alternatives: List[Alternative]) {
+sealed trait ApiTypeQuery {
+  import ApiTypeQuery._
+
+  def children: List[ApiTypeQuery]
+
+  def allTypes: List[Type] = this match {
+    case t: Type => List(t)
+    case _       => children.flatMap(_.allTypes)
+  }
+}
+
+object ApiTypeQuery {
+  case class Sum(parts: List[ApiTypeQuery]) extends ApiTypeQuery {
+    def children = parts
+
     override def toString =
-      alternatives.map(_.toString).mkString("(", " ", ")")
+      parts.mkString("sum(", ", ", ")")
   }
 
-  case class Alternative(variance: Variance, typeName: String, occurrence: Int, boost: Double) {
+  case class Max(alternatives: List[ApiTypeQuery]) extends ApiTypeQuery {
+    def children = alternatives
+
     override def toString =
-      s"${variance.prefix}${typeName}_$occurrence^${(boost * 100).round.toFloat / 100}"
+      alternatives.mkString("max(", ", ", ")")
+  }
+
+  case class Type(variance: Variance, typeName: String, boost: Double) extends ApiTypeQuery {
+    def children = Nil
+
+    override def toString =
+      s"${variance.prefix}${typeName}^$boost"
   }
 }

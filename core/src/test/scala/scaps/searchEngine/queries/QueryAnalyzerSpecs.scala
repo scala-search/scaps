@@ -59,7 +59,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   "the query analyzer" should "resolve type names" in {
     val res = expectSuccess("Aa")
 
-    res.allAlternatives.mkString(" ") should include("p.Aa")
+    res.allTypes.mkString(" ") should include("p.Aa")
   }
 
   it should "fail on unknown names" in {
@@ -88,7 +88,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "prefer names from the Scala standard library over other namespaces" in {
     val res = expectSuccess("List")
 
-    res.allAlternatives.mkString(" ") should (
+    res.allTypes.mkString(" ") should (
       include("scala.collection.immutable.List") and
       not include ("p.List"))
   }
@@ -96,7 +96,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "prefer names from the `scala` root namespace over names from subpackages of `scala`" in {
     val res = expectSuccess("Int")
 
-    res.allAlternatives.mkString(" ") should (
+    res.allTypes.mkString(" ") should (
       include("scala.Int") and
       not include ("scala.pkg.Int"))
   }
@@ -104,26 +104,17 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "correctly trace variance in nested type constructor applications" in {
     val res = expectSuccess("(Aa => Bb) => (Cc => Dd)")
 
-    res.allAlternatives.mkString(" ") should (
-      include("+p.Aa_0") and
-      include("-p.Bb_0") and
-      include("-p.Cc_0") and
-      include("+p.Dd_0"))
-  }
-
-  it should "add increasing occurrence numbers to repeated elements" in {
-    val res = expectSuccess("(Aa, Aa, Aa)")
-
-    res.allAlternatives.mkString(" ") should (
-      include("+p.Aa_0") and
-      include("+p.Aa_1") and
-      include("+p.Aa_2"))
+    res.allTypes.mkString(" ") should (
+      include("+p.Aa") and
+      include("-p.Bb") and
+      include("-p.Cc") and
+      include("+p.Dd"))
   }
 
   it should "include sub classes of types at covariant positions" in {
     val res = expectSuccess("_ => Aa")
 
-    res.allAlternatives.mkString(" ") should (
+    res.allTypes.mkString(" ") should (
       include("p.Bb") and
       include("p.Cc") and
       include("p.Dd"))
@@ -132,14 +123,14 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "not use the bottom type as a sub class of every type" in {
     val res = expectSuccess("_ => Aa")
 
-    res.allAlternatives.mkString(" ") should (
+    res.allTypes.mkString(" ") should (
       not include ("+scala.Nothing"))
   }
 
   it should "include base classes of types at contravariant positions" in {
     val res = expectSuccess("Cc => _")
 
-    res.allAlternatives.mkString(" ") should (
+    res.allTypes.mkString(" ") should (
       include("p.Bb") and
       include("p.Aa") and
       include("scala.Any"))
@@ -148,8 +139,8 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "yield a lower boost for types in deeper nested positions" in {
     val res = expectSuccess("(Float, (Int, _))")
 
-    val Float = res.allAlternatives.find(_.typeName == TypeEntity.Float.name).get
-    val Int = res.allAlternatives.find(_.typeName == TypeEntity.Int.name).get
+    val Float = res.allTypes.find(_.typeName == TypeEntity.Float.name).get
+    val Int = res.allTypes.find(_.typeName == TypeEntity.Int.name).get
 
     Float.boost should be > (Int.boost)
   }
@@ -157,7 +148,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "yield a boost of 1 for a single type" in {
     val res = expectSuccess("Aa")
 
-    val Aa = res.allAlternatives.find(_.typeName == "p.Aa").get
+    val Aa = res.allTypes.find(_.typeName == "p.Aa").get
 
     Aa.boost should be(1d +- 0.01f)
   }
@@ -165,7 +156,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "omit the outermost function application" in {
     val res = expectSuccess("Aa => Bb")
 
-    res.allAlternatives.mkString(" ") should not include ("Function1")
+    res.allTypes.mkString(" ") should not include ("Function1")
   }
 
   it should "normalize curried querries" in {
@@ -183,7 +174,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "preserve function arguments in higher kinded queries" in {
     val res = expectSuccess("(Aa => Bb) => Cc")
 
-    res.allAlternatives.mkString(" ") should include("-scala.Function1_0")
+    res.allTypes.mkString(" ") should include("-scala.Function1")
   }
 
   def expectSuccess(s: String) = {
