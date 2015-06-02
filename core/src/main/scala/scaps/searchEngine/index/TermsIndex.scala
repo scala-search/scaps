@@ -40,6 +40,8 @@ import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
 import org.apache.lucene.search.ConstantScoreQuery
+import org.apache.lucene.document.Field
+import org.apache.lucene.document.FieldType
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -105,17 +107,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         keysAndTypes.add(docQuery, Occur.SHOULD)
       }
 
-      val types = {
-        val q = new BooleanQuery
-        for { tpe <- query.tpe.allTypes } {
-          val term = s"${tpe.variance.prefix}${tpe.typeName}"
-          q.add(new TermQuery(new Term(fields.fingerprint, term)), Occur.SHOULD)
-        }
-        val cq = new ConstantScoreQuery(q)
-        cq.setBoost(0.01f)
-        cq
-      }
-      keysAndTypes.add(types, Occur.SHOULD)
+      val tfpq = new TypeFingerprintQuery(fields.fingerprint, query.tpe)
+      keysAndTypes.add(tfpq, Occur.SHOULD)
 
       val modules = new BooleanQuery
 
@@ -127,7 +120,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       } else {
         modules.add(new MatchAllDocsQuery, Occur.SHOULD)
       }
-      modules.setBoost(0.01f)
+      modules.setBoost(0)
 
       val q = new BooleanQuery
       q.add(keysAndTypes, Occur.MUST)
@@ -154,7 +147,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
     Fingerprint(entity).types.foreach { tpe =>
-      add(fields.fingerprint, s"${tpe.variance.prefix}${tpe.name}")
+      doc.add(new TextWithTermVectorField(fields.fingerprint, s"${tpe.variance.prefix}${tpe.name}", Store.YES))
     }
     add(fields.doc, entity.comment)
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
@@ -203,5 +196,20 @@ object TermsIndex {
 
   class ModuleIdSimilarity extends DefaultSimilarity {
     override def idf(docFreq: Long, numDocs: Long) = 1f
+  }
+
+  class TextWithTermVectorField(name: String, value: String, store: Store)
+    extends Field(name, value, TextWithTermVectorField.fieldType(store))
+
+  object TextWithTermVectorField {
+    def fieldType(store: Store): FieldType = {
+      val tpe = new FieldType
+      tpe.setIndexed(true)
+      tpe.setTokenized(true)
+      tpe.setStoreTermVectors(true)
+      tpe.setStored(store == Store.YES)
+      tpe.freeze()
+      tpe
+    }
   }
 }

@@ -18,6 +18,7 @@ object Dependencies {
   val luceneVersion = "4.10.4"
   val luceneCore = "org.apache.lucene" % "lucene-core" % luceneVersion
   val luceneAnalyzersCommon = "org.apache.lucene" % "lucene-analyzers-common" % luceneVersion
+  val luceneQueries = "org.apache.lucene" % "lucene-queries" % luceneVersion
 
   val akkaVersion = "2.3.9"
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -51,7 +52,8 @@ object Dependencies {
     logging,
     logback,
     luceneCore,
-    luceneAnalyzersCommon)
+    luceneAnalyzersCommon,
+    luceneQueries)
 
   val evaluationDependencies = Seq(
     scalatest,

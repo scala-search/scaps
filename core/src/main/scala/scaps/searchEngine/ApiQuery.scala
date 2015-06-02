@@ -28,6 +28,10 @@ object ApiTypeQuery {
       parts.mkString("sum(", ", ", ")")
   }
 
+  object Sum {
+    def apply(parts: ApiTypeQuery*): Sum = Sum(parts.toList)
+  }
+
   case class Max(alternatives: List[ApiTypeQuery]) extends ApiTypeQuery {
     def children = alternatives
 
@@ -35,8 +39,14 @@ object ApiTypeQuery {
       alternatives.mkString("max(", ", ", ")")
   }
 
+  object Max {
+    def apply(alternatives: ApiTypeQuery*): Max = Max(alternatives.toList)
+  }
+
   case class Type(variance: Variance, typeName: String, boost: Double) extends ApiTypeQuery {
     def children = Nil
+
+    val fingerprint = s"${variance.prefix}${typeName}"
 
     override def toString =
       s"${variance.prefix}${typeName}^$boost"
