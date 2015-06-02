@@ -15,13 +15,13 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]       Box[C]        Box[Loop]
+   *        A          X          Box[+T]      Box[C]       Box[C]       MyBox[Loop]
    *        ^                       ^            ^            ^              ^
    *    /---|---\                   |            |            |              |
-   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]     Loop
-   *            ^
-   *            |
-   *            D
+   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]   Loop[+T]
+   *            ^                                                            ^
+   *            |                                                            |
+   *            D                                                        MyLoop[+T]
    */
   val A = new TypeEntity.PrimitiveType("A")
   val B = new TypeEntity.PrimitiveType("B")
@@ -35,7 +35,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val MyBox = new TypeEntity.GenericType("MyBox")
   val CBox = new TypeEntity.PrimitiveType("CBox")
   val GenericCBox = new TypeEntity.GenericType("GenericCBox")
-  val Loop = new TypeEntity.PrimitiveType("Loop")
+  val Loop = new TypeEntity.GenericType("Loop")
+  val MyLoop = new TypeEntity.GenericType("MyLoop")
 
   val views = {
     def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
@@ -49,7 +50,11 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
       isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
       isSubTypeOf(v => GenericCBox(T(v), v), v => Box(C(v), v), 1),
-      isSubTypeOf(Loop(_), v => Box(Loop(v), v), 1))
+      isSubTypeOf(v => Loop(T(v), v), v => MyBox(Loop(T(v), v), v), 1),
+      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 2),
+      isSubTypeOf(v => MyLoop(T(v), v), v => Loop(T(v), v), 1),
+      isSubTypeOf(v => MyLoop(T(v), v), v => MyBox(Loop(T(v), v), v), 2),
+      isSubTypeOf(v => MyLoop(T(v), v), v => Box(Loop(T(v), v), v), 3))
   }
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {
@@ -64,8 +69,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   }
 
   it should "use alternative types at covariant positions" in {
-    // () => A
-    val q = TypeEntity.Ignored(A(Covariant) :: Nil)
+    // A
+    val q = A(Covariant)
 
     expand(q) should be(unified(
       Sum(
@@ -179,13 +184,20 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   }
 
   it should "not recurse on self referencing types" in {
-    val q = Loop(Covariant)
+    // MyLoop[A] => _
+    val q = TypeEntity.Ignored(MyLoop(A(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
         Max(
-          Leaf(Loop(Covariant), 0, 0),
-          Leaf(Box(Wildcard(Covariant)), 0, 0)))))
+          Sum(
+            Leaf(MyLoop(Wildcard(Contravariant), Contravariant), 0, 0),
+            Leaf(A(Contravariant), 1, 0)),
+          Sum(
+            Leaf(Loop(Wildcard(Contravariant), Contravariant), 0, 1),
+            Leaf(A(Contravariant), 1, 0)),
+          Leaf(MyBox(Wildcard(Contravariant), Contravariant), 0, 2),
+          Leaf(Box(Wildcard(Contravariant), Contravariant), 0, 3)))))
   }
 
   val viewIndex = {

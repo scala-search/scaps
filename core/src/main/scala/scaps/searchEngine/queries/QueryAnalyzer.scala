@@ -153,26 +153,38 @@ class QueryAnalyzer private[searchEngine] (
   def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
-    def parts(tpe: TypeEntity, depth: Int, dist: Int): Alternative = tpe match {
+    def parts(tpe: TypeEntity, depth: Int, dist: Int, outerTpes: Set[TypeEntity]): Alternative = tpe match {
       case TypeEntity.Ignored(args, v) =>
-        Sum(args.map(alternatives(_, depth)))
+        Sum(args.map(alternatives(_, depth, outerTpes)))
       case tpe =>
         Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
-          tpe.args.filterNot(_.isTypeParam).map(arg => alternatives(arg, depth + 1)))
+          (tpe.args
+            .filterNot(_.isTypeParam)
+            .filterNot(outerTpes.contains(_))
+            .map(arg => alternatives(arg, depth + 1, outerTpes))))
     }
 
-    def alternatives(tpe: TypeEntity, depth: Int): Part = {
-      val originalTypeParts = parts(tpe, depth, 0)
+    def alternatives(tpe: TypeEntity, depth: Int, outerTpes: Set[TypeEntity]): Part = {
+      val alternativesWithDistance = findAlternativesWithDistance(tpe).toList
+
+      val outerTpesAndAlts = outerTpes + tpe ++ alternativesWithDistance.map(_._1)
+
+      val originalTypeParts = parts(tpe, depth, 0, outerTpesAndAlts)
       val alternativesParts =
         findAlternativesWithDistance(tpe).toList.map {
           case (alt, dist) =>
-            parts(alt, depth, dist)
+            parts(alt, depth, dist, outerTpesAndAlts)
         }
 
       Max(originalTypeParts :: alternativesParts)
     }
 
-    parts(tpe, 0, 0)
+    tpe match {
+      case TypeEntity.Ignored(_, _) =>
+        parts(tpe, 0, 0, Set())
+      case _ =>
+        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 0, 0, Set())
+    }
   }
 
   private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {

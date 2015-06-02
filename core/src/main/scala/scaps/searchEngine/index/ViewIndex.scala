@@ -31,11 +31,11 @@ class ViewIndex(val dir: Directory) extends Index[View] {
     def alignVariance(alt: TypeEntity) =
       alt.withVariance(tpe.variance)
 
-    def alignTypeArgs(alt: TypeEntity, source: TypeEntity) = {
+    def alignTypeArgs(alt: TypeEntity, source: TypeEntity): TypeEntity = {
       val alignedArgs = alt.args.map { arg =>
         source.args.indexOf(arg) match {
-          case -1     => arg
-          case argIdx => tpe.args(argIdx)
+          case -1     => alignTypeArgs(arg, source)
+          case argIdx => alignTypeArgs(tpe.args(argIdx), source)
         }
       }
 

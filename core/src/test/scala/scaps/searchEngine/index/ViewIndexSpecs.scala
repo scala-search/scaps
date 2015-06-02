@@ -11,10 +11,10 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]
-   *        ^                       ^            ^
-   *    /---|---\                   |            |
-   *    B       C                MyBox[+T]      CBox
+   *        A          X          Box[+T]      Box[C]    Box[Loop[T]]
+   *        ^                       ^            ^            ^
+   *    /---|---\                   |            |            |
+   *    B       C                MyBox[+T]      CBox       Loop[+T]
    *            ^
    *            |
    *            D
@@ -30,6 +30,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   val Box = new TypeEntity.GenericType("Box")
   val MyBox = new TypeEntity.GenericType("MyBox")
   val CBox = new TypeEntity.PrimitiveType("CBox")
+  val Loop = new TypeEntity.GenericType("Loop")
 
   val views = {
     def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
@@ -41,7 +42,8 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
       isSubTypeOf(D(_), C(_), 1),
       isSubTypeOf(D(_), A(_), 2),
       isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
-      isSubTypeOf(CBox(_), v => Box(C(v), v), 1))
+      isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
+      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 1))
   }
 
   val viewIndex = {
@@ -123,5 +125,13 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
     basetypesOfMyBoxOfC should (
       have length (1) and
       contain((Box(C(Contravariant), Contravariant), 1)))
+  }
+
+  it should "substitute type args in nested types" in {
+    val baseTypesOfLoopOfA = viewIndex.findAlternativesWithDistance(Loop(A(Contravariant), Contravariant)).get
+
+    baseTypesOfLoopOfA should (
+      have length (1) and
+      contain((Box(Loop(A(Contravariant), Contravariant), Contravariant), 1)))
   }
 }
