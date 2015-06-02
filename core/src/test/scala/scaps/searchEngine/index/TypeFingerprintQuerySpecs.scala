@@ -50,4 +50,15 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
 
     scorer.score("+A" :: "+B" :: "+C" :: Nil) should be(2.5f)
   }
+
+  ignore should "score sums with a total higher match" in {
+    val scorer = FingerprintScorer(
+      Max(
+        tpe("A", 1.5),
+        Sum(
+          tpe("B", 1),
+          tpe("C", 1))))
+
+    scorer.score("+A" :: "+B" :: "+C" :: Nil) should be(2)
+  }
 }

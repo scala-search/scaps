@@ -20,7 +20,7 @@ import org.apache.lucene.search.Explanation
 class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
   extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery)) {
 
-  val scorerQuery = TypeFingerprintQuery.FingerprintScorer(apiQuery)
+  val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
   override def name() = "TypeFingerprint"
 
@@ -46,7 +46,7 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
             current = terms.next()
           }
 
-          scorerQuery.score(typesBuffer)
+          scorer.score(typesBuffer)
         }.getOrElse {
           0f
         }
@@ -76,13 +76,23 @@ object TypeFingerprintQuery {
   }
 
   object FingerprintScorer {
-    def apply(q: ApiTypeQuery): FingerprintScorer = q match {
-      case ApiTypeQuery.Sum(children) =>
-        SumNode(children.map(apply))
-      case ApiTypeQuery.Max(children) =>
-        MaxNode(children.map(apply))
-      case ApiTypeQuery.Type(v, name, boost) =>
-        Leaf(s"${v.prefix}$name", boost.toFloat)
+    def apply(q: ApiTypeQuery): FingerprintScorer =
+      minimize(q match {
+        case ApiTypeQuery.Sum(children) =>
+          SumNode(children.map(apply))
+        case ApiTypeQuery.Max(children) =>
+          MaxNode(children.map(apply))
+        case ApiTypeQuery.Type(v, name, boost) =>
+          Leaf(s"${v.prefix}$name", boost.toFloat)
+      })
+
+    def minimize(scorer: FingerprintScorer): FingerprintScorer = scorer match {
+      case DeadLeaf | (_: Leaf)        => scorer
+      case SumNode(Nil) | MaxNode(Nil) => DeadLeaf
+      case SumNode(child :: Nil)       => minimize(child)
+      case MaxNode(child :: Nil)       => minimize(child)
+      case SumNode(cs)                 => SumNode(cs.map(minimize))
+      case MaxNode(cs)                 => MaxNode(cs.map(minimize))
     }
   }
 
@@ -107,7 +117,10 @@ object TypeFingerprintQuery {
       val termsWithMaxScore = documentFingerprint
         .map(t => (t, score(t).map(_._1).getOrElse(0f)))
 
-      val terms = termsWithMaxScore.sortBy(-_._2).map(_._1)
+      val terms = termsWithMaxScore
+        .filter(_._2 > 0f)
+        .sortBy(-_._2)
+        .map(_._1)
 
       terms.foldLeft((0f, this)) {
         case ((score, scorer), fpt) =>
@@ -115,6 +128,15 @@ object TypeFingerprintQuery {
             case (newScore, newScorer) => (score + newScore, newScorer)
           }
       }._1
+    }
+
+    val hasMatched: Boolean = false
+
+    override def toString: String = this match {
+      case SumNode(cs)     => cs.mkString("sum(", ", ", ")")
+      case MaxNode(cs)     => cs.mkString("max(", ", ", ")")
+      case Leaf(fp, boost) => s"$fp^$boost"
+      case DeadLeaf        => "∅"
     }
   }
 
@@ -129,7 +151,12 @@ object TypeFingerprintQuery {
         case Seq() => None
         case matches =>
           val (idx, score, newChild) = matches.max
-          Some((score, SumNode(children.updated(idx, newChild))))
+
+          children.updated(idx, newChild).filterNot(_.hasMatched) match {
+            case Nil      => Some((score, DeadLeaf))
+            case c :: Nil => Some((score, c))
+            case cs       => Some((score, SumNode(cs)))
+          }
       }
   }
 
@@ -154,5 +181,7 @@ object TypeFingerprintQuery {
 
   object DeadLeaf extends FingerprintScorer {
     def score(fpt: String) = None
+
+    override val hasMatched = true
   }
 }

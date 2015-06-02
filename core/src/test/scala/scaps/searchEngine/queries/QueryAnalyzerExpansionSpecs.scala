@@ -15,10 +15,10 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]       Box[C]
-   *        ^                       ^            ^            ^
-   *    /---|---\                   |            |            |
-   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]
+   *        A          X          Box[+T]      Box[C]       Box[C]        Box[Loop]
+   *        ^                       ^            ^            ^              ^
+   *    /---|---\                   |            |            |              |
+   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]     Loop
    *            ^
    *            |
    *            D
@@ -35,6 +35,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val MyBox = new TypeEntity.GenericType("MyBox")
   val CBox = new TypeEntity.PrimitiveType("CBox")
   val GenericCBox = new TypeEntity.GenericType("GenericCBox")
+  val Loop = new TypeEntity.PrimitiveType("Loop")
 
   val views = {
     def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
@@ -47,7 +48,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       isSubTypeOf(D(_), A(_), 2),
       isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
       isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
-      isSubTypeOf(v => GenericCBox(T(v), v), v => Box(C(v), v), 1))
+      isSubTypeOf(v => GenericCBox(T(v), v), v => Box(C(v), v), 1),
+      isSubTypeOf(Loop(_), v => Box(Loop(v), v), 1))
   }
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {
@@ -174,6 +176,16 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
           Sum(
             Leaf(MyBox(Wildcard(Covariant)), 0, 1),
             innerBoxParts)))))
+  }
+
+  it should "not recurse on self referencing types" in {
+    val q = Loop(Covariant)
+
+    expand(q) should be(unified(
+      Sum(
+        Max(
+          Leaf(Loop(Covariant), 0, 0),
+          Leaf(Box(Wildcard(Covariant)), 0, 0)))))
   }
 
   val viewIndex = {
