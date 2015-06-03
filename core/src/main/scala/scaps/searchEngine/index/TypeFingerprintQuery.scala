@@ -77,11 +77,20 @@ object TypeFingerprintQuery {
   def matcherQuery(field: String, apiQuery: ApiTypeQuery) = {
     val q = new BooleanQuery
 
-    val ignoredTypes = List("-scala.Any", "-scala.AnyVal", "-java.lang.Object", "+scala.Nothing")
+    val rankedTypesWithTerm = apiQuery.allTypes
+      .sortBy(-_.boost)
+      .map(tpe => (tpe, s"${tpe.variance.prefix}${tpe.typeName}"))
 
-    val terms = apiQuery.allTypes
-      .map(tpe => s"${tpe.variance.prefix}${tpe.typeName}")
-      .filterNot(ignoredTypes.contains(_))
+    val thresholdTypes = List("-scala.Any", "-scala.AnyVal", "-java.lang.Object", "+scala.Nothing")
+    val threshold = rankedTypesWithTerm
+      .find(typeWithTerm => thresholdTypes.contains(typeWithTerm._2))
+      .map(_._1.boost)
+      .getOrElse(0d)
+
+    val terms = rankedTypesWithTerm
+      .takeWhile(_._1.boost > threshold)
+      .take(10)
+      .map(_._2)
       .distinct
 
     for {

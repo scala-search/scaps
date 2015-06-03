@@ -7,6 +7,8 @@ case class ApiQuery(keywords: List[String], tpe: ApiTypeQuery) {
     s"${keywords.mkString(" ")}: $tpe"
 
   def allTypes = tpe.allTypes
+
+  def prettyPrint = s"${keywords.mkString(" ")}: ${tpe.prettyPrint()}"
 }
 
 sealed trait ApiTypeQuery {
@@ -17,6 +19,19 @@ sealed trait ApiTypeQuery {
   def allTypes: List[Type] = this match {
     case t: Type => List(t)
     case _       => children.flatMap(_.allTypes)
+  }
+
+  def prettyPrint(level: Int = 0): String = {
+    val prefix = " " * (level * 2)
+
+    this match {
+      case Sum(Nil) | Sum(_ :: Nil) | Max(Nil) | Max(_ :: Nil) | Type(_, _, _) =>
+        s"$prefix$this"
+      case Sum(cs) =>
+        cs.map(_.prettyPrint(level + 1)).mkString(s"${prefix}sum(\n", "\n", ")")
+      case Max(cs) =>
+        cs.map(_.prettyPrint(level + 1)).mkString(s"${prefix}max(\n", "\n", ")")
+    }
   }
 }
 

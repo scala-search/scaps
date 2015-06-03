@@ -152,7 +152,7 @@ class SearchEngine private[searchEngine] (
       analyzed <- analyzeQuery(moduleIds, parsed).get
       results <- termsIndex.find(analyzed, moduleIds).get
     } yield {
-      logger.debug(s"""query "${query}" expanded to "${analyzed}" """)
+      logger.debug(s"""query "${query}" expanded to:\n"${analyzed.prettyPrint}" """)
       results
     }
   }
