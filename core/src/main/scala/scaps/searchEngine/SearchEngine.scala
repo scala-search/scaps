@@ -123,7 +123,7 @@ class SearchEngine private[searchEngine] (
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 
       val tfs = TypeFrequencies(
-        viewIndex.findAlternativesWithDistance(_).get,
+        viewIndex.findAlternativesWithDistance(_).get.map(_._1),
         termsIndex.allTerms().get.sample(settings.index.typeFrequenciesSampleSize))
 
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>

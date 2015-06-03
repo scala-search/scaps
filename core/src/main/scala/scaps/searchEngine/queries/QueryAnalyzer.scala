@@ -7,7 +7,6 @@ import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.ApiTypeQuery
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
-import scaps.searchEngine.QueryFingerprint
 import scaps.searchEngine.SemanticError
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings

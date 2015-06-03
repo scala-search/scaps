@@ -118,7 +118,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfB = tfs((Covariant, "p.B"))
 
     tfA should be(3) // from new A, m1, m2
-    tfB should be(4) // from new B, m2, m3, m4
+    tfB should be(3) // from new B, m3, m4
   }
 
   def typeFrequencies(source: String) = {
@@ -132,7 +132,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       withViewIndex { viewIndex =>
         viewIndex.addEntities(views)
 
-        TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get, termIndex.allTerms().get)
+        TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), termIndex.allTerms().get)
       }
     }
   }

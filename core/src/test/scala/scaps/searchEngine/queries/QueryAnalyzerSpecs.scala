@@ -120,11 +120,11 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("p.Dd"))
   }
 
-  it should "not use the bottom type as a sub class of every type" in {
+  it should "use the bottom type as a sub class of every type" in {
     val res = expectSuccess("_ => Aa")
 
     res.allTypes.mkString(" ") should (
-      not include ("+scala.Nothing"))
+      include("+scala.Nothing"))
   }
 
   it should "include base classes of types at contravariant positions" in {
