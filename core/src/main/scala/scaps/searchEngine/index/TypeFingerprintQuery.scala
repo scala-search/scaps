@@ -33,9 +33,13 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
         customScore(doc, subQueryScore, valSrcScores(0))
 
       override def customScore(doc: Int, subQueryScore: Float, normFromValSrc: Float): Float = {
+        normFromValSrc * score(doc)
+      }
+
+      def score(doc: Int): Float = {
         val reader = context.reader()
 
-        val score = Option(reader.getTermVector(doc, field)).map { tv =>
+        Option(reader.getTermVector(doc, field)).map { tv =>
           var terms: TermsEnum = null
           terms = tv.iterator(terms)
 
@@ -51,8 +55,6 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
         }.getOrElse {
           throw new IllegalArgumentException(s"Field $field does not store term vectors.")
         }
-
-        normFromValSrc * score
       }
 
       override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpl: Explanation): Explanation = {
@@ -60,7 +62,13 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
       }
 
       override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpls: Array[Explanation]): Explanation = {
-        new Explanation(customScore(doc, 0, 0), "type fingerprint score")
+        val normExplanation = valSrcExpls(0)
+        val queryScore = score(doc)
+
+        val expl = new Explanation(normExplanation.getValue * queryScore, "type fingerprint score, product of:")
+        expl.addDetail(new Explanation(queryScore, "type fingerprint"))
+        expl.addDetail(normExplanation)
+        expl
       }
     }
 }
@@ -68,11 +76,17 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
 object TypeFingerprintQuery {
   def matcherQuery(field: String, apiQuery: ApiTypeQuery) = {
     val q = new BooleanQuery
+
+    val ignoredTypes = List("-scala.Any", "-scala.AnyVal", "-java.lang.Object", "+scala.Nothing")
+
+    val terms = apiQuery.allTypes
+      .map(tpe => s"${tpe.variance.prefix}${tpe.typeName}")
+      .filterNot(ignoredTypes.contains(_))
+      .distinct
+
     for {
-      tpe <- apiQuery.allTypes
-      if tpe.boost > 0.01
+      term <- terms
     } {
-      val term = s"${tpe.variance.prefix}${tpe.typeName}"
       q.add(new TermQuery(new Term(field, term)), Occur.SHOULD)
     }
     new ConstantScoreQuery(q)

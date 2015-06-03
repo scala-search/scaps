@@ -8,7 +8,7 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
 
   def leaf(tpeName: String) =
-    Leaf(new TypeEntity.PrimitiveType(tpeName)(Covariant), 0, 0)
+    Leaf(new TypeEntity.PrimitiveType(tpeName)(Covariant), 1, 0, 0)
 
   val A = leaf("A")
   val B = leaf("B")

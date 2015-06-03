@@ -15,6 +15,7 @@ import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.Explanation
 
 trait Index[E] {
   private[index] def dir: Directory
@@ -30,7 +31,7 @@ trait Index[E] {
   private[index] def toDocument(e: E): Document
   private[index] def toEntity(d: Document): E
 
-  private[index] def search(query: Query, maxResults: Int = Int.MaxValue): Try[Seq[E]] =
+  private[index] def search(query: Query, maxResults: Int = Int.MaxValue, explain: Option[(E, Explanation) => Unit] = None): Try[Seq[E]] =
     withSearcher { searcher =>
       val docs = searcher.search(query, maxResults)
 
@@ -38,7 +39,13 @@ trait Index[E] {
         i <- 0 until docs.scoreDocs.length
         docId = docs.scoreDocs(i).doc
         if docId != DocIdSetIterator.NO_MORE_DOCS
-      } yield toEntity(searcher.doc(docId))
+      } yield {
+        val res = toEntity(searcher.doc(docId))
+        explain.foreach { e =>
+          e(res, searcher.explain(query, docId))
+        }
+        res
+      }
     }
 
   private[index] def withWriter[A](f: IndexWriter => A): Try[A] = {

@@ -57,11 +57,11 @@ private[queries] object ExpandedQuery {
       Max(alts.toList)
   }
 
-  case class Leaf(tpe: TypeEntity, depth: Int, dist: Int) extends Part with Alternative {
+  case class Leaf(tpe: TypeEntity, fraction: Double, depth: Int, dist: Int) extends Part with Alternative {
     val children = Nil
 
     override def toString =
-      s"$tpe^($depth, $dist)"
+      s"$tpe^($fraction, $depth, $dist)"
   }
 
   def minimizeClauses(q: ExpandedQuery): ExpandedQuery = q match {
@@ -153,27 +153,37 @@ class QueryAnalyzer private[searchEngine] (
   def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
-    def parts(tpe: TypeEntity, depth: Int, dist: Int, outerTpes: Set[TypeEntity]): Alternative = tpe match {
-      case TypeEntity.Ignored(args, v) =>
-        Sum(args.map(alternatives(_, depth, outerTpes)))
-      case tpe =>
-        Sum(Leaf(tpe.withArgsAsParams, depth, dist) ::
-          (tpe.args
+    def parts(tpe: TypeEntity, fraction: Double, depth: Int, dist: Int, outerTpes: Set[TypeEntity]): Alternative = {
+      tpe match {
+        case TypeEntity.Ignored(args, v) =>
+          val partFraction = if (tpe.args.isEmpty) fraction else (fraction / tpe.args.length)
+
+          Sum(args.map(alternatives(_, partFraction, depth, outerTpes)))
+        case tpe =>
+          val partArgs = tpe.args
             .filterNot(_.isTypeParam)
-            .filterNot(outerTpes.contains(_))
-            .map(arg => alternatives(arg, depth + 1, outerTpes))))
+
+          val outerFraction = if (partArgs.isEmpty) fraction else (fraction / 2)
+          val partFraction = (fraction / (2 * partArgs.length))
+
+          val parts = partArgs.map(arg =>
+            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partFraction, depth + 1, 0)
+            else alternatives(arg, partFraction, depth + 1, outerTpes))
+
+          Sum(Leaf(tpe.withArgsAsParams, outerFraction, depth, dist) :: parts)
+      }
     }
 
-    def alternatives(tpe: TypeEntity, depth: Int, outerTpes: Set[TypeEntity]): Part = {
+    def alternatives(tpe: TypeEntity, fraction: Double, depth: Int, outerTpes: Set[TypeEntity]): Part = {
       val alternativesWithDistance = findAlternativesWithDistance(tpe).toList
 
       val outerTpesAndAlts = outerTpes + tpe ++ alternativesWithDistance.map(_._1)
 
-      val originalTypeParts = parts(tpe, depth, 0, outerTpesAndAlts)
+      val originalTypeParts = parts(tpe, fraction, depth, 0, outerTpesAndAlts)
       val alternativesParts =
-        findAlternativesWithDistance(tpe).toList.map {
+        alternativesWithDistance.map {
           case (alt, dist) =>
-            parts(alt, depth, dist, outerTpesAndAlts)
+            parts(alt, fraction, depth, dist, outerTpesAndAlts)
         }
 
       Max(originalTypeParts :: alternativesParts)
@@ -181,9 +191,9 @@ class QueryAnalyzer private[searchEngine] (
 
     tpe match {
       case TypeEntity.Ignored(_, _) =>
-        parts(tpe, 0, 0, Set())
+        parts(tpe, 1, 0, 0, Set())
       case _ =>
-        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 0, 0, Set())
+        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
     }
   }
 
@@ -193,16 +203,25 @@ class QueryAnalyzer private[searchEngine] (
     case l: ExpandedQuery.Leaf    => ApiTypeQuery.Type(l.tpe.variance, l.tpe.name, boost(l))
   }
 
-  private def boost(l: ExpandedQuery.Leaf): Double = {
+  private def boost(l: ExpandedQuery.Leaf): Double =
+    l.fraction * weightedGeometricMean(
+      itf(l) -> settings.query.typeFrequencyWeight,
+      1d / (l.depth + 1) -> settings.query.depthBoostWeight,
+      1d / (l.dist + 1) -> settings.query.distanceBoostWeight)
+
+  /**
+   * The inverse type frequency is defined as log10(10 / (10f + (1 - 2f)))
+   * where f is the type frequency normed by the maximum possible type frequency.
+   *
+   * The (1 - 2f) term ensures that the return value is <= 1.0 but > 0.0 for types
+   * with a frequency equal to the maximum frequency.
+   */
+  private def itf(l: ExpandedQuery.Leaf): Double = {
     val maxFrequency = settings.index.typeFrequenciesSampleSize
 
     val freq = math.min(getFrequency(l.tpe.variance, l.tpe.name), maxFrequency)
-    val itf = math.log((maxFrequency.toDouble + 1) / (freq + 1))
-
-    weightedGeometricMean(
-      itf -> settings.query.typeFrequencyWeight,
-      1d / (l.depth + 1) -> settings.query.depthBoostWeight,
-      1d / (l.dist + 1) -> settings.query.distanceBoostWeight)
+    val normedFreq = (freq.toDouble / maxFrequency)
+    math.log10(10 / (normedFreq * 10 + (1 - 2 * normedFreq)))
   }
 
   /**
