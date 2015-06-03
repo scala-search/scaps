@@ -16,9 +16,10 @@ import org.apache.lucene.queries.function.FunctionQuery
 import org.apache.lucene.queries.function.valuesource.ConstValueSource
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.Explanation
+import org.apache.lucene.queries.function.valuesource.NormValueSource
 
 class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
-  extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery)) {
+  extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery), TypeFingerprintQuery.normFunctionQuery(field)) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -29,12 +30,12 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
   override def getCustomScoreProvider(context: AtomicReaderContext) =
     new CustomScoreProvider(context) {
       override def customScore(doc: Int, subQueryScore: Float, valSrcScores: Array[Float]): Float =
-        customScore(doc, subQueryScore, 0)
+        customScore(doc, subQueryScore, valSrcScores(0))
 
-      override def customScore(doc: Int, subQueryScore: Float, valSrcScore: Float): Float = {
+      override def customScore(doc: Int, subQueryScore: Float, normFromValSrc: Float): Float = {
         val reader = context.reader()
 
-        Option(reader.getTermVector(doc, field)).map { tv =>
+        val score = Option(reader.getTermVector(doc, field)).map { tv =>
           var terms: TermsEnum = null
           terms = tv.iterator(terms)
 
@@ -48,8 +49,10 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
 
           scorer.score(typesBuffer)
         }.getOrElse {
-          0f
+          throw new IllegalArgumentException(s"Field $field does not store term vectors.")
         }
+
+        normFromValSrc * score
       }
 
       override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpl: Explanation): Explanation = {
@@ -73,6 +76,10 @@ object TypeFingerprintQuery {
       q.add(new TermQuery(new Term(field, term)), Occur.SHOULD)
     }
     new ConstantScoreQuery(q)
+  }
+
+  def normFunctionQuery(field: String) = {
+    new FunctionQuery(new NormValueSource(field))
   }
 
   object FingerprintScorer {
