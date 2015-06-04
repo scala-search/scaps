@@ -188,11 +188,18 @@ class QueryAnalyzer private[searchEngine] (
       Max(originalTypeParts :: alternativesParts)
     }
 
+    val noParts = tpe.toList
+      .filter {
+        case TypeEntity.Ignored(_, _) => false
+        case _                        => true
+      }
+      .length
+
     tpe match {
       case TypeEntity.Ignored(args, _) =>
-        parts(tpe, args.length, 0, 0, Set())
+        parts(tpe, noParts, 0, 0, Set())
       case _ =>
-        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
+        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), noParts, 0, 0, Set())
     }
   }
 
