@@ -85,7 +85,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
   def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
       toLuceneQuery(query, moduleIds).map(
-        lq => search(lq, settings.query.maxResults).get)
+        lq => search(lq, 10, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
     }
 
   def deleteEntitiesIn(module: Module): Try[Unit] =

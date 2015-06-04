@@ -139,6 +139,8 @@ object TypeFingerprintQuery extends Logging {
   sealed trait FingerprintScorer {
     def score(fpt: String): Option[(Float, FingerprintScorer)]
 
+    def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer)
+
     def score(documentFingerprint: Seq[String]): Float = {
       /*
        * This is only a heuristic that generally yields accurate results but
@@ -154,15 +156,19 @@ object TypeFingerprintQuery extends Logging {
        * achievable score of each individual term and uses this order to score
        * the fingerprint as a whole.
        */
+      val (termScores, preparedScorer) = prepare(documentFingerprint)
+
+      val maxScores = termScores.groupBy(_._1).mapValues(_.maxBy(_._2)._2)
+
       val termsWithMaxScore = documentFingerprint
-        .map(t => (t, score(t).map(_._1).getOrElse(0f)))
+        .flatMap(t => maxScores.get(t).map((t, _)))
 
       val terms = termsWithMaxScore
         .filter(_._2 > 0f)
         .sortBy(-_._2)
         .map(_._1)
 
-      terms.foldLeft((0f, this)) {
+      terms.foldLeft((0f, preparedScorer)) {
         case ((score, scorer), fpt) =>
           scorer.score(fpt).fold((score, scorer)) {
             case (newScore, newScorer) => (score + newScore, newScorer)
@@ -181,6 +187,18 @@ object TypeFingerprintQuery extends Logging {
   }
 
   case class SumNode(children: List[FingerprintScorer]) extends FingerprintScorer {
+    def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = {
+      val childRes = children.map(_.prepare(fingerprint))
+      val childScores = childRes.flatMap(_._1)
+      val matchingChilds = childRes.map(_._2).filter(_ != DeadLeaf)
+
+      if (matchingChilds.isEmpty) {
+        (Seq(), DeadLeaf)
+      } else {
+        (childScores, SumNode(matchingChilds))
+      }
+    }
+
     implicit val o: Ordering[(Int, Float, FingerprintScorer)] = Ordering.Float.on(_._2)
 
     def score(fpt: String) =
@@ -201,6 +219,18 @@ object TypeFingerprintQuery extends Logging {
   }
 
   case class MaxNode(children: List[FingerprintScorer]) extends FingerprintScorer {
+    def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = {
+      val childRes = children.map(_.prepare(fingerprint))
+      val childScores = childRes.flatMap(_._1)
+      val matchingChilds = childRes.map(_._2).filter(_ != DeadLeaf)
+
+      if (matchingChilds.isEmpty) {
+        (Seq(), DeadLeaf)
+      } else {
+        (childScores, MaxNode(matchingChilds))
+      }
+    }
+
     implicit val o: Ordering[(Float, FingerprintScorer)] = Ordering.Float.on(_._1)
 
     def score(fpt: String) =
@@ -211,15 +241,24 @@ object TypeFingerprintQuery extends Logging {
       }
   }
 
-  case class Leaf(fingerprint: String, boost: Float) extends FingerprintScorer {
+  case class Leaf(tpe: String, boost: Float) extends FingerprintScorer {
+    def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) =
+      if (fingerprint.contains(tpe)) {
+        (Seq(tpe -> boost), this)
+      } else {
+        (Seq(), DeadLeaf)
+      }
+
     def score(fpt: String) =
-      if (fingerprint == fpt)
+      if (tpe == fpt)
         Some((boost, DeadLeaf))
       else
         None
   }
 
   object DeadLeaf extends FingerprintScorer {
+    def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = (Seq(), this)
+
     def score(fpt: String) = None
 
     override val hasMatched = true
