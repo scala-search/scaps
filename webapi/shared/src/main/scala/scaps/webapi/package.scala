@@ -159,6 +159,14 @@ case class TermEntity(
     s"$name$params: ${tpe.signature}"
   }
 
+  def typeFingerprint: List[String] =
+    tpe.normalize(typeParameters).toList
+      .filter {
+        case TypeEntity.Ignored(_, _) => false
+        case _                        => true
+      }
+      .map(_.fingerprint)
+
   def withoutComment = copy(comment = "")
 }
 
@@ -180,6 +188,8 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
     }
     s"$name$argStr"
   }
+
+  def fingerprint: String = s"${variance.prefix}$name"
 
   def toList: List[TypeEntity] = this :: args.flatMap(_.toList)
 

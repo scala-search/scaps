@@ -189,8 +189,8 @@ class QueryAnalyzer private[searchEngine] (
     }
 
     tpe match {
-      case TypeEntity.Ignored(_, _) =>
-        parts(tpe, 1, 0, 0, Set())
+      case TypeEntity.Ignored(args, _) =>
+        parts(tpe, args.length, 0, 0, Set())
       case _ =>
         parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
     }

@@ -1,9 +1,11 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
+
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -14,14 +16,15 @@ import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
+import org.apache.lucene.document.Field
 import org.apache.lucene.document.Field.Store
+import org.apache.lucene.document.FieldType
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.DisjunctionMaxQuery
 import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
@@ -30,18 +33,15 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
+
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.searchEngine.ApiQuery
-import scaps.searchEngine.Fingerprint
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
-import org.apache.lucene.search.ConstantScoreQuery
-import org.apache.lucene.document.Field
-import org.apache.lucene.document.FieldType
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -146,8 +146,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
-    Fingerprint(entity).types.foreach { tpe =>
-      doc.add(new TextWithTermVectorField(fields.fingerprint, s"${tpe.variance.prefix}${tpe.name}", Store.YES))
+    entity.typeFingerprint.foreach { fp =>
+      doc.add(new TextWithTermVectorField(fields.fingerprint, fp, Store.YES))
     }
     add(fields.doc, entity.comment)
     doc.add(new StoredField(fields.entity, upickle.write(entity)))

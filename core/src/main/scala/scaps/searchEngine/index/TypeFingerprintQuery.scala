@@ -17,6 +17,7 @@ import org.apache.lucene.queries.function.valuesource.ConstValueSource
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.queries.function.valuesource.NormValueSource
+import scaps.utils.Logging
 
 class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
   extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery), TypeFingerprintQuery.normFunctionQuery(field)) {
@@ -73,25 +74,26 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
     }
 }
 
-object TypeFingerprintQuery {
+object TypeFingerprintQuery extends Logging {
   def matcherQuery(field: String, apiQuery: ApiTypeQuery) = {
     val q = new BooleanQuery
 
-    val rankedTypesWithTerm = apiQuery.allTypes
+    val rankedTypesWithFp = apiQuery.allTypes
       .sortBy(-_.boost)
-      .map(tpe => (tpe, s"${tpe.variance.prefix}${tpe.typeName}"))
+      .map(tpe => (tpe, tpe.fingerprint))
 
-    val thresholdTypes = List("-scala.Any", "-scala.AnyVal", "-java.lang.Object", "+scala.Nothing")
-    val threshold = rankedTypesWithTerm
+    val threshold = rankedTypesWithFp
       .find(typeWithTerm => thresholdTypes.contains(typeWithTerm._2))
       .map(_._1.boost)
       .getOrElse(0d)
 
-    val terms = rankedTypesWithTerm
+    val terms = rankedTypesWithFp
       .takeWhile(_._1.boost > threshold)
       .take(10)
       .map(_._2)
       .distinct
+
+    logger.debug(s"Matching documents with fingerprint types: $terms")
 
     for {
       term <- terms
@@ -99,6 +101,14 @@ object TypeFingerprintQuery {
       q.add(new TermQuery(new Term(field, term)), Occur.SHOULD)
     }
     new ConstantScoreQuery(q)
+  }
+
+  private val thresholdTypes = {
+    import scaps.webapi._
+    import scaps.webapi.TypeEntity._
+
+    List(Any(Contravariant), AnyVal(Contravariant), AnyRef(Contravariant), Nothing(Covariant))
+      .map(_.fingerprint)
   }
 
   def normFunctionQuery(field: String) = {
@@ -112,8 +122,8 @@ object TypeFingerprintQuery {
           SumNode(children.map(apply))
         case ApiTypeQuery.Max(children) =>
           MaxNode(children.map(apply))
-        case ApiTypeQuery.Type(v, name, boost) =>
-          Leaf(s"${v.prefix}$name", boost.toFloat)
+        case t @ ApiTypeQuery.Type(v, name, boost) =>
+          Leaf(t.fingerprint, boost.toFloat)
       })
 
     def minimize(scorer: FingerprintScorer): FingerprintScorer = scorer match {

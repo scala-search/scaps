@@ -21,6 +21,8 @@ object Index extends App with Logging {
 
     val engine = SearchEngine(Settings.fromApplicationConf).get
 
+    engine.resetIndexes().get
+
     val entities =
       ExtractionError.logErrors(extractor(sourceJar), logger.info(_))
 

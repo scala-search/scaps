@@ -69,9 +69,9 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
     expand(q) should be(unified(
       Sum(
-        Leaf(A(Contravariant), 1d / 3, 0, 0),
-        Leaf(X(Contravariant), 1d / 3, 0, 0),
-        Leaf(D(Covariant), 1d / 3, 0, 0))))
+        Leaf(A(Contravariant), 1d, 0, 0),
+        Leaf(X(Contravariant), 1d, 0, 0),
+        Leaf(D(Covariant), 1d, 0, 0))))
   }
 
   it should "use alternative types at covariant positions" in {

@@ -8,7 +8,6 @@ import scaps.searchEngine.SyntaxError
 import scaps.searchEngine.TooUnspecific
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
-import scaps.searchEngine.Fingerprint
 
 object Search extends App {
   val engine = SearchEngine(Settings.fromApplicationConf).get
@@ -31,7 +30,7 @@ object Search extends App {
       results => results.take(10).foreach { term =>
         println(term.signature)
         println(term.tpe.normalize(term.typeParameters))
-        println(Fingerprint(term))
+        println(term.typeFingerprint)
         println()
       })
   }
