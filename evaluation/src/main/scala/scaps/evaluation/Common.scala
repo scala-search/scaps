@@ -1,13 +1,11 @@
 package scaps.evaluation
 
 import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.urlToProcess
-
 import scalaz.{ \/ => \/ }
 import scalaz.std.list.listInstance
 import scalaz.std.stream.streamInstance
@@ -22,13 +20,14 @@ import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
 import scaps.utils.Logging
 import scaps.webapi.Module
+import scaps.utils.timers
 
 object Common extends Logging {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
     queriesWithRelevantDocs.map {
       case (query, relevantResults) =>
-        engine.search(query).get.map(
-          results => QueryStats(query, results.map(_.signature), relevantResults))
+        val (res, dur) = timers.withTime(engine.search(query).get)
+        res.map(results => QueryStats(query, results.map(_.signature), relevantResults, dur))
     }.sequenceU.map(Stats(_))
   }
 

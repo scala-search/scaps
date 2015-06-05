@@ -32,22 +32,19 @@ object Benchmark extends App {
   val now = (new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")).format(Calendar.getInstance.getTime())
   val runInfo = now :: runName :: Nil
 
-  val (entries, queryTime) = withTime {
-    Common.runQueries(engine, evaluationSettings.queries).fold(
-      error => {
-        println(error)
-        List(runInfo ::: "<MAP>" :: "---" :: "---" :: Nil)
-      },
-      stats => {
-        val queryData = stats.queryStats.map { qs =>
-          runInfo ::: qs.query :: qs.averagePrecision.toString :: qs.recallAt10.toString :: Nil
-        }
-        queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision.toString :: stats.meanRecallAt10.toString :: Nil)
-      })
-  }
+  val entries = Common.runQueries(engine, evaluationSettings.queries).fold(
+    error => {
+      println(error)
+      List(runInfo ::: "<MAP>" :: "---" :: "---" :: "---" :: Nil)
+    },
+    stats => {
+      val queryData = stats.queryStats.map { qs =>
+        runInfo ::: qs.query :: qs.averagePrecision :: qs.recallAt10 :: qs.duration.toMillis :: Nil
+      }
+      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision :: stats.meanRecallAt10 :: stats.duration.toMillis :: Nil)
+    })
 
-  val timeEntry = runInfo ::: "<queryTime> (ms)" :: queryTime.toMillis :: "---" :: Nil
-  val csvRows = (entries :+ timeEntry).map(_.mkString("", "; ", ";"))
+  val csvRows = entries.map(_.mkString("", "; ", ";"))
   val csv = csvRows.mkString("", "\n", "\n")
 
   println(csv)

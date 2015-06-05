@@ -2,6 +2,7 @@ package scaps.evaluation.stats
 
 import scala.annotation.tailrec
 import scala.Ordering
+import scala.concurrent.duration.Duration
 
 case class QueryStats(
   query: String,
@@ -9,7 +10,8 @@ case class QueryStats(
   relevantRetrievedDocs: Int,
   relevantDocs: Int,
   accumulatedPrecision: Double,
-  relevantRetrievedInTop10: Int) {
+  relevantRetrievedInTop10: Int,
+  duration: Duration) {
 
   val recall = relevantRetrievedDocs.toDouble / relevantDocs
   val precision = QueryStats.precision(relevantRetrievedDocs, retrievedDocs)
@@ -24,7 +26,7 @@ object QueryStats {
   def precision(relret: Int, ret: Int): Double =
     if (ret == 0) 0d else (relret.toDouble / ret)
 
-  def apply[A](query: String, results: Seq[A], relevant: Set[A]): QueryStats = {
+  def apply[A](query: String, results: Seq[A], relevant: Set[A], duration: Duration): QueryStats = {
     def next(prev: QueryStats, isRelevant: Boolean) = {
       val isRel = if (isRelevant) 1 else 0
       val ret = prev.retrievedDocs + 1
@@ -45,7 +47,7 @@ object QueryStats {
       }
     }
 
-    loop(results, QueryStats(query, 0, 0, relevant.size, 0d, 0))
+    loop(results, QueryStats(query, 0, 0, relevant.size, 0d, 0, duration))
   }
 
   implicit val queryStatsOrdering =

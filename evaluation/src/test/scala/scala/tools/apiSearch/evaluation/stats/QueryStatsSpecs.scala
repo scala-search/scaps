@@ -3,6 +3,7 @@ package scaps.evaluation.stats
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.scalatest.path.FreeSpec
+import scala.concurrent.duration.Duration
 
 class QueryStatsSpecs extends FreeSpec with Matchers {
   "query stats" - {
@@ -64,8 +65,8 @@ class QueryStatsSpecs extends FreeSpec with Matchers {
   }
 
   def avep(results: Seq[Int], relevant: Set[Int]) =
-    QueryStats[Int]("", results, relevant).averagePrecision
+    QueryStats[Int]("", results, relevant, Duration.Zero).averagePrecision
 
   def recall10(results: Seq[Int], relevant: Set[Int]) =
-    QueryStats[Int]("", results, relevant).recallAt10
+    QueryStats[Int]("", results, relevant, Duration.Zero).recallAt10
 }

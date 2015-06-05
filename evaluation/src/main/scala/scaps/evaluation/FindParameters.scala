@@ -18,15 +18,15 @@ import RngExtensions.RichRng
 object FindParameters extends App {
   val outputDir = "evaluation/target/results"
 
-  val lengthNormWeights = Rng.oneof(0.7) //RngExtensions.normalSample(1d, 0.05d).map(d => (d * 10).round / 10d)
+  val lengthNormWeights = Rng.oneof(0.1) //Rng.choosedouble(0.01, 0.2).map(d => (d * 200d).round / 200d)
 
   val depthBoostWeight = Rng.choosedouble(0, 2)
-  val distanceBoostWeight = Rng.choosedouble(0, 2)
+  val distanceBoostWeight = Rng.choosedouble(0, 3)
   val typeFrequencyWeight = Rng.choosedouble(0, 2)
-  val nameBoosts = Rng.choosedouble(0, 1)
-  val docBoosts = Rng.choosedouble(0, 1)
+  val nameBoosts = Rng.oneof(0.02)
+  val docBoosts = Rng.oneof(0.01)
 
-  val noConfigurations = 10000
+  val noConfigurations = 5000
 
   val settings = Settings.fromApplicationConf
   val evaluationSettings = EvaluationSettings.fromApplicationConf.copy(rebuildIndex = true)
@@ -42,7 +42,8 @@ object FindParameters extends App {
       QuerySettings.nameBoost,
       QuerySettings.docBoost,
       "MAP",
-      "R@10")
+      "R@10",
+      "t")
 
     writer.write(headers.mkString("", "; ", ";\n"))
 
@@ -60,7 +61,7 @@ object FindParameters extends App {
             println(stats.meanAveragePrecision)
             println()
 
-            val cells = List(
+            val cells = List[Any](
               settings.index.lengthNormWeight,
               settings.query.depthBoostWeight,
               settings.query.distanceBoostWeight,
@@ -68,7 +69,8 @@ object FindParameters extends App {
               settings.query.nameBoost,
               settings.query.docBoost,
               stats.meanAveragePrecision,
-              stats.meanRecallAt10)
+              stats.meanRecallAt10,
+              stats.duration.toMillis + " ms")
             writer.write(cells.mkString("", "; ", ";\n"))
           })
     }
