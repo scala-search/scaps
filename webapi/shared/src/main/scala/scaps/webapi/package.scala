@@ -166,6 +166,7 @@ case class TermEntity(
         case _                        => true
       }
       .map(_.fingerprint)
+      .sorted
 
   def withoutComment = copy(comment = "")
 }

@@ -30,6 +30,8 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
 
   override def getCustomScoreProvider(context: AtomicReaderContext) =
     new CustomScoreProvider(context) {
+      val reader = context.reader()
+
       override def customScore(doc: Int, subQueryScore: Float, valSrcScores: Array[Float]): Float =
         customScore(doc, subQueryScore, valSrcScores(0))
 
@@ -38,24 +40,8 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
       }
 
       def score(doc: Int): Float = {
-        val reader = context.reader()
-
-        Option(reader.getTermVector(doc, field)).map { tv =>
-          var terms: TermsEnum = null
-          terms = tv.iterator(terms)
-
-          val typesBuffer = new ListBuffer[String]
-          var current = terms.next()
-
-          while (current != null) {
-            typesBuffer += current.utf8ToString()
-            current = terms.next()
-          }
-
-          scorer.score(typesBuffer)
-        }.getOrElse {
-          throw new IllegalArgumentException(s"Field $field does not store term vectors.")
-        }
+        val fingerprint = scaps.utils.timers.printTime("loadDoc")(reader.document(doc).getValues(field))
+        scaps.utils.timers.printTime("score")(scorer.score(fingerprint))
       }
 
       override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpl: Explanation): Explanation = {
@@ -141,6 +127,14 @@ object TypeFingerprintQuery extends Logging {
   }
 
   sealed trait FingerprintScorer {
+    def prepareMut(fingerprint: Seq[String]): Seq[(String, Float)]
+
+    def scoreMut(fpt: String): Float
+
+    def markMut(fpt: String): Boolean
+
+    def state: String
+
     def score(fpt: String): Option[(Float, FingerprintScorer)]
 
     def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer)
@@ -160,21 +154,25 @@ object TypeFingerprintQuery extends Logging {
        * achievable score of each individual term and uses this order to score
        * the fingerprint as a whole.
        */
-      val (termScores, preparedScorer) = prepare(documentFingerprint)
+      val (termScores, preparedScorer) = prepare(documentFingerprint.distinct)
 
-      val maxScores = termScores.groupBy(_._1).mapValues(_.maxBy(_._2)._2)
+      val terms = {
+        val maxScores = termScores.groupBy(_._1).mapValues(_.maxBy(_._2)._2)
 
-      val termsWithMaxScore = documentFingerprint
-        .flatMap(t => maxScores.get(t).map((t, _)))
+        val termsWithMaxScore = documentFingerprint
+          .flatMap(t => maxScores.get(t).map((t, _)))
 
-      val terms = termsWithMaxScore
-        .filter(_._2 > 0f)
-        .sortBy(-_._2)
-        .map(_._1)
+        termsWithMaxScore
+          .filter(_._2 > 0f)
+          .sortBy(-_._2)
+          .map(_._1)
+      }
 
-      terms.foldLeft((0f, preparedScorer)) {
+      terms.foldLeft((0f, FingerprintScorer.minimize(preparedScorer))) {
         case ((score, scorer), fpt) =>
-          scorer.score(fpt).fold((score, scorer)) {
+          scorer.score(fpt).fold {
+            (score, scorer)
+          } {
             case (newScore, newScorer) => (score + newScore, newScorer)
           }
       }._1
@@ -191,6 +189,46 @@ object TypeFingerprintQuery extends Logging {
   }
 
   case class SumNode(children: List[FingerprintScorer]) extends FingerprintScorer {
+    var activeChildren: List[FingerprintScorer] = Nil
+
+    def prepareMut(fingerprint: Seq[String]): Seq[(String, Float)] = {
+      val matchingChilds = children
+        .map(c => (c, c.prepareMut(fingerprint)))
+        .filterNot(_._2.isEmpty)
+
+      activeChildren = matchingChilds.map(_._1)
+      topChild = None
+
+      matchingChilds.flatMap(_._2)
+    }
+
+    var topChild: Option[FingerprintScorer] = None
+
+    def scoreMut(fpt: String): Float = {
+      activeChildren.foldLeft(0f) { (topScore, child) =>
+        val score = child.scoreMut(fpt)
+        if (score > topScore) {
+          topChild = Some(child)
+          score
+        } else {
+          topScore
+        }
+      }
+    }
+
+    def markMut(fpt: String): Boolean = {
+      topChild.foreach { child =>
+        val childActive = child.markMut(fpt)
+        if (!childActive) {
+          val firstChildIndex = activeChildren.indexOf(child)
+          activeChildren = activeChildren.patch(firstChildIndex, Nil, 1)
+        }
+      }
+      !activeChildren.isEmpty
+    }
+
+    def state = activeChildren.map(_.state).mkString("sum(", ", ", ")")
+
     def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = {
       val childRes = children.map(_.prepare(fingerprint))
       val childScores = childRes.flatMap(_._1)
@@ -223,6 +261,59 @@ object TypeFingerprintQuery extends Logging {
   }
 
   case class MaxNode(children: List[FingerprintScorer]) extends FingerprintScorer {
+    var activeChildren: List[FingerprintScorer] = Nil
+    var matchingChild: Option[FingerprintScorer] = None
+
+    def prepareMut(fingerprint: Seq[String]): Seq[(String, Float)] = {
+      val matchingChilds = children
+        .map(c => (c, c.prepareMut(fingerprint)))
+        .filterNot(_._2.isEmpty)
+
+      activeChildren = matchingChilds.map(_._1)
+      matchingChild = None
+      topChild = None
+
+      matchingChilds.flatMap(_._2)
+    }
+
+    var topChild: Option[FingerprintScorer] = None
+
+    def scoreMut(fpt: String): Float =
+      matchingChild.fold {
+        val topMatchingChild = activeChildren
+          .map(c => (c, c.scoreMut(fpt)))
+          .filter(_._2 > 0f)
+          .maxByOpt(_._2)
+
+        topMatchingChild.fold {
+          0f
+        } {
+          case (child, score) =>
+            topChild = Some(child)
+            score
+        }
+      } { child =>
+        child.scoreMut(fpt)
+      }
+
+    def markMut(fpt: String): Boolean =
+      topChild.map { child =>
+        val childActive = child.markMut(fpt)
+        if (childActive) {
+          matchingChild = topChild
+        } else {
+          matchingChild = None
+          activeChildren = Nil
+        }
+        childActive
+      }.getOrElse(true)
+
+    def state = matchingChild.fold {
+      activeChildren.map(_.state).mkString("unmatchedMax(", ", ", ")")
+    } { child =>
+      s"matchedMax(${child.state})"
+    }
+
     def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = {
       val childRes = children.map(_.prepare(fingerprint))
       val childScores = childRes.flatMap(_._1)
@@ -246,6 +337,27 @@ object TypeFingerprintQuery extends Logging {
   }
 
   case class Leaf(tpe: String, boost: Float) extends FingerprintScorer {
+
+    def prepareMut(fingerprint: Seq[String]): Seq[(String, Float)] =
+      if (fingerprint.contains(tpe))
+        Seq(tpe -> boost)
+      else
+        Seq()
+
+    def scoreMut(fpt: String): Float =
+      if (tpe == fpt)
+        math.max(boost, Float.MinPositiveValue)
+      else
+        0
+
+    def markMut(fpt: String): Boolean =
+      if (tpe == fpt)
+        false
+      else
+        true
+
+    def state = tpe
+
     def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) =
       if (fingerprint.contains(tpe)) {
         (Seq(tpe -> boost), this)
@@ -261,6 +373,15 @@ object TypeFingerprintQuery extends Logging {
   }
 
   object DeadLeaf extends FingerprintScorer {
+
+    def prepareMut(fingerprint: Seq[String]): Seq[(String, Float)] = ???
+
+    def scoreMut(fpt: String): Float = ???
+
+    def markMut(fpt: String): Boolean = ???
+
+    def state = ???
+
     def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = (Seq(), this)
 
     def score(fpt: String) = None

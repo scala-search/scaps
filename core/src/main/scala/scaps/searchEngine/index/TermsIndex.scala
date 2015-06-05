@@ -84,6 +84,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
   def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
+      //      toLuceneQuery(query, moduleIds).map(
+      //        lq => search(lq, 20, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
       toLuceneQuery(query, moduleIds).map(
         lq => search(lq, settings.query.maxResults).get)
     }
@@ -147,7 +149,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
     entity.typeFingerprint.foreach { fp =>
-      doc.add(new TextWithTermVectorField(fields.fingerprint, fp, Store.YES))
+      add(fields.fingerprint, fp)
     }
     add(fields.doc, entity.comment)
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
@@ -196,20 +198,5 @@ object TermsIndex {
 
   class ModuleIdSimilarity extends DefaultSimilarity {
     override def idf(docFreq: Long, numDocs: Long) = 1f
-  }
-
-  class TextWithTermVectorField(name: String, value: String, store: Store)
-    extends Field(name, value, TextWithTermVectorField.fieldType(store))
-
-  object TextWithTermVectorField {
-    def fieldType(store: Store): FieldType = {
-      val tpe = new FieldType
-      tpe.setIndexed(true)
-      tpe.setTokenized(true)
-      tpe.setStoreTermVectors(true)
-      tpe.setStored(store == Store.YES)
-      tpe.freeze()
-      tpe
-    }
   }
 }
