@@ -18,9 +18,10 @@ import org.apache.lucene.index.IndexReader
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.queries.function.valuesource.NormValueSource
 import scaps.utils.Logging
+import org.apache.lucene.search.Query
 
-class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
-  extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery), TypeFingerprintQuery.normFunctionQuery(field)) {
+class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, matcherQuery: Query)
+  extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery, matcherQuery), TypeFingerprintQuery.normFunctionQuery(field)) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -36,7 +37,7 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
         customScore(doc, subQueryScore, valSrcScores(0))
 
       override def customScore(doc: Int, subQueryScore: Float, normFromValSrc: Float): Float = {
-        normFromValSrc * score(doc)
+        normFromValSrc * subQueryScore * score(doc)
       }
 
       def score(doc: Int): Float = {
@@ -52,8 +53,11 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
         val normExplanation = valSrcExpls(0)
         val queryScore = score(doc)
 
-        val expl = new Explanation(normExplanation.getValue * queryScore, "type fingerprint score, product of:")
+        val expl = new Explanation(
+          normExplanation.getValue * subQueryExpl.getValue * queryScore,
+          "type fingerprint score, product of:")
         expl.addDetail(new Explanation(queryScore, "type fingerprint"))
+        expl.addDetail(subQueryExpl)
         expl.addDetail(normExplanation)
         expl
       }
@@ -61,8 +65,8 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery)
 }
 
 object TypeFingerprintQuery extends Logging {
-  def matcherQuery(field: String, apiQuery: ApiTypeQuery) = {
-    val q = new BooleanQuery
+  def matcherQuery(field: String, apiQuery: ApiTypeQuery, innerMatcherQuery: Query) = {
+    val fingerprintMatcher = new BooleanQuery
 
     val rankedTypesWithFp = apiQuery.allTypes
       .sortBy(-_.boost)
@@ -73,20 +77,30 @@ object TypeFingerprintQuery extends Logging {
       .map(_._1.boost)
       .getOrElse(0d)
 
-    val terms = rankedTypesWithFp
+    val termsOverThreshold = rankedTypesWithFp
       .takeWhile(_._1.boost > threshold)
-      .take(10)
       .map(_._2)
       .distinct
+
+    val terms =
+      if (termsOverThreshold.isEmpty)
+        rankedTypesWithFp.headOption.toList.map(_._2)
+      else
+        termsOverThreshold
 
     logger.debug(s"Matching documents with fingerprint types: $terms")
 
     for {
       term <- terms
     } {
-      q.add(new TermQuery(new Term(field, term)), Occur.SHOULD)
+      fingerprintMatcher.add(new TermQuery(new Term(field, term)), Occur.SHOULD)
     }
-    new ConstantScoreQuery(q)
+
+    val matcherQuery = new BooleanQuery
+    matcherQuery.add(new ConstantScoreQuery(fingerprintMatcher), Occur.SHOULD)
+    matcherQuery.add(innerMatcherQuery, Occur.SHOULD)
+
+    matcherQuery
   }
 
   private val thresholdTypes = {

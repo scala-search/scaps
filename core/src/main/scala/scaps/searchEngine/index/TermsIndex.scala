@@ -97,20 +97,19 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
   private def toLuceneQuery(query: ApiQuery, moduleIds: Set[String]): ProcessingError \/ Query = {
     try {
-      val keysAndTypes = new BooleanQuery
+      val keys = new BooleanQuery
 
       query.keywords.foreach { keyword =>
         val nameQuery = new TermQuery(new Term(fields.name, keyword))
         nameQuery.setBoost(settings.query.nameBoost.toFloat)
-        keysAndTypes.add(nameQuery, Occur.SHOULD)
+        keys.add(nameQuery, Occur.SHOULD)
 
         val docQuery = new TermQuery(new Term(fields.doc, keyword))
         docQuery.setBoost(settings.query.docBoost.toFloat)
-        keysAndTypes.add(docQuery, Occur.SHOULD)
+        keys.add(docQuery, Occur.SHOULD)
       }
 
-      val tfpq = new TypeFingerprintQuery(fields.fingerprint, query.tpe)
-      keysAndTypes.add(tfpq, Occur.SHOULD)
+      val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys)
 
       val modules = new BooleanQuery
 
