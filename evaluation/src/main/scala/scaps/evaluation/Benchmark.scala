@@ -18,6 +18,7 @@ import java.io.Writer
 import java.io.PrintWriter
 import java.io.FileWriter
 import scaps.utils.using
+import scaps.utils.timers.withTime
 
 object Benchmark extends App {
   val outPath = args.lift(0)
@@ -31,19 +32,22 @@ object Benchmark extends App {
   val now = (new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")).format(Calendar.getInstance.getTime())
   val runInfo = now :: runName :: Nil
 
-  val entries = Common.runQueries(engine, evaluationSettings.queries).fold(
-    error => {
-      println(error)
-      List(runInfo ::: "<MAP>" :: "---" :: "---" :: Nil)
-    },
-    stats => {
-      val queryData = stats.queryStats.map { qs =>
-        runInfo ::: qs.query :: qs.averagePrecision.toString :: qs.recallAt10.toString :: Nil
-      }
-      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision.toString :: stats.meanRecallAt10.toString :: Nil)
-    })
+  val (entries, queryTime) = withTime {
+    Common.runQueries(engine, evaluationSettings.queries).fold(
+      error => {
+        println(error)
+        List(runInfo ::: "<MAP>" :: "---" :: "---" :: Nil)
+      },
+      stats => {
+        val queryData = stats.queryStats.map { qs =>
+          runInfo ::: qs.query :: qs.averagePrecision.toString :: qs.recallAt10.toString :: Nil
+        }
+        queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision.toString :: stats.meanRecallAt10.toString :: Nil)
+      })
+  }
 
-  val csvRows = entries.map(_.mkString("", "; ", ";"))
+  val timeEntry = runInfo ::: "<queryTime> (ms)" :: queryTime.toMillis :: "---" :: Nil
+  val csvRows = (entries :+ timeEntry).map(_.mkString("", "; ", ";"))
   val csv = csvRows.mkString("", "\n", "\n")
 
   println(csv)
