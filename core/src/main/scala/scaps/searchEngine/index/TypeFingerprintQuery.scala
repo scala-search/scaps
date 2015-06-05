@@ -116,15 +116,19 @@ object TypeFingerprintQuery extends Logging {
   }
 
   object FingerprintScorer {
-    def apply(q: ApiTypeQuery): FingerprintScorer =
-      minimize(q match {
-        case ApiTypeQuery.Sum(children) =>
-          SumNode(children.map(apply))
-        case ApiTypeQuery.Max(children) =>
-          MaxNode(children.map(apply))
-        case t @ ApiTypeQuery.Type(v, name, boost) =>
-          Leaf(t.fingerprint, boost.toFloat)
-      })
+    def apply(q: ApiTypeQuery): FingerprintScorer = {
+      def rec(q: ApiTypeQuery): FingerprintScorer =
+        q match {
+          case ApiTypeQuery.Sum(children) =>
+            SumNode(children.map(apply))
+          case ApiTypeQuery.Max(children) =>
+            MaxNode(children.map(apply))
+          case t @ ApiTypeQuery.Type(v, name, boost) =>
+            Leaf(t.fingerprint, boost.toFloat)
+        }
+
+      minimize(rec(q))
+    }
 
     def minimize(scorer: FingerprintScorer): FingerprintScorer = scorer match {
       case DeadLeaf | (_: Leaf)        => scorer

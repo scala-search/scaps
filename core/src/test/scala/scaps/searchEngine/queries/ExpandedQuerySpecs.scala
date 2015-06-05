@@ -14,27 +14,57 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
   val B = leaf("B")
   val C = leaf("C")
 
-  val Box = leaf("Box")
-  val Sox = leaf("Sox")
+  val Ax = leaf("Ax")
+  val Bx = leaf("Bx")
+  val Cx = leaf("Cx")
+  val Dx = leaf("Dx")
 
-  "the expanded query minification" should ""
+  "the expanded query minification" should "rewrite single alternatives and parts" in {
+    val q = Max(Sum(A), Sum(B))
 
-  ignore should "factor out redundant sub queries" in {
-    // (Box & (A | B)) | (Sox & (A | B))
-    // (Box | Sox) & (A | B)
+    ExpandedQuery.minimize(q) should be(Max(A, B))
+
+    val q2 = Max(Sum(Max(A), Max(B)))
+
+    ExpandedQuery.minimize(q2) should be(Max(Sum(A, B)))
+  }
+
+  it should "factor out redundant sub queries" in {
+    // (Ax & (A | B)) | (Bx & (A | B))
+    // (Ax | Bx) & (A | B)
     val q =
       Max(
         Sum(
-          Box,
+          Ax,
           Max(A, B)),
         Sum(
-          Sox,
+          Bx,
           Max(A, B)))
 
-    ExpandedQuery.minimizeClauses(q) should be(
+    ExpandedQuery.minimize(q) should be(
       Max(
         Sum(
-          Max(Box, Sox),
+          Max(Ax, Bx),
           Max(A, B))))
+  }
+
+  it should "factor out multiple redundant subqueries" in {
+    // (Ax & A) | (Bx & A) | (Cx & B) | (Dx & B)
+    // ((Ax | Bx) & A) | ((Cx | Dx) & B)
+    val q =
+      Max(
+        Sum(Ax, A),
+        Sum(Bx, A),
+        Sum(Cx, B),
+        Sum(Dx, B))
+
+    ExpandedQuery.minimize(q) should be(
+      Max(
+        Sum(
+          Max(Ax, Bx),
+          A),
+        Sum(
+          Max(Cx, Dx),
+          B)))
   }
 }

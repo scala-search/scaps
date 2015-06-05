@@ -17,6 +17,7 @@ import scaps.webapi.Invariant
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
 import scaps.searchEngine.View
+import scaps.utils._
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -63,10 +64,49 @@ private[queries] object ExpandedQuery {
       s"$tpe^($fraction, $depth, $dist)"
   }
 
-  def minimizeClauses(q: ExpandedQuery): ExpandedQuery = q match {
-    case l: Leaf           => l
-    case Sum(parts)        => q
-    case Max(alternatives) => q
+  def minimize(p: Part): Part = p match {
+    case Max((alt: Leaf) :: Nil) => alt
+    case Max(alts) =>
+      val minAlts = alts.map(minimize)
+
+      maxRepeatedPart(minAlts).fold[Part] {
+        Max(minAlts)
+      } { part =>
+        minimize(Max(factorOut(part, minAlts)))
+      }
+    case _ => p
+  }
+
+  def maxRepeatedPart(alts: List[Alternative]): Option[Part] =
+    alts
+      .flatMap {
+        case Sum(parts) => parts
+        case _          => Nil
+      }
+      .groupBy(identity)
+      .mapValues(_.length)
+      .filter(_._2 > 1)
+      .maxByOpt(_._2)
+      .map(_._1)
+
+  def factorOut(part: Part, alts: List[Alternative]): List[Alternative] = {
+    val (altsWithPart, altsWithoutPart) = alts.partition {
+      case Sum(ps) => ps.contains(part)
+      case _       => false
+    }
+
+    val altsMinusPart = altsWithPart.map {
+      case Sum(ps) => Sum(ps.filter(_ != part))
+      case _       => ???
+    }
+
+    Sum(Max(altsMinusPart) :: part :: Nil) :: altsWithoutPart
+  }
+
+  def minimize(a: Alternative): Alternative = a match {
+    case Sum((part: Leaf) :: Nil) => part
+    case Sum(parts)               => Sum(parts.map(minimize))
+    case _                        => a
   }
 }
 
@@ -91,6 +131,7 @@ class QueryAnalyzer private[searchEngine] (
       (toType _) andThen
         (_.normalize(Nil)) andThen
         (expandQuery _) andThen
+        (ExpandedQuery.minimize(_)) andThen
         (toApiTypeQuery _) andThen
         { typeQuery => ApiQuery(raw.keywords, typeQuery) })
 
