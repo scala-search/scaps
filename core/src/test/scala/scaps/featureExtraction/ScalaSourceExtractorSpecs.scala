@@ -529,19 +529,29 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
 
       class A extends T {
         override def m = 2
+        def n = 1
       }
 
-      class B extends T
+      class B extends T {
+        def n = 1
+      }
 
       object O extends T {
         override def m = 2
+        def n = 1
       }
 
-      object P extends T
+      object P extends T {
+        def n = 1
+      }
       """)(
       ("p.A#m", _.isOverride should be(true)),
+      ("p.A#n", _.isOverride should be(false)),
       ("p.B#m", _.isOverride should be(true)),
+      ("p.B#n", _.isOverride should be(false)),
       ("p.O.m", _.isOverride should be(true)),
-      ("p.P.m", _.isOverride should be(true)))
+      ("p.O.n", _.isOverride should be(false)),
+      ("p.P.m", _.isOverride should be(true)),
+      ("p.P.n", _.isOverride should be(false)))
   }
 }

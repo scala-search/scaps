@@ -43,14 +43,17 @@ class ViewIndex(val dir: Directory) extends Index[View] {
     }
 
     val (sources, alternatives, distances) = (tpe.variance match {
+      case Covariant if tpe.name == TypeEntity.Nothing.name =>
+        Nil
       case Covariant =>
-        findViewsTo(tpe).get.map(view => (view.to, view.from, view.distance))
+        (tpe, TypeEntity.Nothing(Covariant), 1) +:
+          findViewsTo(tpe).get.map(view => (view.to, view.from, view.distance))
       case Contravariant =>
         findViewsFrom(tpe).get.map(view => (view.from, view.to, view.distance))
-      case Invariant if tpe.name != TypeEntity.Unknown.name =>
-        List((tpe, TypeEntity.Unknown(Invariant), 1))
-      case Invariant =>
+      case Invariant if tpe.name == TypeEntity.Unknown.name =>
         Nil
+      case Invariant =>
+        List((tpe, TypeEntity.Unknown(Invariant), 1))
     }).unzip3
 
     alternatives

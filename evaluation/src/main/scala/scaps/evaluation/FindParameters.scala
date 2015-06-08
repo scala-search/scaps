@@ -50,7 +50,7 @@ object FindParameters extends App {
     generateConfs(noConfigurations, Math.pow(42d, 42d).toLong, settings).zipWithIndex.foreach {
       case (settings, idx) =>
         println(s"test configuration ${idx} of $noConfigurations")
-        println(settings)
+
         engine = Common.updateSearchEngine(engine, settings)
         Common.runQueries(engine, evaluationSettings.queries).fold(
           errors => {
@@ -58,9 +58,6 @@ object FindParameters extends App {
             ???
           },
           stats => {
-            println(stats.meanAveragePrecision)
-            println()
-
             val cells = List[Any](
               settings.index.lengthNormWeight,
               settings.query.depthBoostWeight,
@@ -71,6 +68,8 @@ object FindParameters extends App {
               stats.meanAveragePrecision,
               stats.meanRecallAt10,
               stats.duration.toMillis + " ms")
+
+            println(cells.mkString("", "; ", ";\n"))
             writer.write(cells.mkString("", "; ", ";\n"))
           })
     }

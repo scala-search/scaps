@@ -256,18 +256,13 @@ class QueryAnalyzer private[searchEngine] (
       1d / (l.dist + 1) -> settings.query.distanceBoostWeight)
 
   /**
-   * The inverse type frequency is defined as log10(10 / (10f + (1 - 2f)))
-   * where f is the type frequency normed by the maximum possible type frequency.
-   *
-   * The (1 - 2f) term ensures that the return value is <= 1.0 but > 0.0 for types
-   * with a frequency equal to the maximum frequency.
+   * The inverse type frequency is defined as log10(10 / (10f + (1 - f)))
+   * where f is the type frequency normed by the maximum possible type frequency
+   * (see TypeFrequencies).
    */
   private def itf(l: ExpandedQuery.Leaf): Double = {
-    val maxFrequency = settings.index.typeFrequenciesSampleSize
-
-    val freq = math.min(getFrequency(l.tpe.variance, l.tpe.name), maxFrequency)
-    val normedFreq = (freq.toDouble / maxFrequency)
-    math.log10(10 / (normedFreq * 10 + (1 - 2 * normedFreq)))
+    val freq = getFrequency(l.tpe.variance, l.tpe.name)
+    math.log10(10 / (freq * 10 + (1 - freq)))
   }
 
   /**
@@ -281,5 +276,5 @@ class QueryAnalyzer private[searchEngine] (
     elemsWithWeight.map { case (x, w) => x * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
 
   private def getFrequency(v: Variance, t: String) =
-    findClassesBySuffix(t).headOption.map(_.frequency(v)).filter(_ > 0).getOrElse(1)
+    findClassesBySuffix(t).headOption.map(_.frequency(v)).getOrElse(0f)
 }

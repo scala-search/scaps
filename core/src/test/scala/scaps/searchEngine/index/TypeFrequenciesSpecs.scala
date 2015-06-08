@@ -6,7 +6,7 @@ import scaps.searchEngine.View
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {
-    val tfs = typeFrequencies("""
+    val (tfs, maxFreq) = typeFrequenciesWithMaxAbsoluteFrequency("""
       package p
 
       trait A
@@ -28,21 +28,16 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfC = tfs((Covariant, "p.C"))
     val tfNothing = tfs((Covariant, TypeEntity.Nothing.name))
 
-    tfAny should be < tfA
-    tfA should (
-      be >= 1 and
-      be < tfB)
-    tfB should (
-      be >= 2 and
-      be < tfC)
-    tfB2 should be(tfA + 1) // ctor of B2 also returns a B2
-    tfC should (
-      be >= 3 and
-      be < tfNothing)
+    tfAny should be(0f)
+    tfA should be(1f / maxFreq) // m1
+    tfB should be(3f / maxFreq) // m1, m2, new B
+    tfB2 should be(2f / maxFreq) // m1, new B2
+    tfC should be(5f / maxFreq) // m1, m2, m3, new C, new B
+    tfNothing should be(1f)
   }
 
   it should "calculate type frequencies at contravariant positions" in {
-    val tfs = typeFrequencies("""
+    val (tfs, maxFreq) = typeFrequenciesWithMaxAbsoluteFrequency("""
       package p
 
       trait A
@@ -63,20 +58,22 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfB = tfs((Contravariant, "p.B"))
     val tfB2 = tfs((Contravariant, "p.B2"))
     val tfC = tfs((Contravariant, "p.C"))
+    val tfNothing = tfs((Contravariant, TypeEntity.Nothing.name))
 
     tfAny should be >= tfA
     tfA should (
-      be >= 3 and
+      be >= (3f / maxFreq) and
       be > tfB)
     tfB should (
-      be >= 2 and
+      be >= (2f / maxFreq) and
       be > tfC)
     tfC should (
-      be >= 1)
+      be >= (1f / maxFreq))
+    tfNothing should be(0f)
   }
 
   it should "calculate type frequencies at invariant positions" in {
-    val tfs = typeFrequencies("""
+    val (tfs, maxFreq) = typeFrequenciesWithMaxAbsoluteFrequency("""
       package p
 
       trait A
@@ -92,13 +89,13 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfB = tfs((Invariant, "p.B"))
     val tfC = tfs((Invariant, "p.C"))
 
-    tfA should be(0)
-    tfB should be(1)
-    tfC should be(0)
+    tfA should be(0f)
+    tfB should be(1f / maxFreq)
+    tfC should be(0f)
   }
 
   it should "calculate type frequencies of generic types" in {
-    val tfs = typeFrequencies("""
+    val (tfs, maxFreq) = typeFrequenciesWithMaxAbsoluteFrequency("""
       package p
 
       class A[+T]
@@ -117,11 +114,11 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfA = tfs((Covariant, "p.A"))
     val tfB = tfs((Covariant, "p.B"))
 
-    tfA should be(3) // from new A, m1, m2
-    tfB should be(3) // from new B, m3, m4
+    tfA should be(3f / maxFreq) // new A, m1, m2
+    tfB should be(3f / maxFreq) // new B, m3, m4
   }
 
-  def typeFrequencies(source: String) = {
+  def typeFrequenciesWithMaxAbsoluteFrequency(source: String) = {
     val entities = extractAll(source)
     val terms = entities.collect { case t: TermEntity => t }
     val classes = entities.collect { case c: ClassEntity => c }
@@ -132,7 +129,10 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       withViewIndex { viewIndex =>
         viewIndex.addEntities(views)
 
-        TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), termIndex.allTerms().get)
+        val terms = termIndex.allTerms().get
+
+        (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), terms, Int.MaxValue),
+          terms.filter(!_.isOverride).length)
       }
     }
   }

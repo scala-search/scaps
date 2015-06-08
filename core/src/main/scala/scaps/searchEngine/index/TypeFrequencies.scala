@@ -7,7 +7,9 @@ import scaps.utils._
 import scaps.searchEngine.View
 
 object TypeFrequencies {
-  def apply(findAlternatives: TypeEntity => Seq[TypeEntity], terms: Seq[TermEntity]) = {
+  def apply(findAlternatives: TypeEntity => Seq[TypeEntity],
+            terms: Seq[TermEntity],
+            maxSampleSize: Int): Map[(Variance, String), Float] = {
     // use weak hash map to avoid out of memory exceptions
     val findAlternativesCached = Memo.weakHashMapMemo { findAlternatives }
 
@@ -29,10 +31,16 @@ object TypeFrequencies {
         tpe <- types(term.tpe.normalize(term.typeParameters)).distinct
       } yield (tpe.variance, tpe.name)
 
-    terms
+    val sampledTerms = terms
+      .filter(!_.isOverride)
+      .sample(maxSampleSize)
+
+    val maxFrequency = sampledTerms.length
+
+    sampledTerms
       .flatMap(typesReferencedFromTerm)
       .groupBy(identity)
-      .mapValues(_.length)
+      .mapValues(_.length.toFloat / maxFrequency)
       .withDefaultValue(0)
   }
 }

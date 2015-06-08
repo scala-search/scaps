@@ -34,4 +34,20 @@ class SampleSeqOpsSpecs extends FlatSpec with Matchers {
 
     sampleWasDifferent should be(true)
   }
+
+  it should "evenly distribute values" in {
+    val l = Seq(1, 2, 3)
+
+    val res = List.newBuilder[Int]
+
+    for { _ <- 1 to 1000 } {
+      res ++= l.sample(2)
+    }
+
+    val countPerVal = res.result().groupBy(identity).mapValues(_.length)
+
+    countPerVal.foreach { i =>
+      i._2 shouldBe (666 +- 60)
+    }
+  }
 }

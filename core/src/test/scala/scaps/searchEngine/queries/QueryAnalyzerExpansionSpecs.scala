@@ -247,7 +247,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val analyzer = new QueryAnalyzer(
     Settings.fromApplicationConf,
     _ => ???,
-    viewIndex.findAlternativesWithDistance(_).get)
+    viewIndex.findAlternativesWithDistance(_).get.filter(_._1.name != TypeEntity.Nothing.name))
 
   def expand(q: TypeEntity) =
     unified(analyzer.expandQuery(q))

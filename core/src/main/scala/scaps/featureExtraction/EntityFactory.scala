@@ -68,7 +68,7 @@ trait EntityFactory extends Logging {
 
       val isOverride =
         !sym.allOverriddenSymbols.isEmpty ||
-          (sym.owner.isModule && sym.owner.baseClasses.exists(_.tpe.decl(sym.name) != NoSymbol))
+          (sym.owner.isModule && sym.owner.baseClasses.drop(1).exists(_.tpe.decl(sym.name) != NoSymbol))
 
       if (isOverride) flags += TermEntity.Overrides
       if (sym.isImplicit) flags += TermEntity.Implicit
@@ -78,7 +78,8 @@ trait EntityFactory extends Logging {
 
   def isTermOfInterest(sym: Symbol): Boolean =
     (sym.isTerm || (sym.isConstructor && !sym.owner.isAbstractClass)) &&
-      sym.isPublic
+      sym.isPublic &&
+      !sym.isSynthetic
 
   def createTypeEntity(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
     val (params, memberType) =

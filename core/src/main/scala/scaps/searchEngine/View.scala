@@ -16,17 +16,9 @@ sealed trait View {
 
 object View {
   def fromClass(cls: ClassEntity): Seq[View] = {
-    val clsTpe = cls.toType
-
-    val subTypes =
-      cls.baseTypes.zipWithIndex.map {
-        case (base, idx) => SubType(clsTpe, base, idx + 1)
-      }
-
-    if (cls.name == TypeEntity.Nothing)
-      subTypes
-    else
-      SubType(TypeEntity.Nothing(Covariant), clsTpe, 1) :: subTypes
+    cls.baseTypes.zipWithIndex.map {
+      case (base, idx) => SubType(cls.toType, base, idx + 1)
+    }
   }
 
   def key(tpe: TypeEntity) =

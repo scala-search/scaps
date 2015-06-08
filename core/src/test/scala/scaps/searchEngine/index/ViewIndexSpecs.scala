@@ -32,6 +32,8 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   val CBox = new TypeEntity.PrimitiveType("CBox")
   val Loop = new TypeEntity.GenericType("Loop")
 
+  val Nothing = TypeEntity.Nothing
+
   val views = {
     def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
       SubType(cls(Covariant), base(Covariant), dist)
@@ -56,10 +58,11 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
     val subtypesOfA = viewIndex.findAlternativesWithDistance(A(Covariant)).get
 
     subtypesOfA should (
-      have length (3) and
+      have length (4) and
       contain((B(Covariant), 1)) and
       contain((C(Covariant), 1)) and
-      contain((D(Covariant), 2)))
+      contain((D(Covariant), 2)) and
+      contain((Nothing(Covariant), 1)))
   }
 
   it should "retrieve basetypes of types at contravariant positions" in {
@@ -83,24 +86,27 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
     val subtypesOfBox = viewIndex.findAlternativesWithDistance(Box(T(Covariant), Covariant)).get
 
     subtypesOfBox should (
-      have length (1) and
+      have length (2) and
       contain((MyBox(T(Covariant), Covariant), 1)) and
-      not contain ((CBox(Covariant), 1)))
+      not contain ((CBox(Covariant), 1)) and
+      contain((Nothing(Covariant), 1)))
   }
 
   it should "retrieve subtypes of parametric types with concrete arguments" in {
     val subtypesOfBoxOfB = viewIndex.findAlternativesWithDistance(Box(B(Covariant), Covariant)).get
 
     subtypesOfBoxOfB should (
-      have length (1) and
-      contain((MyBox(B(Covariant), Covariant), 1)))
+      have length (2) and
+      contain((MyBox(B(Covariant), Covariant), 1)) and
+      contain((Nothing(Covariant), 1)))
 
     val subtypesOfBoxOfC = viewIndex.findAlternativesWithDistance(Box(C(Covariant), Covariant)).get
 
     subtypesOfBoxOfC should (
-      have length (2) and
+      have length (3) and
       contain((MyBox(C(Covariant), Covariant), 1)) and
-      contain((CBox(Covariant), 1)))
+      contain((CBox(Covariant), 1)) and
+      contain((Nothing(Covariant), 1)))
   }
 
   it should "retrieve parametric basetypes" in {

@@ -106,7 +106,7 @@ case class ClassEntity(
   baseTypes: List[TypeEntity],
   referencedFrom: Set[Module] = Set(),
   comment: String = "",
-  typeFrequency: Map[Variance, Int] = Map())
+  typeFrequency: Map[Variance, Float] = Map())
   extends Entity {
 
   override def toString() = {
@@ -122,7 +122,7 @@ case class ClassEntity(
   def isFunction = typeParameters.length > 0 && name == TypeEntity.Function.name(typeParameters.length - 1)
 
   def frequency(v: Variance) =
-    typeFrequency.get(v).getOrElse(0)
+    typeFrequency.get(v).getOrElse(0f)
 
   def toType: TypeEntity =
     TypeEntity(name, Covariant, typeParameters.map(p => TypeEntity(p.name, p.variance, Nil, true)))
