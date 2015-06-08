@@ -133,6 +133,7 @@ case class TermEntity(
   typeParameters: List[TypeParameterEntity],
   tpe: TypeEntity,
   comment: String,
+  flags: Set[TermEntity.Flag] = Set(),
   module: Module = Module.Unknown)
   extends Entity {
 
@@ -169,6 +170,22 @@ case class TermEntity(
       .sorted
 
   def withoutComment = copy(comment = "")
+
+  def isOverride = flags(TermEntity.Overrides)
+
+  def isImplicit = flags(TermEntity.Implicit)
+}
+
+object TermEntity {
+  sealed trait Flag {
+    def name: String
+  }
+  case object Overrides extends Flag {
+    val name = "overrides"
+  }
+  case object Implicit extends Flag {
+    val name = "implicit"
+  }
 }
 
 case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], isTypeParam: Boolean = false) extends EntityLike {

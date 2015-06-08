@@ -63,7 +63,17 @@ trait EntityFactory extends Logging {
   def createTermEntity(sym: Symbol, rawComment: String): ExtractionError \/ TermEntity =
     \/.fromTryCatchNonFatal {
       val (typeParams, tpe) = createTypeEntity(sym)
-      TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment)
+
+      val flags = Set.newBuilder[TermEntity.Flag]
+
+      val isOverride =
+        !sym.allOverriddenSymbols.isEmpty ||
+          (sym.owner.isModule && sym.owner.baseClasses.exists(_.tpe.decl(sym.name) != NoSymbol))
+
+      if (isOverride) flags += TermEntity.Overrides
+      if (sym.isImplicit) flags += TermEntity.Implicit
+
+      TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment, flags.result)
     }.leftMap(ExtractionError(qualifiedName(sym, false), _))
 
   def isTermOfInterest(sym: Symbol): Boolean =

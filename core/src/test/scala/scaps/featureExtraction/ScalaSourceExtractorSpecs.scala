@@ -518,4 +518,30 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)(
       ("p.O.m", t => println(t)))
   }
+
+  it should "set the 'overrides' flag on terms that override an inherited member" in {
+    extractTerms("""
+      package p
+
+      trait T {
+        def m = 1
+      }
+
+      class A extends T {
+        override def m = 2
+      }
+
+      class B extends T
+
+      object O extends T {
+        override def m = 2
+      }
+
+      object P extends T
+      """)(
+      ("p.A#m", _.isOverride should be(true)),
+      ("p.B#m", _.isOverride should be(true)),
+      ("p.O.m", _.isOverride should be(true)),
+      ("p.P.m", _.isOverride should be(true)))
+  }
 }

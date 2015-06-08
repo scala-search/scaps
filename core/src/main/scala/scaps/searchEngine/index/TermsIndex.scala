@@ -151,6 +151,9 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       add(fields.fingerprint, fp)
     }
     add(fields.doc, entity.comment)
+    entity.flags.foreach { flag =>
+      add(fields.flags, flag.name)
+    }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
     doc
@@ -170,6 +173,7 @@ object TermsIndex {
     val doc = "doc"
     val entity = "entity"
     val moduleId = "moduleId"
+    val flags = "flags"
   }
 
   class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {

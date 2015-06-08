@@ -26,7 +26,7 @@ object TypeFrequencies {
 
     def typesReferencedFromTerm(term: TermEntity): Seq[(Variance, String)] =
       for {
-        tpe <- types(term.tpe.normalize(term.typeParameters))
+        tpe <- types(term.tpe.normalize(term.typeParameters)).distinct
       } yield (tpe.variance, tpe.name)
 
     terms
