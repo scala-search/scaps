@@ -15,7 +15,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]       Box[C]       MyBox[Loop]    Bag[+T]  Y
+   *        A          X          Box[+T]      Box[C]       Box[C]       MyBox[Loop]    Bag[+T]  Y   Tup[+T1, +T2]
    *        ^                       ^            ^            ^              ^            ^      ^
    *    /---|---\                   |            |            |              |            |      |
    *    B       C                MyBox[+T]      CBox    GenericCBox[+T]   Loop[+T]        YBag[+T]
@@ -41,6 +41,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val MyLoop = new TypeEntity.GenericType("MyLoop")
   val Bag = new TypeEntity.GenericType("Bag")
   val YBag = new TypeEntity.GenericType("YBag")
+  val Tup = new TypeEntity.VariantType("Tup")
 
   val views = {
     def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
@@ -189,6 +190,17 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
             innerBoxParts)))))
   }
 
+  it should "expand repeated types at covariant positions" in {
+    // _ => (X, X)
+    val q = Tup(X(Covariant) :: X(Covariant) :: Nil, Covariant)
+
+    expand(q) should be(unified(
+      Sum(
+        Leaf(Tup(Wildcard(Covariant) :: Wildcard(Covariant) :: Nil, Covariant), 1d, 0, 0),
+        Leaf(X(Covariant), 1d, 1, 0),
+        Leaf(X(Covariant), 1d, 1, 0))))
+  }
+
   it should "expand types with a subtype equal to one of the type arguments" in {
     // YBag[Y] => _
     val q = TypeEntity.Ignored(YBag(Y(Contravariant), Contravariant) :: Nil)
@@ -250,7 +262,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   def unified(q: Part): Part = (q match {
     case Max(Sum(Max(children) :: Nil) :: Nil) =>
-      Max(children.map(unified))
+      Max(children.map(unified).sorted)
     case Max(children) =>
       children.map(unified).sorted match {
         case (child: Leaf) :: Nil => child
@@ -260,9 +272,9 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Leaf(t.renameTypeParams(_ => "_"), fraction, depth, dist)
   })
 
-  def unified(q: Alternative): Alternative = (q match {
+  def unified(q: Alternative): Alternative = q match {
     case Sum(Max(Sum(children) :: Nil) :: Nil) =>
-      Sum(children.map(unified))
+      Sum(children.map(unified).sorted)
     case Sum(children) =>
       children.map(unified).sorted match {
         case (child: Leaf) :: Nil => child
@@ -270,5 +282,5 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       }
     case Leaf(t, fraction, depth, dist) =>
       Leaf(t.renameTypeParams(_ => "_"), fraction, depth, dist)
-  })
+  }
 }

@@ -18,10 +18,15 @@ object View {
   def fromClass(cls: ClassEntity): Seq[View] = {
     val clsTpe = cls.toType
 
-    SubType(TypeEntity.Nothing(Covariant), clsTpe, 1) ::
+    val subTypes =
       cls.baseTypes.zipWithIndex.map {
         case (base, idx) => SubType(clsTpe, base, idx + 1)
       }
+
+    if (cls.name == TypeEntity.Nothing)
+      subTypes
+    else
+      SubType(TypeEntity.Nothing(Covariant), clsTpe, 1) :: subTypes
   }
 
   def key(tpe: TypeEntity) =

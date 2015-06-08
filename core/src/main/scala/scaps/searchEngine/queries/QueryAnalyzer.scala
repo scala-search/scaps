@@ -80,7 +80,7 @@ private[queries] object ExpandedQuery {
   def maxRepeatedPart(alts: List[Alternative]): Option[Part] =
     alts
       .flatMap {
-        case Sum(parts) => parts
+        case Sum(parts) => parts.distinct
         case _          => Nil
       }
       .groupBy(identity)
@@ -203,14 +203,13 @@ class QueryAnalyzer private[searchEngine] (
           val partArgs = tpe.args
             .filterNot(_.isTypeParam)
 
-          val outerFraction = if (partArgs.isEmpty) fraction else (fraction / 2)
-          val partFraction = (fraction / (2 * partArgs.length))
+          val partFraction = (fraction / (partArgs.length + 1))
 
           val parts = partArgs.map(arg =>
             if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partFraction, depth + 1, 0)
             else alternatives(arg, partFraction, depth + 1, outerTpes))
 
-          Sum(Leaf(tpe.withArgsAsParams, outerFraction, depth, dist) :: parts)
+          Sum(Leaf(tpe.withArgsAsParams, partFraction, depth, dist) :: parts)
       }
     }
 

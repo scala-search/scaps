@@ -67,4 +67,11 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
           Max(Cx, Dx),
           B)))
   }
+
+  it should "handle repeated types correctly" in {
+    // A & ((A & A) | B)
+    val q = Sum(A, Max(Sum(A, A), B))
+
+    ExpandedQuery.minimize(q) should be(q)
+  }
 }
