@@ -38,11 +38,6 @@ package object utils {
       }
 
     def maxByOpt[B: Ordering](f: A => B) =
-      t.reduceOption { (l, r) =>
-        if (f(l) >= f(r))
-          l
-        else
-          r
-      }
+      minByOpt(f)(implicitly[Ordering[B]].reverse)
   }
 }
