@@ -11,10 +11,10 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]    Box[Loop[T]]
-   *        ^                       ^            ^            ^
-   *    /---|---\                   |            |            |
-   *    B       C                MyBox[+T]      CBox       Loop[+T]
+   *        A          X          Box[+T]      Box[C]    Box[Loop[T]]   Box[+T]
+   *        ^                       ^            ^            ^            ^
+   *    /---|---\                   |            |            |            |
+   *    B       C                MyBox[+T]      CBox       Loop[+T]    InvarBox[T]
    *            ^
    *            |
    *            D
@@ -26,11 +26,13 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   val X = new TypeEntity.PrimitiveType("X")
 
   val T = (v: Variance) => TypeEntity("T", v, Nil, isTypeParam = true)
+  val U = (v: Variance) => TypeEntity("U", v, Nil, isTypeParam = true)
   val Wildcard = (v: Variance) => TypeEntity("_", v, Nil, isTypeParam = true)
   val Box = new TypeEntity.GenericType("Box")
   val MyBox = new TypeEntity.GenericType("MyBox")
   val CBox = new TypeEntity.PrimitiveType("CBox")
   val Loop = new TypeEntity.GenericType("Loop")
+  val InvarBox = new TypeEntity.GenericType("InvarBox")
 
   val Nothing = TypeEntity.Nothing
 
@@ -45,7 +47,8 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
       isSubTypeOf(D(_), A(_), 2),
       isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
       isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
-      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 1))
+      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 1),
+      isSubTypeOf(v => InvarBox(T(Invariant), v), v => Box(T(v), v), 1))
   }
 
   val viewIndex = {
@@ -83,11 +86,12 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve subtypes of parametric types" in {
-    val subtypesOfBox = viewIndex.findAlternativesWithDistance(Box(T(Covariant), Covariant)).get
+    val subtypesOfBox = viewIndex.findAlternativesWithDistance(Box(U(Covariant), Covariant)).get
 
     subtypesOfBox should (
-      have length (2) and
-      contain((MyBox(T(Covariant), Covariant), 1)) and
+      have length (3) and
+      contain((MyBox(U(Covariant), Covariant), 1)) and
+      contain((InvarBox(U(Invariant), Covariant), 1)) and
       not contain ((CBox(Covariant), 1)) and
       contain((Nothing(Covariant), 1)))
   }
@@ -96,16 +100,18 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
     val subtypesOfBoxOfB = viewIndex.findAlternativesWithDistance(Box(B(Covariant), Covariant)).get
 
     subtypesOfBoxOfB should (
-      have length (2) and
+      have length (3) and
       contain((MyBox(B(Covariant), Covariant), 1)) and
+      contain((InvarBox(B(Invariant), Covariant), 1)) and
       contain((Nothing(Covariant), 1)))
 
     val subtypesOfBoxOfC = viewIndex.findAlternativesWithDistance(Box(C(Covariant), Covariant)).get
 
     subtypesOfBoxOfC should (
-      have length (3) and
+      have length (4) and
       contain((MyBox(C(Covariant), Covariant), 1)) and
       contain((CBox(Covariant), 1)) and
+      contain((InvarBox(C(Invariant), Covariant), 1)) and
       contain((Nothing(Covariant), 1)))
   }
 
@@ -118,11 +124,11 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve basetypes of parametric types" in {
-    val basetypesOfMyBox = viewIndex.findAlternativesWithDistance(MyBox(T(Contravariant), Contravariant)).get
+    val basetypesOfMyBox = viewIndex.findAlternativesWithDistance(MyBox(U(Contravariant), Contravariant)).get
 
     basetypesOfMyBox should (
       have length (1) and
-      contain((Box(T(Contravariant), Contravariant), 1)))
+      contain((Box(U(Contravariant), Contravariant), 1)))
   }
 
   it should "retrieve basetypes of parametric types with concrete arguments" in {
