@@ -8,7 +8,7 @@ import scaps.webapi.Covariant
 class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   import scaps.searchEngine.index.TypeFingerprintQuery.FingerprintScorer
 
-  def tpe(name: String, boost: Double) = Type(Covariant, name, boost)
+  def tpe(name: String, boost: Double) = Type(Covariant, name, boost, 1)
 
   "a fingerprint scorer" should "score a simple type query" in {
     val scorer = FingerprintScorer(tpe("A", 1))

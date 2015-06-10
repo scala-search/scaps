@@ -22,8 +22,10 @@ import scaps.webapi.Covariant
 /**
  * A Lucene query that scores type fingerprints in a field against a type query.
  */
-class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query)
-  extends CustomScoreQuery(TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery), TypeFingerprintQuery.normFunctionQuery(field)) {
+class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double)
+  extends CustomScoreQuery(
+    TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, frequencyCutoff),
+    TypeFingerprintQuery.normFunctionQuery(field)) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -76,28 +78,22 @@ object TypeFingerprintQuery extends Logging {
    * The matcher query scores fingerprints with a constant value of 1 or uses the score of `subQuery`
    * if available.
    */
-  def matcherQuery(field: String, typeQuery: ApiTypeQuery, subQuery: Query) = {
+  def matcherQuery(field: String, typeQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double) = {
     val fingerprintMatcher = new BooleanQuery
 
-    val rankedTypesWithFp = typeQuery.allTypes
+    val rankedTermsWithFreq = typeQuery.allTypes
       .sortBy(-_.boost)
-      .map(tpe => (tpe, tpe.fingerprint))
-
-    val threshold = rankedTypesWithFp
-      .find(typeWithTerm => thresholdTypes.contains(typeWithTerm._2))
-      .map(_._1.boost)
-      .getOrElse(0d)
-
-    val termsOverThreshold = rankedTypesWithFp
-      .takeWhile(_._1.boost > threshold)
-      .map(_._2)
+      .map(t => (t.fingerprint, t.typeFrequency))
       .distinct
 
-    val terms =
-      if (termsOverThreshold.isEmpty)
-        rankedTypesWithFp.headOption.toList.map(_._2)
-      else
-        termsOverThreshold
+    val accumulatedFreq = rankedTermsWithFreq
+      .scanLeft(0f)(_ + _._2)
+
+    val rankedTypesWithFreq = rankedTermsWithFreq.zip(accumulatedFreq)
+
+    val terms = rankedTypesWithFreq
+      .takeWhile(_._2 < frequencyCutoff)
+      .map(_._1._1)
 
     logger.debug(s"Matching documents with fingerprint types: $terms")
 
@@ -138,7 +134,7 @@ object TypeFingerprintQuery extends Logging {
             SumNode(children.map(apply))
           case ApiTypeQuery.Max(children) =>
             MaxNode(children.map(apply))
-          case t @ ApiTypeQuery.Type(v, name, boost) =>
+          case t @ ApiTypeQuery.Type(v, name, boost, _) =>
             Leaf(t.fingerprint, boost.toFloat)
         }
 

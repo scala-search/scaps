@@ -109,7 +109,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         keys.add(docQuery, Occur.SHOULD)
       }
 
-      val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys)
+      val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff)
 
       val modules = new BooleanQuery
 

@@ -244,9 +244,16 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {
-    case ExpandedQuery.Sum(parts) => ApiTypeQuery.Sum(parts.map(toApiTypeQuery))
-    case ExpandedQuery.Max(alts)  => ApiTypeQuery.Max(alts.map(toApiTypeQuery))
-    case l: ExpandedQuery.Leaf    => ApiTypeQuery.Type(l.tpe.variance, l.tpe.name, boost(l))
+    case ExpandedQuery.Sum(parts) =>
+      ApiTypeQuery.Sum(parts.map(toApiTypeQuery))
+    case ExpandedQuery.Max(alts) =>
+      ApiTypeQuery.Max(alts.map(toApiTypeQuery))
+    case l: ExpandedQuery.Leaf =>
+      ApiTypeQuery.Type(
+        l.tpe.variance,
+        l.tpe.name,
+        boost(l),
+        getFrequency(l.tpe.variance, l.tpe.name))
   }
 
   private def boost(l: ExpandedQuery.Leaf): Double =

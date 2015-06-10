@@ -25,7 +25,7 @@ sealed trait ApiTypeQuery {
     val prefix = " " * (level * 2)
 
     this match {
-      case Sum(Nil) | Sum(_ :: Nil) | Max(Nil) | Max(_ :: Nil) | Type(_, _, _) =>
+      case Sum(Nil) | Sum(_ :: Nil) | Max(Nil) | Max(_ :: Nil) | Type(_, _, _, _) =>
         s"$prefix$this"
       case Sum(cs) =>
         cs.map(_.prettyPrint(level + 1)).mkString(s"${prefix}sum(\n", "\n", ")")
@@ -58,12 +58,12 @@ object ApiTypeQuery {
     def apply(alternatives: ApiTypeQuery*): Max = Max(alternatives.toList)
   }
 
-  case class Type(variance: Variance, typeName: String, boost: Double) extends ApiTypeQuery {
+  case class Type(variance: Variance, typeName: String, boost: Double, typeFrequency: Float) extends ApiTypeQuery {
     def children = Nil
 
     val fingerprint = s"${variance.prefix}${typeName}"
 
     override def toString =
-      s"${variance.prefix}${typeName}^$boost"
+      s"${variance.prefix}${typeName}^($boost, $typeFrequency)"
   }
 }

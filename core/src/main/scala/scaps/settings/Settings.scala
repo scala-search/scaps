@@ -66,7 +66,8 @@ case class QuerySettings(
   distanceBoostWeight: Double,
   typeFrequencyWeight: Double,
   nameBoost: Double,
-  docBoost: Double) {
+  docBoost: Double,
+  fingerprintFrequencyCutoff: Double) {
 
   import Settings._
 
@@ -76,6 +77,7 @@ case class QuerySettings(
   assertPositive(typeFrequencyWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
+  assertPositive(fingerprintFrequencyCutoff)
 }
 
 object QuerySettings {
@@ -86,7 +88,8 @@ object QuerySettings {
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
       conf.getDouble(nameBoost),
-      conf.getDouble(docBoost))
+      conf.getDouble(docBoost),
+      conf.getDouble(fingerprintFrequencyCutoff))
 
   val depthBoostWeight = "depth-boost-weight"
 
@@ -97,4 +100,6 @@ object QuerySettings {
   val nameBoost = "name-boost"
 
   val docBoost = "doc-boost"
+
+  val fingerprintFrequencyCutoff = "fingerprint-frequency-cutoff"
 }

@@ -25,6 +25,7 @@ object FindParameters extends App {
   val typeFrequencyWeight = Rng.choosedouble(0, 2)
   val nameBoosts = Rng.oneof(0.02)
   val docBoosts = Rng.oneof(0.01)
+  val fingerprintFrequencyCutoff = Rng.choosedouble(0, 1)
 
   val noConfigurations = 5000
 
@@ -41,6 +42,7 @@ object FindParameters extends App {
       QuerySettings.typeFrequencyWeight,
       QuerySettings.nameBoost,
       QuerySettings.docBoost,
+      QuerySettings.fingerprintFrequencyCutoff,
       "MAP",
       "R@10",
       "t")
@@ -65,6 +67,7 @@ object FindParameters extends App {
               settings.query.typeFrequencyWeight,
               settings.query.nameBoost,
               settings.query.docBoost,
+              settings.query.fingerprintFrequencyCutoff,
               stats.meanAveragePrecision,
               stats.meanRecallAt10,
               stats.duration.toMillis + " ms")
@@ -94,12 +97,14 @@ object FindParameters extends App {
       tf <- typeFrequencyWeight
       nb <- nameBoosts
       db <- docBoosts
+      fpCutoff <- fingerprintFrequencyCutoff
     } yield settings.copy(
       depthBoostWeight = depth,
       distanceBoostWeight = dist,
       typeFrequencyWeight = tf,
       nameBoost = nb,
-      docBoost = db)
+      docBoost = db,
+      fingerprintFrequencyCutoff = fpCutoff)
 
   def randomize(settings: IndexSettings): Rng[IndexSettings] =
     for {
