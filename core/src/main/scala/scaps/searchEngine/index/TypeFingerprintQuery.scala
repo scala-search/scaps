@@ -88,6 +88,7 @@ object TypeFingerprintQuery extends Logging {
 
     val accumulatedFreq = rankedTermsWithFreq
       .scanLeft(0f)(_ + _._2)
+      .drop(1)
 
     val rankedTypesWithFreq = rankedTermsWithFreq.zip(accumulatedFreq)
 

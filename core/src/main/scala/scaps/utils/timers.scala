@@ -12,7 +12,7 @@ object timers {
 
   def printTime[R](desc: String)(block: => R): R = {
     val (res, duration) = withTime(block)
-    println(s"Elapsed time for $desc: ${duration.toMicros} µ")
+    println(s"Elapsed time for $desc: ${duration.toMillis} ms")
     res
   }
 }

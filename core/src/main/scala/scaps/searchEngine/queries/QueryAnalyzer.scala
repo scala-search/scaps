@@ -113,8 +113,8 @@ private[queries] object ExpandedQuery {
 /**
  * Analyzes parsed queries.
  *
- * Instances require access to the class index which can be injected via
- * `findClassesBySuffix` and `findSubClasses`
+ * Instances require access to the class and view index which can be injected via
+ * `findClassesBySuffix` and `findAlternativesWithDistance`
  */
 class QueryAnalyzer private[searchEngine] (
   settings: Settings,
@@ -123,8 +123,6 @@ class QueryAnalyzer private[searchEngine] (
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
-   *
-   * Fails when `findClassesBySuffix` or `findSubClasses` fails.
    */
   def apply(raw: RawQuery): SemanticError \/ ApiQuery =
     resolveNames(raw.tpe).map(

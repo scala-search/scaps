@@ -10,18 +10,18 @@ import scala.util.Try
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.store.RAMDirectory
 
+import scalaz.Memo
 import scalaz.{ \/ => \/ }
 import scaps.searchEngine.index.ClassIndex
 import scaps.searchEngine.index.ModuleIndex
 import scaps.searchEngine.index.TermsIndex
-import scaps.searchEngine.index.ViewIndex
 import scaps.searchEngine.index.TypeFrequencies
+import scaps.searchEngine.index.ViewIndex
 import scaps.searchEngine.queries.QueryAnalyzer
 import scaps.searchEngine.queries.QueryParser
 import scaps.searchEngine.queries.RawQuery
 import scaps.settings.Settings
 import scaps.utils.Logging
-import scaps.utils.SampleSeqOps
 import scaps.webapi.ClassEntity
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
@@ -87,6 +87,8 @@ class SearchEngine private[searchEngine] (
 
   def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false)(implicit ec: ExecutionContext): Try[Unit] =
     Try {
+      analyzers = Map()
+
       deleteModule(module).get
 
       def setModule(t: TermEntity) =
@@ -167,14 +169,22 @@ class SearchEngine private[searchEngine] (
     } index.resetIndex().get
   }
 
+  private var analyzers: Map[Set[String], QueryAnalyzer] = Map()
+
   private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
     def findClassBySuffix(suffix: String) =
-      (classesIndex.findClassBySuffix(suffix, moduleIds).get)
+      classesIndex.findClassBySuffix(suffix, moduleIds).get
 
-    val analyzer = new QueryAnalyzer(
-      settings,
-      (findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _),
-      viewIndex.findAlternativesWithDistance(_).get)
+    val analyzer = analyzers.get(moduleIds).fold {
+      val analyzer = new QueryAnalyzer(
+        settings,
+        Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),
+        Memo.mutableHashMapMemo(viewIndex.findAlternativesWithDistance(_).get))
+
+      analyzers += (moduleIds -> analyzer)
+
+      analyzer
+    } { identity }
 
     analyzer(raw)
   }
