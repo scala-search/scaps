@@ -148,7 +148,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
     entity.typeFingerprint.foreach { fp =>
-      doc.add(new TextField(fields.fingerprint, fp, Store.NO))
+      doc.add(new TextField(fields.fingerprint, fp, Store.YES))
     }
     add(fields.doc, entity.comment)
     entity.flags.foreach { flag =>

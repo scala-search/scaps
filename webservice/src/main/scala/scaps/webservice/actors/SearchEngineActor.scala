@@ -43,7 +43,6 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
   val logger = Logging(context.system, this)
 
   def receive = {
-    val searcher = actorOf(searcherProps, "searcher")
     val indexWorker = actorOf(indexWorkerProps, "indexWorker")
 
     def ready(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
@@ -55,6 +54,7 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
         case i: Index =>
           enqueueJob(i, Nil, indexedModules, indexErrors)
         case s: Search =>
+          val searcher = actorOf(searcherProps, "searcher")
           searcher.tell(s, sender)
         case GetStatus =>
           sender ! IndexReady(indexedModules.toSeq, indexErrors)
@@ -194,7 +194,7 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
 
   def receive = {
     case Search(q, moduleIds, noResults, offset) =>
-      sender ! searchEngine.search(q, moduleIds).get.map {
+      val res = searchEngine.search(q, moduleIds).get.map {
         case terms => terms.drop(offset).take(noResults)
       }.leftMap {
         case SyntaxError(msg) =>
@@ -208,5 +208,7 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
         case TooUnspecific() =>
           s"Query too unspecific consider using wildcards '_' instead of 'Any' types"
       }
+      sender ! res
+      context.stop(self)
   }
 }
