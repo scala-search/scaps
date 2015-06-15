@@ -1,15 +1,12 @@
 package scaps.searchEngine
 
 import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
-
 import org.apache.lucene.store.FSDirectory
 import org.apache.lucene.store.RAMDirectory
-
 import scalaz.Memo
 import scalaz.{ \/ => \/ }
 import scaps.searchEngine.index.ClassIndex
@@ -31,12 +28,13 @@ import scaps.webapi.Module
 import scaps.webapi.TermEntity
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
+import org.apache.lucene.store.NIOFSDirectory
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
     def createDir(path: File) = {
       path.mkdirs()
-      FSDirectory.open(path)
+      new NIOFSDirectory(path)
     }
 
     val terms = new TermsIndex(createDir(settings.index.termsDir), settings)
@@ -177,7 +175,7 @@ class SearchEngine private[searchEngine] (
 
     val analyzer = analyzers.get(moduleIds).fold {
       val analyzer = new QueryAnalyzer(
-        settings,
+        settings.query,
         Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),
         Memo.mutableHashMapMemo(viewIndex.findAlternativesWithDistance(_).get))
 

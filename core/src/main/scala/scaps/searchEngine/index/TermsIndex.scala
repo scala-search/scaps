@@ -143,12 +143,12 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     val doc = new Document
 
     def add(field: String, value: String) =
-      doc.add(new TextField(field, value, Store.YES))
+      doc.add(new TextField(field, value, Store.NO))
 
     add(fields.name, entity.name)
     add(fields.moduleId, entity.module.moduleId)
     entity.typeFingerprint.foreach { fp =>
-      add(fields.fingerprint, fp)
+      doc.add(new TextField(fields.fingerprint, fp, Store.NO))
     }
     add(fields.doc, entity.comment)
     entity.flags.foreach { flag =>

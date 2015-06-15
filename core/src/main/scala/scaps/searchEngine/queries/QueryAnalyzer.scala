@@ -9,7 +9,7 @@ import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SemanticError
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
-import scaps.settings.Settings
+import scaps.settings.QuerySettings
 import scaps.webapi.ClassEntity
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
@@ -77,7 +77,7 @@ private[queries] object ExpandedQuery {
     case _ => p
   }
 
-  def maxRepeatedPart(alts: List[Alternative]): Option[Part] =
+  private def maxRepeatedPart(alts: List[Alternative]): Option[Part] =
     alts
       .flatMap {
         case Sum(parts) => parts.distinct
@@ -89,7 +89,7 @@ private[queries] object ExpandedQuery {
       .maxByOpt(_._2)
       .map(_._1)
 
-  def factorOut(part: Part, alts: List[Alternative]): List[Alternative] = {
+  private def factorOut(part: Part, alts: List[Alternative]): List[Alternative] = {
     val (altsWithPart, altsWithoutPart) = alts.partition {
       case Sum(ps) => ps.contains(part)
       case _       => false
@@ -117,7 +117,7 @@ private[queries] object ExpandedQuery {
  * `findClassesBySuffix` and `findAlternativesWithDistance`
  */
 class QueryAnalyzer private[searchEngine] (
-  settings: Settings,
+  settings: QuerySettings,
   findClassesBySuffix: (String) => Seq[ClassEntity],
   findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Int)]) {
 
@@ -188,7 +188,7 @@ class QueryAnalyzer private[searchEngine] (
   /**
    * Builds the query structure of parts and alternatives for a type.
    */
-  def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
+  private[queries] def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
     def parts(tpe: TypeEntity, fraction: Double, depth: Int, dist: Int, outerTpes: Set[TypeEntity]): Alternative = {
@@ -227,11 +227,10 @@ class QueryAnalyzer private[searchEngine] (
     }
 
     val noParts = tpe.toList
-      .filter {
+      .count {
         case TypeEntity.Ignored(_, _) => false
         case _                        => true
       }
-      .length
 
     tpe match {
       case TypeEntity.Ignored(args, _) =>
@@ -256,9 +255,9 @@ class QueryAnalyzer private[searchEngine] (
 
   private def boost(l: ExpandedQuery.Leaf): Double =
     l.fraction * weightedGeometricMean(
-      itf(l) -> settings.query.typeFrequencyWeight,
-      1d / (l.depth + 1) -> settings.query.depthBoostWeight,
-      1d / (l.dist + 1) -> settings.query.distanceBoostWeight)
+      itf(l) -> settings.typeFrequencyWeight,
+      1d / (l.depth + 1) -> settings.depthBoostWeight,
+      1d / (l.dist + 1) -> settings.distanceBoostWeight)
 
   /**
    * The inverse type frequency is defined as log10(10 / (10f + (1 - f)))

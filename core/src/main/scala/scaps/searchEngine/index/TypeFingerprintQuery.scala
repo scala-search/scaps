@@ -45,8 +45,10 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
       }
 
       def score(doc: Int): Float = {
-        // There is probably a faster way to access the field value for every matched document
+        // There is probably a faster way to access the field value for every matched document.
+        // Accessing the fingerprint through term vectors resulted in slightly worse performance.
         val fingerprint = reader.document(doc).getValues(field)
+
         scorer.score(fingerprint)
       }
 
@@ -109,14 +111,6 @@ object TypeFingerprintQuery extends Logging {
     matcherQuery.add(subQuery, Occur.SHOULD)
 
     matcherQuery
-  }
-
-  private val thresholdTypes = {
-    import scaps.webapi._
-    import scaps.webapi.TypeEntity._
-
-    List(Any(Contravariant), AnyVal(Contravariant), AnyRef(Contravariant), Nothing(Covariant))
-      .map(_.fingerprint)
   }
 
   /**
@@ -230,7 +224,7 @@ object TypeFingerprintQuery extends Logging {
      * Calculates the score for a individual fingerprint type.
      *
      * If this node or one of the subnodes match `fpt` it returns some score
-     * with a new scorer without the matched leaf.
+     * with a new scorer that wont match that particular leaf again.
      */
     def score(fpt: String): Option[(Float, FingerprintScorer)] = this match {
       case SumNode(children) =>

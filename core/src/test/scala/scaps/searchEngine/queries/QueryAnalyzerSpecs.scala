@@ -189,11 +189,8 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     res.swap.getOrElse(???)
   }
 
-  val settings = {
-    val s = Settings.fromApplicationConf
-    val query = s.query.copy(typeFrequencyWeight = 0)
-    s.copy(query = query)
-  }
+  val settings =
+    Settings.fromApplicationConf.query.copy(typeFrequencyWeight = 0)
 
   val analyzer = {
     val classEntities = extractAllClasses(env)
