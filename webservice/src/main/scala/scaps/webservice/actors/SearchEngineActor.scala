@@ -54,7 +54,7 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
         case i: Index =>
           enqueueJob(i, Nil, indexedModules, indexErrors)
         case s: Search =>
-          val searcher = actorOf(searcherProps, "searcher")
+          val searcher = actorOf(searcherProps)
           searcher.tell(s, sender)
         case GetStatus =>
           sender ! IndexReady(indexedModules.toSeq, indexErrors)
