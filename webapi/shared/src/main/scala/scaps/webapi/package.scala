@@ -174,6 +174,8 @@ case class TermEntity(
   def isOverride = flags(TermEntity.Overrides)
 
   def isImplicit = flags(TermEntity.Implicit)
+
+  def isStatic = flags(TermEntity.Static)
 }
 
 object TermEntity {
@@ -185,6 +187,9 @@ object TermEntity {
   }
   case object Implicit extends Flag {
     val name = "implicit"
+  }
+  case object Static extends Flag {
+    val name = "static"
   }
 }
 
@@ -213,7 +218,7 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
 
   def withVariance(v: Variance): TypeEntity =
     if (variance == v) this
-    else copy(variance = variance * v, args = args.map(arg => arg.withVariance(arg.variance * v)))
+    else copy(variance = v, args = args.map(arg => arg.withVariance(arg.variance * v)))
 
   def transform(f: TypeEntity => TypeEntity): TypeEntity =
     f(this.copy(args = args.map(_.transform(f))))

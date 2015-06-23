@@ -10,7 +10,8 @@ import scaps.webapi.Entity
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scalaz._
+import scaps.webapi._
+import scalaz.{ Contravariant => _, _ }
 
 class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
@@ -126,7 +127,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "overwritte classes when reindexed with the same module id" in
     withSearchEngine { searchEngine =>
-      val f = searchEngine.indexEntities(module1._1, extractAll("""
+      searchEngine.indexEntities(module1._1, extractAll("""
         package p
 
         // empty, p.C does no longer exist in module1

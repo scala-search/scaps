@@ -15,6 +15,7 @@ import scaps.webapi.Contravariant
 import scaps.webapi.Invariant
 import org.apache.lucene.store.RAMDirectory
 import scaps.searchEngine.index.ViewIndex
+import scaps.webapi.ClassEntity
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
@@ -193,8 +194,9 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     Settings.fromApplicationConf.query.copy(typeFrequencyWeight = 0)
 
   val analyzer = {
-    val classEntities = extractAllClasses(env)
-    val views = classEntities.flatMap(View.fromClass(_))
+    val entities = extractAll(env)
+    val classEntities = entities.collect { case c: ClassEntity => c }
+    val views = entities.flatMap(View.fromEntity(_))
 
     def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, List[V]] = ps
       .distinct

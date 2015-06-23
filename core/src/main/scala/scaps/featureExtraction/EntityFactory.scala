@@ -19,7 +19,7 @@ trait EntityFactory extends Logging {
       val cls = createClassEntity(classSym)
 
       val objTerm =
-        if (isTermOfInterest(classSym)) Some(createTermEntity(classSym, getDocComment(classSym, classSym)))
+        if (isTermOfInterest(classSym)) Some(createTermEntity(classSym, false, getDocComment(classSym, classSym)))
         else None
 
       val memberSymsWithComments = classSym.tpe.members
@@ -27,11 +27,11 @@ trait EntityFactory extends Logging {
         .map { m =>
           val copy = m.cloneSymbol(classSym)
           copy.info = classSym.tpe.memberInfo(m)
-          (copy, getDocComment(m, classSym))
+          (copy, m.isPrimaryConstructor, getDocComment(m, classSym))
         }
 
       val referencedClasses = memberSymsWithComments.flatMap {
-        case (sym, _) =>
+        case (sym, _, _) =>
           sym.tpe.collect { case t => t.typeSymbol }
             .filter(isClassOfInterest _)
             .map(createClassEntity _)
@@ -60,7 +60,7 @@ trait EntityFactory extends Logging {
       !sym.isLocalClass &&
       sym.isPublic
 
-  def createTermEntity(sym: Symbol, rawComment: String): ExtractionError \/ TermEntity =
+  def createTermEntity(sym: Symbol, isPrimaryCtor: Boolean, rawComment: String): ExtractionError \/ TermEntity =
     \/.fromTryCatchNonFatal {
       val (typeParams, tpe) = createTypeEntity(sym)
 
@@ -70,8 +70,17 @@ trait EntityFactory extends Logging {
         !sym.allOverriddenSymbols.isEmpty ||
           (sym.owner.isModule && sym.owner.baseClasses.drop(1).exists(_.tpe.decl(sym.name) != NoSymbol))
 
+      val isImplicit =
+        sym.isImplicit || (isPrimaryCtor && sym.owner.isImplicit)
+
+      // reimplements Symbol#isStatic to work on inherited members
+      def isStatic(s: Symbol): Boolean =
+        s.owner.hasPackageFlag ||
+          ((s.owner.hasModuleFlag || s.isConstructor) && isStatic(s.owner))
+
       if (isOverride) flags += TermEntity.Overrides
-      if (sym.isImplicit) flags += TermEntity.Implicit
+      if (isImplicit) flags += TermEntity.Implicit
+      if (isStatic(sym)) flags += TermEntity.Static
 
       TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment, flags.result)
     }.leftMap(ExtractionError(qualifiedName(sym, false), _))

@@ -554,4 +554,57 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.P.m", _.isOverride should be(true)),
       ("p.P.n", _.isOverride should be(false)))
   }
+
+  it should "set the 'implicit' flag on implicit defs" in {
+    extractTerms("""
+      package p
+
+      object O{
+        implicit def m(l: Long): Int = ???
+      }
+      """)(
+      ("p.O.m", _.isImplicit should be(true)))
+  }
+
+  it should "set the 'implicit' flag on primary constructors of implicit classes" in {
+    extractTerms("""
+      package p
+
+      object O {
+        implicit class C(i: Int)
+      }
+      """)(
+      ("p.O.C.<init>", _.isImplicit should be(true)))
+  }
+
+  it should "set the 'static' flag on terms that have no classes in their owner chain" in {
+    extractTerms("""
+      package p
+
+      object O {
+        def m = 1
+
+        object P {
+          def n = 1
+        }
+
+        class C {
+          def o = 1
+
+          object Q {
+            def p = 1
+          }
+        }
+      }
+      """)(
+      ("p.O", _.isStatic should be(true)),
+      ("p.O.m", _.isStatic should be(true)),
+      ("p.O.P", _.isStatic should be(true)),
+      ("p.O.P.n", _.isStatic should be(true)),
+      ("p.O.P.toString", _.isStatic should be(true)),
+      ("p.O.C.<init>", _.isStatic should be(true)),
+      ("p.O.C#o", _.isStatic should be(false)),
+      ("p.O.C#Q", _.isStatic should be(false)),
+      ("p.O.C#Q.p", _.isStatic should be(false)))
+  }
 }

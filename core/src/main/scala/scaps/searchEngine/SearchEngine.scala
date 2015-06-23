@@ -102,7 +102,7 @@ class SearchEngine private[searchEngine] (
       val classesWithModule = entitiesWithUnknown
         .collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
 
-      val views = classesWithModule.flatMap(View.fromClass)
+      val views = entitiesWithUnknown.flatMap(View.fromEntity)
 
       val f = Future.sequence(List(
         Future { termsIndex.addEntities(termsWithModule).get },

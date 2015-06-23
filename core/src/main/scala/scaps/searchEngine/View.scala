@@ -8,6 +8,9 @@ sealed trait View {
   def from: TypeEntity
   def to: TypeEntity
 
+  assert(from.variance == Covariant, s"$from is not covariant")
+  assert(to.variance == Covariant, s"$to is not covariant")
+
   def fromKey = key(from)
   def toKey = key(to)
 
@@ -15,10 +18,29 @@ sealed trait View {
 }
 
 object View {
-  def fromClass(cls: ClassEntity): Seq[View] = {
+  private def fromClass(cls: ClassEntity): Seq[View] = {
     cls.baseTypes.zipWithIndex.map {
       case (base, idx) => SubType(cls.toType, base, idx + 1)
     }
+  }
+
+  private def fromTerm(t: TermEntity): Seq[View] = {
+    if (t.isImplicit && t.isStatic)
+      t.tpe match {
+        case TypeEntity.Function(from :: Nil, to, _) =>
+          Seq(ImplicitConversion(from.withVariance(Covariant), to, t.name))
+        case TypeEntity.MethodInvocation(from :: Nil, to, _) =>
+          Seq(ImplicitConversion(from.withVariance(Covariant), to, t.name))
+        case _ =>
+          Nil
+      }
+    else
+      Nil
+  }
+
+  def fromEntity(e: Entity): Seq[View] = e match {
+    case c: ClassEntity => fromClass(c)
+    case t: TermEntity  => fromTerm(t)
   }
 
   def key(tpe: TypeEntity) =
@@ -37,7 +59,7 @@ case class ImplicitConversion(from: TypeEntity, to: TypeEntity, evidence: String
   def distance = 1
 
   override def toString =
-    s"$fromKey converts implicitly to $toKey ($evidence)"
+    s"$fromKey is convertible to $toKey ($evidence)"
 }
 
 case class TypeClassImplementation(subject: TypeEntity, implementedClass: TypeEntity, evidence: String) extends View {

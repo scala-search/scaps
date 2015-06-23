@@ -27,7 +27,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val value = 1
       }
       """) { index =>
-      val value = TermEntity("pkg.Obj.value", Nil, TypeEntity.Int(), "")
+      val value = TermEntity("pkg.Obj.value", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
       index.findTermsByName("value").get should contain(value)
       index.findTermsByName("obj").get should contain(value)
       index.findTermsByName("pkg").get should contain(value)
@@ -42,7 +42,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val myValue = 1
       }
       """) { index =>
-      val value = TermEntity("somePkg.AnotherObj.myValue", Nil, TypeEntity.Int(), "")
+      val value = TermEntity("somePkg.AnotherObj.myValue", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
       index.findTermsByName("value").get should contain(value)
       index.findTermsByName("another").get should contain(value)
       index.findTermsByName("pkg").get should contain(value)
