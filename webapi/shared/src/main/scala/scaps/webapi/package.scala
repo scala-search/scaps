@@ -142,11 +142,12 @@ case class TermEntity(
       case "" => ""
       case _  => s"$comment\n"
     }
+    val mods = flags.map(_.name).mkString(" ")
     val params = typeParameters match {
       case Nil => ""
       case ps  => ps.mkString("[", ", ", "]")
     }
-    s"$c$name$params: $tpe"
+    s"$c$mods $name$params: $tpe"
   }
 
   /**
@@ -262,6 +263,8 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           loop(arg)
         case Repeated(arg, _) =>
           loop(arg)
+        case Implicit(arg, _) =>
+          loop(arg)
         case tpe: TypeEntity =>
           val normalizedArgs = tpe.args.map(loop)
           typeParams.find(_.name == tpe.name).fold {
@@ -290,6 +293,7 @@ object TypeEntity {
   object AnyVal extends PrimitiveType("scala.AnyVal")
   object AnyRef extends PrimitiveType("java.lang.Object")
   object Int extends PrimitiveType("scala.Int")
+  object Long extends PrimitiveType("scala.Long")
   object Float extends PrimitiveType("scala.Float")
   object Char extends PrimitiveType("scala.Char")
   object String extends PrimitiveType("java.lang.String")
@@ -311,6 +315,8 @@ object TypeEntity {
 
   object ByName extends GenericType("<byname>")
   object Repeated extends GenericType("<repeated>")
+  object Implicit extends GenericType("<implicit>")
+  object Option extends GenericType("scala.Option")
 
   class GenericType(val name: String) {
     def apply(arg: TypeEntity, variance: Variance = Covariant) =

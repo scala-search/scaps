@@ -25,16 +25,30 @@ object View {
   }
 
   private def fromTerm(t: TermEntity): Seq[View] = {
-    if (t.isImplicit && t.isStatic)
-      t.tpe match {
+    if (t.isImplicit && t.isStatic) {
+      def withoutImplicitParams(tpe: TypeEntity): TypeEntity = tpe match {
+        case TypeEntity.MethodInvocation(a :: as, res, _) if a.name == TypeEntity.Implicit.name =>
+          withoutImplicitParams(res)
+        case TypeEntity.MethodInvocation(args, res, v) =>
+          TypeEntity.MethodInvocation(args, withoutImplicitParams(res), v)
+        case _ =>
+          tpe
+      }
+
+      def etaExpand(tpe: TypeEntity): TypeEntity = tpe match {
+        case TypeEntity.MethodInvocation(args, res, v) =>
+          TypeEntity.Function(args, etaExpand(res), v)
+        case _ =>
+          tpe
+      }
+
+      (withoutImplicitParams _ andThen etaExpand _)(t.tpe) match {
         case TypeEntity.Function(from :: Nil, to, _) =>
-          Seq(ImplicitConversion(from.withVariance(Covariant), to, t.name))
-        case TypeEntity.MethodInvocation(from :: Nil, to, _) =>
           Seq(ImplicitConversion(from.withVariance(Covariant), to, t.name))
         case _ =>
           Nil
       }
-    else
+    } else
       Nil
   }
 

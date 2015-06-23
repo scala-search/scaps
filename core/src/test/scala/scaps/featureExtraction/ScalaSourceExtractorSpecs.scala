@@ -400,6 +400,23 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.m", _.tpe.args should contain(TypeEntity.Repeated(TypeEntity.Int(Contravariant), Contravariant))))
   }
 
+  it should "extract implicit parameters" in {
+    extractTerms("""
+      package p
+
+      object O {
+        def m(implicit i: Int) = ???
+
+        def n[T: Option](o: T) = ???
+      }
+      """)(
+      ("p.O.m", _.tpe.args should contain(TypeEntity.Implicit(TypeEntity.Int(Contravariant), Contravariant))),
+      ("p.O.n", _.tpe.args(1).args should contain(
+        TypeEntity.Implicit(
+          TypeEntity.Option(
+            TypeEntity("T", Contravariant, Nil, isTypeParam = true), Contravariant), Contravariant))))
+  }
+
   it should "not extract private terms and classes" in {
     val entities = extractAll("""
       package p

@@ -177,7 +177,13 @@ trait EntityFactory extends Logging {
     def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeEntity = paramss match {
       case Nil => createTypeEntity(resultTpe, Covariant)
       case params :: rest =>
-        val paramTypes = params.map(p => createTypeEntity(p.tpe, Contravariant))
+        val paramTypes = params.map { p =>
+          val pTpe = createTypeEntity(p.tpe, Contravariant)
+          if (p.isImplicit)
+            TypeEntity.Implicit(pTpe, Contravariant)
+          else
+            pTpe
+        }
         val resultType = rec(rest, resultTpe.resultType)
         TypeEntity.MethodInvocation(paramTypes, resultType)
     }
