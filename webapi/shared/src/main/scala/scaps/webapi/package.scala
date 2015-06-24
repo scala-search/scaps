@@ -205,13 +205,17 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
     s"${variance.prefix}$name$argStr"
   }
 
-  def signature: String = {
-    val argStr = args match {
-      case Nil => ""
-      case as  => as.map(_.signature).mkString("[", ", ", "]")
+  def signature: String =
+    this match {
+      case Implicit(t, _) => 
+        t.signature
+      case _ =>
+        val argStr = args match {
+          case Nil => ""
+          case as  => as.map(_.signature).mkString("[", ", ", "]")
+        }
+        s"$name$argStr"
     }
-    s"$name$argStr"
-  }
 
   def fingerprint: String = s"${variance.prefix}$name"
 
