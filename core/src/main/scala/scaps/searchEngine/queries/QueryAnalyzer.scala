@@ -254,7 +254,7 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def boost(l: ExpandedQuery.Leaf): Double =
-    weightedGeometricMean(
+    weightedHarmonicMean(
       l.fraction -> settings.fractionWeight,
       itf(l) -> settings.typeFrequencyWeight,
       1d / (l.depth + 1) -> settings.depthBoostWeight,
@@ -279,6 +279,12 @@ class QueryAnalyzer private[searchEngine] (
 
   private def weightedArithmeticMean(elemsWithWeight: (Double, Double)*) =
     elemsWithWeight.map { case (x, w) => x * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
+
+  /**
+   * Implements https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
+   */
+  private def weightedHarmonicMean(elemsWithWeight: (Double, Double)*) =
+    elemsWithWeight.map(_._2).sum / elemsWithWeight.map { case (x, w) => w / x }.sum
 
   private def getFrequency(v: Variance, t: String) =
     findClassesBySuffix(t).headOption.map(_.frequency(v)).getOrElse(0f)
