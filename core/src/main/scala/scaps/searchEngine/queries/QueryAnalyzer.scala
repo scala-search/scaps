@@ -254,7 +254,8 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def boost(l: ExpandedQuery.Leaf): Double =
-    l.fraction * weightedGeometricMean(
+    weightedGeometricMean(
+      l.fraction -> settings.fractionWeight,
       itf(l) -> settings.typeFrequencyWeight,
       1d / (l.depth + 1) -> settings.depthBoostWeight,
       1d / (l.dist + 1) -> settings.distanceBoostWeight)

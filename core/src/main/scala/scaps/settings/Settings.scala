@@ -65,6 +65,7 @@ case class QuerySettings(
   depthBoostWeight: Double,
   distanceBoostWeight: Double,
   typeFrequencyWeight: Double,
+  fractionWeight: Double,
   nameBoost: Double,
   docBoost: Double,
   fingerprintFrequencyCutoff: Double) {
@@ -75,6 +76,7 @@ case class QuerySettings(
   assertPositive(depthBoostWeight)
   assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
+  assertPositive(fractionWeight)
   assertPositive(nameBoost)
   assertPositive(docBoost)
   assertPositive(fingerprintFrequencyCutoff)
@@ -87,6 +89,7 @@ object QuerySettings {
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
+      conf.getDouble(fractionWeight),
       conf.getDouble(nameBoost),
       conf.getDouble(docBoost),
       conf.getDouble(fingerprintFrequencyCutoff))
@@ -96,6 +99,8 @@ object QuerySettings {
   val distanceBoostWeight = "distance-boost-weight"
 
   val typeFrequencyWeight = "type-frequency-weight"
+
+  val fractionWeight = "fraction-weight"
 
   val nameBoost = "name-boost"
 
