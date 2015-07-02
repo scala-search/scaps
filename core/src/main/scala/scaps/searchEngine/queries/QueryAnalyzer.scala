@@ -194,14 +194,14 @@ class QueryAnalyzer private[searchEngine] (
     def parts(tpe: TypeEntity, fraction: Double, depth: Int, dist: Int, outerTpes: Set[TypeEntity]): Alternative = {
       tpe match {
         case TypeEntity.Ignored(args, v) =>
-          val partFraction = if (tpe.args.isEmpty) fraction else (fraction / tpe.args.length)
+          val partFraction = fraction / args.length
 
           Sum(args.map(alternatives(_, partFraction, depth, outerTpes)))
         case tpe =>
           val partArgs = tpe.args
             .filterNot(_.isTypeParam)
 
-          val partFraction = (fraction / (partArgs.length + 1))
+          val partFraction = fraction / (partArgs.length + 1)
 
           val parts = partArgs.map(arg =>
             if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partFraction, depth + 1, 0)
@@ -226,17 +226,11 @@ class QueryAnalyzer private[searchEngine] (
       Max(originalTypeParts :: alternativesParts)
     }
 
-    val noParts = tpe.toList
-      .count {
-        case TypeEntity.Ignored(_, _) => false
-        case _                        => true
-      }
-
     tpe match {
       case TypeEntity.Ignored(args, _) =>
-        parts(tpe, noParts, 0, 0, Set())
+        parts(tpe, 1, 0, 0, Set())
       case _ =>
-        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), noParts, 0, 0, Set())
+        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
     }
   }
 
