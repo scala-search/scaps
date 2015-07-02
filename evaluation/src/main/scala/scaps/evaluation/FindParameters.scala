@@ -23,7 +23,6 @@ object FindParameters extends App {
   val depthBoostWeight = Rng.choosedouble(0, 2)
   val distanceBoostWeight = Rng.choosedouble(0, 3)
   val typeFrequencyWeight = Rng.choosedouble(0, 2)
-  val fractionWeight = Rng.choosedouble(0, 3)
   val nameBoosts = Rng.oneof(0.02)
   val docBoosts = Rng.oneof(0.01)
   val fingerprintFrequencyCutoff = Rng.oneof(0.5)
@@ -41,7 +40,6 @@ object FindParameters extends App {
       QuerySettings.depthBoostWeight,
       QuerySettings.distanceBoostWeight,
       QuerySettings.typeFrequencyWeight,
-      QuerySettings.fractionWeight,
       QuerySettings.nameBoost,
       QuerySettings.docBoost,
       QuerySettings.fingerprintFrequencyCutoff,
@@ -67,7 +65,6 @@ object FindParameters extends App {
               settings.query.depthBoostWeight,
               settings.query.distanceBoostWeight,
               settings.query.typeFrequencyWeight,
-              settings.query.fractionWeight,
               settings.query.nameBoost,
               settings.query.docBoost,
               settings.query.fingerprintFrequencyCutoff,
@@ -98,7 +95,6 @@ object FindParameters extends App {
       depth <- depthBoostWeight
       dist <- distanceBoostWeight
       tf <- typeFrequencyWeight
-      fw <- fractionWeight
       nb <- nameBoosts
       db <- docBoosts
       fpCutoff <- fingerprintFrequencyCutoff
@@ -106,7 +102,6 @@ object FindParameters extends App {
       depthBoostWeight = depth,
       distanceBoostWeight = dist,
       typeFrequencyWeight = tf,
-      fractionWeight = fw,
       nameBoost = nb,
       docBoost = db,
       fingerprintFrequencyCutoff = fpCutoff)

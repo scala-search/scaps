@@ -8,7 +8,7 @@ import scaps.webapi.Covariant
 class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   import scaps.searchEngine.index.TypeFingerprintQuery.FingerprintScorer
 
-  def tpe(name: String, boost: Double) = Type(Covariant, name, boost, 1)
+  def tpe(name: String, boost: Double, freq: Float = 1) = Type(Covariant, name, boost, freq)
 
   "a fingerprint scorer" should "score a simple type query" in {
     val scorer = FingerprintScorer(tpe("A", 1))
@@ -75,5 +75,27 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
           tpe("C", 1))))
 
     scorer.score("+A" :: "+B" :: "+C" :: Nil) should be(2)
+  }
+
+  "the term frequency cutoff" should "not be exceeded" in {
+    val terms = TypeFingerprintQuery.termsBelowCutoff(
+      Max(tpe("A", 1, 0.5f), tpe("B", 0.9, 0.4f), tpe("C", 0.8, 0.3f)),
+      1)
+
+    terms should (
+      contain("+A") and
+      contain("+B") and
+      not contain ("+C"))
+  }
+
+  it should "fill the quota with terms with a lower score" in {
+    val terms = TypeFingerprintQuery.termsBelowCutoff(
+      Max(tpe("A", 1, 0.5f), tpe("B", 0.9, 0.6f), tpe("C", 0.8, 0.3f)),
+      1)
+
+    terms should (
+      contain("+A") and
+      contain("+C") and
+      not contain ("+B"))
   }
 }

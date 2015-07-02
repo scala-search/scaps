@@ -83,20 +83,7 @@ object TypeFingerprintQuery extends Logging {
   def matcherQuery(field: String, typeQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double) = {
     val fingerprintMatcher = new BooleanQuery
 
-    val rankedTermsWithFreq = typeQuery.allTypes
-      .sortBy(-_.boost)
-      .map(t => (t.fingerprint, t.typeFrequency))
-      .distinct
-
-    val accumulatedFreq = rankedTermsWithFreq
-      .scanLeft(0f)(_ + _._2)
-      .drop(1)
-
-    val rankedTypesWithFreq = rankedTermsWithFreq.zip(accumulatedFreq)
-
-    val terms = rankedTypesWithFreq
-      .takeWhile(_._2 < frequencyCutoff)
-      .map(_._1._1)
+    val terms = termsBelowCutoff(typeQuery, frequencyCutoff)
 
     logger.debug(s"Matching documents with fingerprint types: $terms")
 
@@ -111,6 +98,23 @@ object TypeFingerprintQuery extends Logging {
     matcherQuery.add(subQuery, Occur.SHOULD)
 
     matcherQuery
+  }
+
+  def termsBelowCutoff(typeQuery: ApiTypeQuery, frequencyCutoff: Double): List[String] = {
+    val rankedTermsWithFreq = typeQuery.allTypes
+      .sortBy(-_.boost)
+      .map(t => (t.fingerprint, t.typeFrequency))
+      .distinct
+
+    val (terms, _) = rankedTermsWithFreq.foldLeft((List[String](), 0f)) {
+      case (acc @ (accTerms, accFreq), (term, freq)) =>
+        if (accFreq + freq < frequencyCutoff)
+          (term :: accTerms, accFreq + freq)
+        else
+          acc
+    }
+
+    terms
   }
 
   /**
