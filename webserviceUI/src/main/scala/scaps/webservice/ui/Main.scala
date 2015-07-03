@@ -41,7 +41,7 @@ object Main {
 
   searchField
     .flatMap(_.observeDomEvents("focus"))
-    .foreach(_.select())
+    .foreach(_._1.select())
 
   val query = searchField
     .flatMap(_.observeValue())
@@ -53,8 +53,39 @@ object Main {
     .flatMap(_.observeValues())
     .distinctUntilChanged
 
+  Observable.combineLatest(searchField, moduleCheckboxes)
+    .foreach {
+      case (sf, cbs) =>
+        val state = (sf.value, cbs.filter(_.checked).map(_.value))
+        dom.history.replaceState(upickle.write(state), null)
+    }
+
+  Observable.combineLatest(query, moduleIds)
+    .drop(1)
+    .foreach {
+      case (q, ms) =>
+        val uri = DomPages.searchUri(q, ms)
+        dom.history.pushState(upickle.write((q, ms)), null, uri)
+    }
+
+  val historyState = dom.window.observeDomEvents("popstate")
+    .map {
+      case (_, event) =>
+        val data = event.asInstanceOf[dom.PopStateEvent].state.asInstanceOf[String]
+        upickle.read[(String, Set[String])](data)
+    }
+
+  Observable.combineLatest(searchField, moduleCheckboxes, historyState)
+    .foreach {
+      case (sf, cbs, (q, ms)) =>
+        sf.value = q
+        cbs.foreach { cb =>
+          cb.checked = ms(cb.value)
+        }
+    }
+
   val dynamicContent =
-    Observable.combineLatest(query, moduleIds)
+    Observable.merge(Observable.combineLatest(query, moduleIds), historyState)
       .drop(1)
       .flatMap {
         case (q, ms) => fetchContent(q, ms)

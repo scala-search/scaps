@@ -61,15 +61,15 @@ object ObservableExtensions {
     }
   }
 
-  implicit class ObservableDomNodes[N <: dom.Node](node: N) {
-    def observeDomEvents(eventName: String): Observable[N] =
+  implicit class ObservableDomNodes[N <: dom.EventTarget](node: N) {
+    def observeDomEvents(eventName: String): Observable[(N, dom.Event)] =
       Observable.create { subscriber =>
         implicit val executionContext = subscriber.scheduler
 
         def loop(): Unit = {
           lazy val listener: js.Function1[dom.Event, Unit] = (e: dom.Event) => {
             subscriber.scheduler.execute {
-              subscriber.observer.onNext(node).onSuccess {
+              subscriber.observer.onNext((node, e)).onSuccess {
                 case Ack.Continue =>
                   node.removeEventListener(eventName, listener)
                   loop()
