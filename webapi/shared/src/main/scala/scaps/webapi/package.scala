@@ -170,6 +170,15 @@ case class TermEntity(
       .map(_.fingerprint)
       .sorted
 
+  def withoutImplicitParameters = {
+    val args = tpe.args.filter {
+      case TypeEntity.Implicit(_, _) => false
+      case _                         => true
+    }
+
+    copy(tpe = tpe.copy(args = args))
+  }
+
   def withoutComment = copy(comment = "")
 
   def isOverride = flags(TermEntity.Overrides)
@@ -207,7 +216,7 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
 
   def signature: String =
     this match {
-      case Implicit(t, _) => 
+      case Implicit(t, _) =>
         t.signature
       case _ =>
         val argStr = args match {

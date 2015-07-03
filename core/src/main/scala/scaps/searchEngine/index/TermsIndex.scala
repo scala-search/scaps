@@ -1,11 +1,9 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -33,7 +31,6 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
-
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.searchEngine.ApiQuery
@@ -42,6 +39,12 @@ import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
+import org.apache.lucene.document.FloatDocValuesField
+import org.apache.lucene.queries.function.FunctionQuery
+import org.apache.lucene.queries.function.valuesource.FloatFieldSource
+import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
+import org.apache.lucene.queries.function.FunctionValues
+import org.apache.lucene.queries.CustomScoreQuery
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -111,6 +114,16 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
       val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff)
 
+      val docLenBoost = new FunctionQuery(
+        new SimpleFloatFunction(new FloatFieldSource(fields.docLen)) {
+          def func(doc: Int, values: FunctionValues): Float =
+            settings.index.lengthNormWeight.toFloat * (values.floatVal(doc) - 1f) + 1f
+
+          def name(): String = "docLenNormalization"
+        })
+
+      val boostedKeysAndTypes = new CustomScoreQuery(keysAndTypes, docLenBoost)
+
       val modules = new BooleanQuery
 
       if (!moduleIds.isEmpty) {
@@ -124,7 +137,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       modules.setBoost(0)
 
       val q = new BooleanQuery
-      q.add(keysAndTypes, Occur.MUST)
+      q.add(boostedKeysAndTypes, Occur.MUST)
       q.add(modules, Occur.MUST)
 
       q.right
@@ -156,6 +169,11 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
+    val adjustedFpLength = entity.withoutImplicitParameters.typeFingerprint.length
+    val docLen = (1d / Math.sqrt(adjustedFpLength))
+
+    doc.add(new FloatDocValuesField(fields.docLen, docLen.toFloat))
+
     doc
   }
 
@@ -174,6 +192,7 @@ object TermsIndex {
     val entity = "entity"
     val moduleId = "moduleId"
     val flags = "flags"
+    val docLen = "docLen"
   }
 
   class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {
@@ -188,8 +207,8 @@ object TermsIndex {
     override def decodeNormValue(b: Long): Float = (b.toFloat) / prec
     override def encodeNormValue(f: Float): Long = (f * prec).toLong
 
-    override def lengthNorm(state: FieldInvertState): Float =
-      settings.index.lengthNormWeight.toFloat * (delegate.lengthNorm(state) - 1f) + 1f
+    // Length normalization is implemented with the `docLen` field
+    override def lengthNorm(state: FieldInvertState): Float = 1f
 
     // delegate remaining methods to default similarity
     override def scorePayload(doc: Int, start: Int, end: Int, payload: BytesRef): Float = delegate.scorePayload(doc, start, end, payload)
