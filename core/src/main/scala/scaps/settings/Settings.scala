@@ -38,11 +38,9 @@ case class IndexSettings(
   modulesDir: File,
   viewsDir: File,
   timeout: Duration,
-  lengthNormWeight: Double,
   typeFrequenciesSampleSize: Int) {
 
   import Settings._
-  assertPositive(lengthNormWeight)
   assertPositive(typeFrequenciesSampleSize)
 }
 
@@ -54,14 +52,12 @@ object IndexSettings {
       new File(conf.getString("modules-dir")),
       new File(conf.getString("views-dir")),
       conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
-      conf.getDouble(lengthNormWeight),
       conf.getInt("type-frequencies-sample-size"))
-
-  val lengthNormWeight = "length-norm-weight"
 }
 
 case class QuerySettings(
   maxResults: Int,
+  lengthNormWeight: Double,
   depthBoostWeight: Double,
   distanceBoostWeight: Double,
   typeFrequencyWeight: Double,
@@ -72,6 +68,7 @@ case class QuerySettings(
   import Settings._
 
   assertPositive(maxResults)
+  assertPositive(lengthNormWeight)
   assertPositive(depthBoostWeight)
   assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
@@ -84,12 +81,15 @@ object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getInt("max-results"),
+      conf.getDouble(lengthNormWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
       conf.getDouble(nameBoost),
       conf.getDouble(docBoost),
       conf.getDouble(fingerprintFrequencyCutoff))
+
+  val lengthNormWeight = "length-norm-weight"
 
   val depthBoostWeight = "depth-boost-weight"
 

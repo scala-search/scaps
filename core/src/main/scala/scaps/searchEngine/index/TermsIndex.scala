@@ -117,7 +117,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       val docLenBoost = new FunctionQuery(
         new SimpleFloatFunction(new FloatFieldSource(fields.docLen)) {
           def func(doc: Int, values: FunctionValues): Float =
-            settings.index.lengthNormWeight.toFloat * (values.floatVal(doc) - 1f) + 1f
+            settings.query.lengthNormWeight.toFloat * (values.floatVal(doc) - 1f) + 1f
 
           def name(): String = "docLenNormalization"
         })

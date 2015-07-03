@@ -18,11 +18,10 @@ import RngExtensions.RichRng
 object FindParameters extends App {
   val outputDir = "evaluation/target/results"
 
-  val lengthNormWeights = Rng.oneof(0.25) //Rng.choosedouble(0.01, 0.2).map(d => (d * 200d).round / 200d)
-
+  val lengthNormWeights = Rng.choosedouble(0, 1)
   val depthBoostWeight = Rng.choosedouble(0, 2)
   val distanceBoostWeight = Rng.choosedouble(0, 3)
-  val typeFrequencyWeight = Rng.choosedouble(0, 2)
+  val typeFrequencyWeight = Rng.choosedouble(0, 3)
   val nameBoosts = Rng.oneof(0.02)
   val docBoosts = Rng.oneof(0.01)
   val fingerprintFrequencyCutoff = Rng.oneof(0.5)
@@ -36,7 +35,7 @@ object FindParameters extends App {
 
   using(new FileWriter(outputFile)) { writer =>
     val headers = List(
-      IndexSettings.lengthNormWeight,
+      QuerySettings.lengthNormWeight,
       QuerySettings.depthBoostWeight,
       QuerySettings.distanceBoostWeight,
       QuerySettings.typeFrequencyWeight,
@@ -61,7 +60,7 @@ object FindParameters extends App {
           },
           stats => {
             val cells = List[Any](
-              settings.index.lengthNormWeight,
+              settings.query.lengthNormWeight,
               settings.query.depthBoostWeight,
               settings.query.distanceBoostWeight,
               settings.query.typeFrequencyWeight,
@@ -82,16 +81,15 @@ object FindParameters extends App {
     randomize(settings)
       .fill(size)
       .runUnsafe(seed)
-      .sorted(Ordering[Double].on((s: Settings) => s.index.lengthNormWeight))
 
   def randomize(settings: Settings): Rng[Settings] =
     for {
-      index <- randomize(settings.index)
       query <- randomize(settings.query)
-    } yield settings.copy(index = index, query = query)
+    } yield settings.copy(query = query)
 
   def randomize(settings: QuerySettings): Rng[QuerySettings] =
     for {
+      lnw <- lengthNormWeights
       depth <- depthBoostWeight
       dist <- distanceBoostWeight
       tf <- typeFrequencyWeight
@@ -99,17 +97,13 @@ object FindParameters extends App {
       db <- docBoosts
       fpCutoff <- fingerprintFrequencyCutoff
     } yield settings.copy(
+      lengthNormWeight = lnw,
       depthBoostWeight = depth,
       distanceBoostWeight = dist,
       typeFrequencyWeight = tf,
       nameBoost = nb,
       docBoost = db,
       fingerprintFrequencyCutoff = fpCutoff)
-
-  def randomize(settings: IndexSettings): Rng[IndexSettings] =
-    for {
-      lnw <- lengthNormWeights
-    } yield settings.copy(lengthNormWeight = lnw)
 
   def outputFile() = {
     val output = new File(outputDir)
