@@ -22,10 +22,9 @@ import scaps.webapi.Covariant
 /**
  * A Lucene query that scores type fingerprints in a field against a type query.
  */
-class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double)
+class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double, lengthNorm: FunctionQuery)
   extends CustomScoreQuery(
-    TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, frequencyCutoff),
-    TypeFingerprintQuery.normFunctionQuery(field)) {
+    TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, frequencyCutoff), lengthNorm) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -115,14 +114,6 @@ object TypeFingerprintQuery extends Logging {
     }
 
     terms
-  }
-
-  /**
-   * The norm function query is used to get access to the fingerprint norm value for all
-   * matched documents.
-   */
-  def normFunctionQuery(field: String) = {
-    new FunctionQuery(new NormValueSource(field))
   }
 
   object FingerprintScorer {

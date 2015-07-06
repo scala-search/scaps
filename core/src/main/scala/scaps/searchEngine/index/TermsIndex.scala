@@ -1,11 +1,9 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -37,7 +35,6 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
-
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.searchEngine.ApiQuery
@@ -46,6 +43,7 @@ import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
+import scaps.utils.Statistic
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -113,24 +111,24 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         keys.add(docQuery, Occur.SHOULD)
       }
 
-      val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff)
-
       val docLenBoost = new FunctionQuery(
         new DualFloatFunction(new IntFieldSource(fields.noParams), new IntFieldSource(fields.fingerprintLength)) {
           def func(doc: Int, noParamsValues: FunctionValues, fingerprintLengthValues: FunctionValues): Float = {
             val noParams = noParamsValues.intVal(doc)
             val fingerprintLength = fingerprintLengthValues.intVal(doc)
 
-            val typeComplexity = 1 + noParams - (1d / (Math.pow(0.2d * fingerprintLength, 2d) + 1d))
+            val lengthNorm = Statistic.weightedGeometricMean(
+              1d / Math.sqrt(1 + noParams) -> settings.query.parameterCountWeight,
+              1d / Math.sqrt(1 + fingerprintLength) -> (1 - settings.query.parameterCountWeight))
 
-            val docLenNorm = 1d / Math.sqrt(typeComplexity)
-            settings.query.lengthNormWeight.toFloat * (docLenNorm.toFloat - 1f) + 1f
+            (settings.query.lengthNormWeight * (lengthNorm - 1) + 1).toFloat
           }
 
           def name(): String = "docLenNormalization"
         })
 
-      val boostedKeysAndTypes = new CustomScoreQuery(keysAndTypes, docLenBoost)
+      val keysAndTypes = new TypeFingerprintQuery(
+        fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff, docLenBoost)
 
       val modules = new BooleanQuery
 
@@ -145,7 +143,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       modules.setBoost(0)
 
       val q = new BooleanQuery
-      q.add(boostedKeysAndTypes, Occur.MUST)
+      q.add(keysAndTypes, Occur.MUST)
       q.add(modules, Occur.MUST)
 
       q.right
@@ -177,8 +175,6 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
-    val tpeComplexity = entity.tpe.toList.length
-    val length = entity.tpe.explicitParamsCount + (1d - (1d / (Math.pow(0.2d * tpeComplexity, 2d) + 1d)))
     doc.add(new NumericDocValuesField(fields.noParams, entity.tpe.explicitParamsCount))
     doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.toList.length))
 

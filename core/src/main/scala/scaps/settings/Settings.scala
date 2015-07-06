@@ -58,6 +58,7 @@ object IndexSettings {
 case class QuerySettings(
   maxResults: Int,
   lengthNormWeight: Double,
+  parameterCountWeight: Double,
   depthBoostWeight: Double,
   distanceBoostWeight: Double,
   typeFrequencyWeight: Double,
@@ -69,6 +70,7 @@ case class QuerySettings(
 
   assertPositive(maxResults)
   assertPositive(lengthNormWeight)
+  assertDouble(0, 1)(parameterCountWeight)
   assertPositive(depthBoostWeight)
   assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
@@ -82,6 +84,7 @@ object QuerySettings {
     QuerySettings(
       conf.getInt("max-results"),
       conf.getDouble(lengthNormWeight),
+      conf.getDouble(parameterCountWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
@@ -90,6 +93,8 @@ object QuerySettings {
       conf.getDouble(fingerprintFrequencyCutoff))
 
   val lengthNormWeight = "length-norm-weight"
+
+  val parameterCountWeight = "parameter-count-weight"
 
   val depthBoostWeight = "depth-boost-weight"
 

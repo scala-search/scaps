@@ -248,7 +248,7 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def boost(l: ExpandedQuery.Leaf): Double =
-    l.fraction * weightedGeometricMean(
+    l.fraction * Statistic.weightedGeometricMean(
       itf(l) -> settings.typeFrequencyWeight,
       1d / (l.depth + 1) -> settings.depthBoostWeight,
       1d / (l.dist + 1) -> settings.distanceBoostWeight)
@@ -262,22 +262,6 @@ class QueryAnalyzer private[searchEngine] (
     val freq = getFrequency(l.tpe.variance, l.tpe.name)
     math.log10(10 / (freq * 10 + (1 - freq)))
   }
-
-  /**
-   * Implements http://en.wikipedia.org/wiki/Weighted_geometric_mean
-   */
-  private def weightedGeometricMean(elemsWithWeight: (Double, Double)*) =
-    math.exp(
-      elemsWithWeight.map { case (x, w) => w * math.log(x) }.sum / elemsWithWeight.map { case (_, w) => w }.sum)
-
-  private def weightedArithmeticMean(elemsWithWeight: (Double, Double)*) =
-    elemsWithWeight.map { case (x, w) => x * w }.sum / elemsWithWeight.map { case (_, w) => w }.sum
-
-  /**
-   * Implements https://en.wikipedia.org/wiki/Harmonic_mean#Weighted_harmonic_mean
-   */
-  private def weightedHarmonicMean(elemsWithWeight: (Double, Double)*) =
-    elemsWithWeight.map(_._2).sum / elemsWithWeight.map { case (x, w) => w / x }.sum
 
   private def getFrequency(v: Variance, t: String) =
     findClassesBySuffix(t).headOption.map(_.frequency(v)).getOrElse(0f)

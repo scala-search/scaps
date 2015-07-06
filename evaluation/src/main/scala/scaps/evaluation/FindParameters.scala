@@ -19,6 +19,7 @@ object FindParameters extends App {
   val outputDir = "evaluation/target/results"
 
   val lengthNormWeights = Rng.choosedouble(0, 1)
+  val parameterCountWeight = Rng.choosedouble(0, 1)
   val depthBoostWeight = Rng.choosedouble(0, 2)
   val distanceBoostWeight = Rng.choosedouble(0, 3)
   val typeFrequencyWeight = Rng.choosedouble(0, 3)
@@ -36,6 +37,7 @@ object FindParameters extends App {
   using(new FileWriter(outputFile)) { writer =>
     val headers = List(
       QuerySettings.lengthNormWeight,
+      QuerySettings.parameterCountWeight,
       QuerySettings.depthBoostWeight,
       QuerySettings.distanceBoostWeight,
       QuerySettings.typeFrequencyWeight,
@@ -61,6 +63,7 @@ object FindParameters extends App {
           stats => {
             val cells = List[Any](
               settings.query.lengthNormWeight,
+              settings.query.parameterCountWeight,
               settings.query.depthBoostWeight,
               settings.query.distanceBoostWeight,
               settings.query.typeFrequencyWeight,
@@ -90,6 +93,7 @@ object FindParameters extends App {
   def randomize(settings: QuerySettings): Rng[QuerySettings] =
     for {
       lnw <- lengthNormWeights
+      pcw <- parameterCountWeight
       depth <- depthBoostWeight
       dist <- distanceBoostWeight
       tf <- typeFrequencyWeight
@@ -98,6 +102,7 @@ object FindParameters extends App {
       fpCutoff <- fingerprintFrequencyCutoff
     } yield settings.copy(
       lengthNormWeight = lnw,
+      parameterCountWeight = pcw,
       depthBoostWeight = depth,
       distanceBoostWeight = dist,
       typeFrequencyWeight = tf,
