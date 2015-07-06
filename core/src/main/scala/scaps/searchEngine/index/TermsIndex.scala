@@ -88,7 +88,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
   def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
       //      toLuceneQuery(query, moduleIds).map(
-      //        lq => search(lq, 20, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
+      //        lq => search(lq, 5, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
       toLuceneQuery(query, moduleIds).map(
         lq => search(lq, settings.query.maxResults).get)
     }
@@ -115,9 +115,11 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff)
 
       val docLenBoost = new FunctionQuery(
-        new SimpleFloatFunction(new FloatFieldSource(fields.docLen)) {
-          def func(doc: Int, values: FunctionValues): Float =
-            settings.query.lengthNormWeight.toFloat * (values.floatVal(doc) - 1f) + 1f
+        new SimpleFloatFunction(new FloatFieldSource(fields.noParams)) {
+          def func(doc: Int, values: FunctionValues): Float = {
+            val docLenNorm = 1d / Math.sqrt(1 + values.floatVal(doc))
+            settings.query.lengthNormWeight.toFloat * (docLenNorm.toFloat - 1f) + 1f
+          }
 
           def name(): String = "docLenNormalization"
         })
@@ -169,10 +171,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
-    val adjustedFpLength = entity.withoutImplicitParameters.typeFingerprint.length
-    val docLen = (1d / Math.sqrt(adjustedFpLength))
-
-    doc.add(new FloatDocValuesField(fields.docLen, docLen.toFloat))
+    doc.add(new FloatDocValuesField(fields.noParams, entity.noExplicitParams))
 
     doc
   }
@@ -192,7 +191,7 @@ object TermsIndex {
     val entity = "entity"
     val moduleId = "moduleId"
     val flags = "flags"
-    val docLen = "docLen"
+    val noParams = "noParams"
   }
 
   class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {

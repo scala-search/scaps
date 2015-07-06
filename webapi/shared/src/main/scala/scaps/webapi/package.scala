@@ -171,13 +171,30 @@ case class TermEntity(
       .sorted
 
   def withoutImplicitParameters = {
-    val args = tpe.args.filter {
-      case TypeEntity.Implicit(_, _) => false
-      case _                         => true
+    def removeImplicit(tpe: TypeEntity): TypeEntity = tpe match {
+      case TypeEntity.MethodInvocation(args, TypeEntity.MethodInvocation(innerArgs, ret, _), _) =>
+        val returnsImplicitList = innerArgs.head match {
+          case TypeEntity.Implicit(_, _) => true
+          case _                         => false
+        }
+
+        if (returnsImplicitList)
+          TypeEntity.MethodInvocation(args, ret)
+        else
+          TypeEntity.MethodInvocation(args, removeImplicit(ret))
+      case TypeEntity.MemberAccess(owner, member) =>
+        TypeEntity.MemberAccess(owner, removeImplicit(member))
+      case t => t
     }
 
-    copy(tpe = tpe.copy(args = args))
+    copy(tpe = removeImplicit(tpe))
   }
+
+  def noExplicitParams =
+    withoutImplicitParameters.tpe.normalize(typeParameters) match {
+      case TypeEntity.Ignored(args, _) => args.length - 1
+      case _                           => 0
+    }
 
   def withoutComment = copy(comment = "")
 
