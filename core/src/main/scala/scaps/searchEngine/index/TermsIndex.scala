@@ -171,7 +171,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
-    doc.add(new FloatDocValuesField(fields.noParams, entity.noExplicitParams))
+    val length = entity.noExplicitParams + (1d - (1d / (Math.pow(0.2d * entity.tpe.toList.length, 2d) + 1d)))
+    doc.add(new FloatDocValuesField(fields.noParams, length.toFloat))
 
     doc
   }
