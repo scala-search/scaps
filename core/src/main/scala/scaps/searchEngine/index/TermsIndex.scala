@@ -1,9 +1,11 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
+
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -14,13 +16,17 @@ import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
 import org.apache.lucene.document.Field.Store
-import org.apache.lucene.document.FieldType
+import org.apache.lucene.document.NumericDocValuesField
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.Term
+import org.apache.lucene.queries.CustomScoreQuery
+import org.apache.lucene.queries.function.FunctionQuery
+import org.apache.lucene.queries.function.FunctionValues
+import org.apache.lucene.queries.function.valuesource.DualFloatFunction
+import org.apache.lucene.queries.function.valuesource.IntFieldSource
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.MatchAllDocsQuery
@@ -31,6 +37,7 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
+
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.searchEngine.ApiQuery
@@ -39,12 +46,6 @@ import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
-import org.apache.lucene.document.FloatDocValuesField
-import org.apache.lucene.queries.function.FunctionQuery
-import org.apache.lucene.queries.function.valuesource.FloatFieldSource
-import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
-import org.apache.lucene.queries.function.FunctionValues
-import org.apache.lucene.queries.CustomScoreQuery
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -88,7 +89,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
   def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
     Try {
       //      toLuceneQuery(query, moduleIds).map(
-      //        lq => search(lq, 5, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
+      //        lq => search(lq, 6, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
       toLuceneQuery(query, moduleIds).map(
         lq => search(lq, settings.query.maxResults).get)
     }
@@ -115,9 +116,14 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       val keysAndTypes = new TypeFingerprintQuery(fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff)
 
       val docLenBoost = new FunctionQuery(
-        new SimpleFloatFunction(new FloatFieldSource(fields.noParams)) {
-          def func(doc: Int, values: FunctionValues): Float = {
-            val docLenNorm = 1d / Math.sqrt(1 + values.floatVal(doc))
+        new DualFloatFunction(new IntFieldSource(fields.noParams), new IntFieldSource(fields.fingerprintLength)) {
+          def func(doc: Int, noParamsValues: FunctionValues, fingerprintLengthValues: FunctionValues): Float = {
+            val noParams = noParamsValues.intVal(doc)
+            val fingerprintLength = fingerprintLengthValues.intVal(doc)
+
+            val typeComplexity = 1 + noParams - (1d / (Math.pow(0.2d * fingerprintLength, 2d) + 1d))
+
+            val docLenNorm = 1d / Math.sqrt(typeComplexity)
             settings.query.lengthNormWeight.toFloat * (docLenNorm.toFloat - 1f) + 1f
           }
 
@@ -171,8 +177,10 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
-    val length = entity.noExplicitParams + (1d - (1d / (Math.pow(0.2d * entity.tpe.toList.length, 2d) + 1d)))
-    doc.add(new FloatDocValuesField(fields.noParams, length.toFloat))
+    val tpeComplexity = entity.tpe.toList.length
+    val length = entity.tpe.explicitParamsCount + (1d - (1d / (Math.pow(0.2d * tpeComplexity, 2d) + 1d)))
+    doc.add(new NumericDocValuesField(fields.noParams, entity.tpe.explicitParamsCount))
+    doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.toList.length))
 
     doc
   }
@@ -193,6 +201,7 @@ object TermsIndex {
     val moduleId = "moduleId"
     val flags = "flags"
     val noParams = "noParams"
+    val fingerprintLength = "fingerprintLength"
   }
 
   class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {

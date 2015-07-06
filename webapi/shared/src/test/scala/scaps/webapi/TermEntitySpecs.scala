@@ -17,42 +17,6 @@ object TermEntitySpecs extends TestSuite {
           assert(name == "Executor")
         }
       }
-
-      'noExplicitParams{
-        'method - {
-          val tpe = TypeEntity.MethodInvocation(
-            TypeEntity.Int(Contravariant) :: TypeEntity.Int(Contravariant) :: Nil,
-            TypeEntity.String())
-          val t = TermEntity("a", Nil, tpe, "")
-
-          assert(t.noExplicitParams == 2)
-        }
-
-        'member - {
-          val tpe = TypeEntity.MemberAccess(
-            TypeEntity.Int(),
-            TypeEntity.MethodInvocation(
-              Nil,
-              TypeEntity.String()))
-          val t = TermEntity("a", Nil, tpe, "")
-
-          assert(t.noExplicitParams == 1)
-        }
-
-        'implicitMemberParam - {
-          val tpe = TypeEntity.MemberAccess(
-            TypeEntity.Int(Contravariant),
-            TypeEntity.MethodInvocation(
-              TypeEntity.Int(Contravariant) :: Nil,
-              TypeEntity.MethodInvocation(
-                TypeEntity.Implicit(TypeEntity.String()) :: Nil,
-                TypeEntity.String())))
-          // Int#a(_: Int)(implicit _: String): String
-          val t = TermEntity("a", Nil, tpe, "")
-
-          assert(t.noExplicitParams == 2)
-        }
-      }
     }
   }
 }
