@@ -25,15 +25,15 @@ object RawQuery {
 object QueryParser extends RegexParsers {
   import RawQuery._
 
-  def query: Parser[RawQuery] = keywords ~ tpe ^^ {
+  def query: Parser[RawQuery] = fullQuery | tpeQuery
+
+  def tpeQuery: Parser[RawQuery] = tpe ^^ { RawQuery(Nil, _) }
+
+  def fullQuery: Parser[RawQuery] = (keyword.* <~ """\:\s""".r) ~ tpe ^^ {
     case keywords ~ tpe => RawQuery(keywords, tpe)
   }
 
-  def keywords: Parser[List[String]] = opt((escapedKeywords | singleKeyword) <~ ":") ^^ { _.getOrElse(Nil) }
-
-  def singleKeyword: Parser[List[String]] = """[^`\s\:]*""".r ^^ { _ :: Nil }
-
-  def escapedKeywords: Parser[List[String]] = "`" ~> rep("""[^`\s]+""".r) <~ "`"
+  def keyword: Parser[String] = """[^`\s\:]+""".r
 
   def tpe: Parser[Type] = functionTpe | tupleTpe | simpleTpe
 

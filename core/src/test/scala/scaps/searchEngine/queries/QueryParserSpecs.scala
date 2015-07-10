@@ -80,8 +80,12 @@ class QueryParserSpecs extends FlatSpec with Matchers {
     parse("keyword: Int").keywords should contain("keyword")
   }
 
-  it should "parse keywords escaped by backticks" in {
-    parse("`two keywords`: Int").keywords should contain allOf ("two", "keywords")
+  it should "parse multiple keywords" in {
+    parse("k1 k2 k3: Int").keywords should be(List("k1", "k2", "k3"))
+  }
+
+  it should "allow colons in types" in {
+    parse("::[A, B]").tpe should equal(Type("::", A :: B :: Nil))
   }
 
   def parse(query: String) = {
