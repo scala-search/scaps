@@ -280,13 +280,14 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           }
       }
 
-    def ignoreOutermostFns(tpe: TypeEntity): TypeEntity = tpe match {
+    def paramsAndReturnTpes(tpe: TypeEntity): List[TypeEntity] = tpe match {
       case Function(args, res, v) =>
-        Ignored(args :+ ignoreOutermostFns(res), v)
-      case tpe => tpe
+        args ++ paramsAndReturnTpes(res)
+      case tpe => List(tpe)
     }
 
-    (loop _ andThen ignoreOutermostFns)(this)
+    // outermost function applications are ignored
+    Ignored((loop _ andThen paramsAndReturnTpes)(this))
   }
 }
 
