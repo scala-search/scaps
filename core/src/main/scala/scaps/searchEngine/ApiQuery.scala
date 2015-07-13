@@ -2,7 +2,7 @@ package scaps.searchEngine
 
 import scaps.webapi.Variance
 
-case class ApiQuery(keywords: List[String], tpe: ApiTypeQuery) {
+case class ApiQuery(keywords: List[String], tpe: ApiTypeQuery, queryFingerprintLength: Int) {
   override def toString =
     s"${keywords.mkString(" ")}: $tpe"
 

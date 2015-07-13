@@ -117,9 +117,14 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
           def func(doc: Int, fingerprintLengthValues: FunctionValues): Float = {
             val fingerprintLength = fingerprintLengthValues.intVal(doc)
 
-            val lengthNorm = 1d / Math.sqrt(fingerprintLength)
-
-            (settings.query.lengthNormWeight * (lengthNorm - 1) + 1).toFloat
+            //            val lengthNorm = 1d / (Math.abs(query.queryFingerprintLength - fingerprintLength) + 1)
+            //
+            //            (settings.query.lengthNormWeight * (lengthNorm - 1) + 1).toFloat
+            (1d /
+              (settings.query.lengthNormWeight *
+                math.pow(
+                  0.1 * math.abs(query.queryFingerprintLength - fingerprintLength),
+                  2) + 1)).toFloat
           }
 
           def name(): String = "docLenNormalization"
