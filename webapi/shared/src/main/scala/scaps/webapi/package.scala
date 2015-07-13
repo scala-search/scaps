@@ -247,12 +247,9 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           loop(Function(owner :: Nil, loop(member)))
         case MethodInvocation(args, res, _) =>
           loop(Function(args, loop(res)))
-        case Function(args1, Function(args2, res, _), v) =>
-          // uncurry function
-          loop(Function(args1 ::: args2, res, v))
-        case Function(Tuple(args, _) :: Nil, res, v) =>
-          // detuple function
-          loop(Function(args, res, v))
+        case Function(a :: (as @ (_ :: _)), res, v) =>
+          // curry function
+          loop(Function(a :: Nil, Function(as, res, v), v))
         case Refinement(args, v) =>
           val newArgs = args.flatMap {
             case AnyRef(_) => None
@@ -283,26 +280,13 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           }
       }
 
-    loop(this) match {
+    def ignoreOutermostFns(tpe: TypeEntity): TypeEntity = tpe match {
       case Function(args, res, v) =>
-        Ignored(args :+ res, v)
-      case tpe =>
-        tpe
+        Ignored(args :+ ignoreOutermostFns(res), v)
+      case tpe => tpe
     }
-  }
 
-  def explicitParamsCount: Int = this match {
-    case TypeEntity.MethodInvocation(args, ret, _) =>
-      val isImplicitList = args.headOption.map(TypeEntity.Implicit.matches _).getOrElse(false)
-
-      if (isImplicitList)
-        0
-      else
-        args.length + ret.explicitParamsCount
-    case TypeEntity.MemberAccess(_, ret) =>
-      1 + ret.explicitParamsCount
-    case _ =>
-      0
+    (loop _ andThen ignoreOutermostFns)(this)
   }
 }
 

@@ -44,6 +44,7 @@ import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
 import scaps.utils.Statistic
+import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -112,14 +113,11 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       }
 
       val docLenBoost = new FunctionQuery(
-        new DualFloatFunction(new IntFieldSource(fields.noParams), new IntFieldSource(fields.fingerprintLength)) {
-          def func(doc: Int, noParamsValues: FunctionValues, fingerprintLengthValues: FunctionValues): Float = {
-            val noParams = noParamsValues.intVal(doc)
+        new SimpleFloatFunction(new IntFieldSource(fields.fingerprintLength)) {
+          def func(doc: Int, fingerprintLengthValues: FunctionValues): Float = {
             val fingerprintLength = fingerprintLengthValues.intVal(doc)
 
-            val lengthNorm = Statistic.weightedGeometricMean(
-              1d / Math.sqrt(1 + noParams) -> settings.query.parameterCountWeight,
-              1d / Math.sqrt(1 + fingerprintLength) -> (1 - settings.query.parameterCountWeight))
+            val lengthNorm = 1d / Math.sqrt(fingerprintLength)
 
             (settings.query.lengthNormWeight * (lengthNorm - 1) + 1).toFloat
           }
@@ -175,7 +173,6 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
-    doc.add(new NumericDocValuesField(fields.noParams, entity.tpe.explicitParamsCount))
     doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.toList.length))
 
     doc
@@ -196,31 +193,16 @@ object TermsIndex {
     val entity = "entity"
     val moduleId = "moduleId"
     val flags = "flags"
-    val noParams = "noParams"
     val fingerprintLength = "fingerprintLength"
   }
 
-  class FingerprintSimilarity(settings: Settings) extends TFIDFSimilarity {
-    val delegate = new DefaultSimilarity
-
+  class FingerprintSimilarity(settings: Settings) extends DefaultSimilarity {
     // We use type frequencies instead of document term frequency to boost uncommon
     // types in queries
-    override def idf(docFreq: Long, numDocs: Long) = 1
+    override def idf(docFreq: Long, numDocs: Long) = 1f
 
-    // Override decoding to represent shorter documents with higher precision
-    val prec = Long.MaxValue.toFloat
-    override def decodeNormValue(b: Long): Float = (b.toFloat) / prec
-    override def encodeNormValue(f: Float): Long = (f * prec).toLong
-
-    // Length normalization is implemented with the `docLen` field
+    // Use the `fingerprintLength` field to normalize fingerprint length
     override def lengthNorm(state: FieldInvertState): Float = 1f
-
-    // delegate remaining methods to default similarity
-    override def scorePayload(doc: Int, start: Int, end: Int, payload: BytesRef): Float = delegate.scorePayload(doc, start, end, payload)
-    override def sloppyFreq(distance: Int): Float = delegate.sloppyFreq(distance)
-    override def tf(freq: Float): Float = delegate.tf(freq)
-    override def queryNorm(sumOfSquaredWeights: Float): Float = delegate.queryNorm(sumOfSquaredWeights)
-    override def coord(overlap: Int, maxOverlap: Int): Float = delegate.coord(overlap, maxOverlap)
   }
 
   class ModuleIdSimilarity extends DefaultSimilarity {
