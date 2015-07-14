@@ -14,7 +14,7 @@ sealed trait View {
   def fromKey = key(from)
   def toKey = key(to)
 
-  def distance: Int
+  def distance: Float
 }
 
 object View {
@@ -61,7 +61,7 @@ object View {
     tpe.renameTypeParams(_ => "_").signature
 }
 
-case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Int) extends View {
+case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Float) extends View {
   def from = cls
   def to = baseType
 
@@ -70,7 +70,7 @@ case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Int) extends
 }
 
 case class ImplicitConversion(from: TypeEntity, to: TypeEntity, evidence: String) extends View {
-  def distance = 1
+  def distance = 0.1f
 
   override def toString =
     s"$fromKey is convertible to $toKey ($evidence)"
@@ -80,7 +80,7 @@ case class TypeClassImplementation(subject: TypeEntity, implementedClass: TypeEn
   def from = subject
   def to = implementedClass
 
-  def distance = 1
+  def distance = 0.1f
 
   override def toString =
     s"$fromKey implements type class $toKey ($evidence)"

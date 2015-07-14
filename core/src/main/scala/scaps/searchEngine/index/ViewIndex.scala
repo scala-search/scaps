@@ -27,7 +27,7 @@ class ViewIndex(val dir: Directory) extends Index[View] {
       }
     }
 
-  def findAlternativesWithDistance(tpe: TypeEntity): Try[Seq[(TypeEntity, Int)]] = Try {
+  def findAlternativesWithDistance(tpe: TypeEntity): Try[Seq[(TypeEntity, Float)]] = Try {
     def alignVariance(alt: TypeEntity) =
       alt.withVariance(tpe.variance)
 
@@ -46,14 +46,14 @@ class ViewIndex(val dir: Directory) extends Index[View] {
       case Covariant if tpe.name == TypeEntity.Nothing.name =>
         Nil
       case Covariant =>
-        (tpe, TypeEntity.Nothing(Covariant), 1) +:
+        (tpe, TypeEntity.Nothing(Covariant), 1f) +:
           findViewsTo(tpe).get.map(view => (view.to, view.from, view.distance))
       case Contravariant =>
         findViewsFrom(tpe).get.map(view => (view.from, view.to, view.distance))
       case Invariant if tpe.name == TypeEntity.Unknown.name =>
         Nil
       case Invariant =>
-        List((tpe, TypeEntity.Unknown(Invariant), 1))
+        List((tpe, TypeEntity.Unknown(Invariant), 1f))
     }).unzip3
 
     sources.map(alignVariance)

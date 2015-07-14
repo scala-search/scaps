@@ -57,7 +57,7 @@ private[queries] object ExpandedQuery {
       Max(alts.toList)
   }
 
-  case class Leaf(tpe: TypeEntity, fraction: Double, depth: Int, dist: Int) extends Part with Alternative {
+  case class Leaf(tpe: TypeEntity, fraction: Double, depth: Int, dist: Float) extends Part with Alternative {
     val children = Nil
 
     override def toString =
@@ -119,7 +119,7 @@ private[queries] object ExpandedQuery {
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
   findClassesBySuffix: (String) => Seq[ClassEntity],
-  findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Int)]) {
+  findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Float)]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the terms index.
@@ -192,7 +192,7 @@ class QueryAnalyzer private[searchEngine] (
   private[queries] def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
-    def parts(tpe: TypeEntity, fraction: Double, depth: Int, dist: Int, outerTpes: Set[TypeEntity]): Alternative = {
+    def parts(tpe: TypeEntity, fraction: Double, depth: Int, dist: Float, outerTpes: Set[TypeEntity]): Alternative = {
       tpe match {
         case TypeEntity.Ignored(args, v) =>
           val partFraction = fraction / args.length
