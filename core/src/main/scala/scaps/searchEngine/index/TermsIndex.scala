@@ -114,11 +114,10 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
       val docLenBoost = new FunctionQuery(
         new SimpleFloatFunction(new IntFieldSource(fields.fingerprintLength)) {
+          val lengthWeight = settings.query.lengthNormWeight / math.sqrt(query.queryFingerprintLength)
+
           def func(doc: Int, fingerprintLengthValues: FunctionValues): Float = {
             val fingerprintLength = fingerprintLengthValues.intVal(doc)
-
-            val lengthWeight = settings.query.lengthNormWeight / math.sqrt(query.queryFingerprintLength)
-
             (1d /
               (math.pow(
                 lengthWeight * math.abs(query.queryFingerprintLength - fingerprintLength),

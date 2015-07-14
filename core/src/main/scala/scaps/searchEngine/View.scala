@@ -70,7 +70,7 @@ case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Float) exten
 }
 
 case class ImplicitConversion(from: TypeEntity, to: TypeEntity, evidence: String) extends View {
-  def distance = 0.1f
+  def distance = 0.5f
 
   override def toString =
     s"$fromKey is convertible to $toKey ($evidence)"
@@ -80,7 +80,7 @@ case class TypeClassImplementation(subject: TypeEntity, implementedClass: TypeEn
   def from = subject
   def to = implementedClass
 
-  def distance = 0.1f
+  def distance = 0.5f
 
   override def toString =
     s"$fromKey implements type class $toKey ($evidence)"
