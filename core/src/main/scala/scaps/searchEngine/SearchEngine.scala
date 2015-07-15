@@ -127,8 +127,10 @@ class SearchEngine private[searchEngine] (
         termsIndex.allTerms().get,
         settings.index.typeFrequenciesSampleSize)
 
+      val adjustedTfs = TypeFrequencies.adjustInvariantTopType(tfs)
+
       val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
-        def freq(v: Variance) = tfs((v, cls.name))
+        def freq(v: Variance) = adjustedTfs((v, cls.name))
 
         cls.copy(typeFrequency = Map(
           Covariant -> freq(Covariant),

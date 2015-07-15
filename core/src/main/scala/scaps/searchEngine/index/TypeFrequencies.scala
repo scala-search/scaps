@@ -1,6 +1,6 @@
 package scaps.searchEngine.index
 
-import scalaz._
+import scalaz.{ Contravariant => _, _ }
 import scaps.webapi._
 import scala.util.Random
 import scaps.utils._
@@ -43,4 +43,14 @@ object TypeFrequencies {
       .mapValues(_.length.toFloat / maxFrequency)
       .withDefaultValue(0)
   }
+
+  def adjustInvariantTopType(tfs: Map[(Variance, String), Float]): Map[(Variance, String), Float] =
+    // the common pattern of having an implicit extension class *Ops which is invariant over T for
+    // covariant containers leads to an overboost of the methods in the extension class.
+    // The reason is, that an invariant Any has a much lower type frequency than -Any and therefore
+    // the query expression for ListOps[Any] achieves usually higher scores than the one for List[Any].
+    // This method is a dirty fix and rather arbitrarily but helps significantly in achieving better results!
+    tfs
+      .updated((Invariant, TypeEntity.Any.name), tfs((Contravariant, TypeEntity.Any.name)))
+      .updated((Invariant, TypeEntity.Nothing.name), tfs((Covariant, TypeEntity.Nothing.name)))
 }
