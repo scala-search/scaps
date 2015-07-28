@@ -166,6 +166,9 @@ trait EntityFactory extends Logging {
     } else if (tpe.typeSymbol.name == compiler.typeNames.REPEATED_PARAM_CLASS_NAME) {
       assert(args.length == 1)
       TypeEntity.Repeated(args.head, variance)
+    } else if (tpe.typeSymbol.name == compiler.typeNames.REFINE_CLASS_NAME) {
+      val parents = tpe.parents.map(createTypeEntity(_, variance))
+      TypeEntity.Refinement(parents, variance)
     } else {
       TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args, tpe.typeSymbol.isTypeParameter)
     }

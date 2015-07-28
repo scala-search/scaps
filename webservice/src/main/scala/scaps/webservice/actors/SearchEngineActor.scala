@@ -75,8 +75,8 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
           (if (error.isDefined) Nil else Seq(indexJob.module))
 
         if (queue.tail.isEmpty) {
-          indexWorker ! UpdateTypeFrequencies
-          become(updatingTypeFrequencies(indexed, errors))
+          indexWorker ! FinalizeIndexes
+          become(finalizing(indexed, errors))
         } else {
           indexWorker ! queue.tail.head
           become(indexing(queue.tail, indexed, errors))
@@ -91,8 +91,8 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
         become(resetting())
     }
 
-    def updatingTypeFrequencies(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
-      case Updated =>
+    def finalizing(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
+      case Finalized =>
         become(ready(indexedModules, indexErrors))
       case _: Search =>
         sender ! \/.left(s"Cannot search while index is updating.")
@@ -151,9 +151,9 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
   val logger = Logging(context.system, this)
 
   def receive = {
-    case UpdateTypeFrequencies =>
-      searchEngine.updateTypeFrequencies().get
-      sender ! Updated
+    case FinalizeIndexes =>
+      searchEngine.finalizeIndexes().get
+      sender ! Finalized
 
     case i @ Index(module, sourceFile, classpath, _) =>
       val requestor = sender

@@ -1,6 +1,6 @@
 package scaps.searchEngine.index
 
-import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.JavaConverters._
 import scaps.utils.using
 import scala.util.Try
 import org.apache.lucene.analysis.Analyzer
@@ -76,4 +76,11 @@ trait Index[E] {
   def initWriter() = {
     withWriter(_ => ()).get
   }
+
+  def replaceAllEntities(entities: Seq[E]): Try[Unit] =
+    withWriter { writer =>
+      val docs = entities.map(toDocument)
+      writer.deleteAll()
+      writer.addDocuments(docs.asJavaCollection)
+    }
 }

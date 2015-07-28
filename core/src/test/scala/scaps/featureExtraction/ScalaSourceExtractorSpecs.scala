@@ -378,6 +378,24 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.P", _.tpe.toString should be("+<refinement3>[+java.lang.Object, +p.S, +p.T[scala.Int]]")))
   }
 
+  it should "extract refinement types of values and methods" in {
+    extractTerms("""
+      package p
+
+      trait T {}
+      trait U {}
+
+      object O {
+        val t = new T {}
+        def m = new T {}
+        val u = new T with U {}
+      }
+      """)(
+      ("p.O.t", _.tpe.toString should be("+<refinement2>[+java.lang.Object, +p.T]")),
+      ("p.O.m", _.tpe.toString should be("+<refinement2>[+java.lang.Object, +p.T]")),
+      ("p.O.u", _.tpe.toString should be("+<refinement3>[+java.lang.Object, +p.T, +p.U]")))
+  }
+
   it should "extract by name parameters" in {
     extractTerms("""
       package p
@@ -521,19 +539,6 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("java.lang.String", _ => ()))
-  }
-
-  it should "support type lambdas" in {
-    extractTerms("""
-      package p
-
-      object O {
-        type IntTuple[+A] = (Int, A)
-
-        def m[T](x: T): IntTuple[T] = ???
-      }
-      """)(
-      ("p.O.m", t => println(t)))
   }
 
   it should "set the 'overrides' flag on terms that override an inherited member" in {

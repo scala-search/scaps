@@ -291,6 +291,22 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
     // outermost function applications are ignored
     Ignored((loop _ andThen paramsAndReturnTpes)(this))
   }
+
+  def withoutImplicitParams: TypeEntity = this match {
+    case TypeEntity.MethodInvocation(a :: as, res, _) if a.name == TypeEntity.Implicit.name =>
+      res.withoutImplicitParams
+    case TypeEntity.MethodInvocation(args, res, v) =>
+      TypeEntity.MethodInvocation(args, res.withoutImplicitParams, v)
+    case t =>
+      t
+  }
+
+  def etaExpanded: TypeEntity = this match {
+    case TypeEntity.MethodInvocation(args, res, v) =>
+      TypeEntity.Function(args, res.etaExpanded, v)
+    case t =>
+      t
+  }
 }
 
 object TypeEntity {

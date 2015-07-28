@@ -155,7 +155,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
               se.indexEntities(module, entities, batchMode = true).get
             }
 
-            se.updateTypeFrequencies().get
+            se.finalizeIndexes().get
 
             block(se)
           }

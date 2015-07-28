@@ -178,7 +178,7 @@ class SearchEngineActorSpecs(_system: ActorSystem) extends TestKit(_system) with
 
     val received = await(indexWorker ? "receivedMessages").asInstanceOf[Seq[Any]]
 
-    received should contain(UpdateTypeFrequencies)
+    received should contain(FinalizeIndexes)
   }
 
   def await[T](f: Future[T]): T = {
@@ -222,8 +222,8 @@ class MockedIndexWorker() extends Actor {
   def receive = log orElse {
     case i: Index =>
       job = (sender, i)
-    case UpdateTypeFrequencies =>
-      sender ! Updated
+    case FinalizeIndexes =>
+      sender ! Finalized
     case "continue" =>
       job._1 ! Indexed(job._2, None)
     case "receivedMessages" =>

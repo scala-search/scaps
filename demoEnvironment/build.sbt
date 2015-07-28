@@ -10,7 +10,7 @@ libraryDependencies += "org.scala-refactoring" %% "org.scala-refactoring.library
 
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
 
-libraryDependencies += "org.spire-math" %% "spire" % "0.10.1"
+//libraryDependencies += "org.spire-math" %% "spire" % "0.10.1"
 
 //libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.8.0"
 

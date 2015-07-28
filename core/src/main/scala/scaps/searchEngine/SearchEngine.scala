@@ -29,6 +29,7 @@ import scaps.webapi.TermEntity
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
 import org.apache.lucene.store.NIOFSDirectory
+import scaps.webapi.TypeParameterEntity
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -95,14 +96,16 @@ class SearchEngine private[searchEngine] (
         else
           t.copy(module = module)
 
-      val entitiesWithUnknown = ClassEntity(TypeEntity.Unknown.name, Nil, Nil) +: entities
+      val entitiesWithSyntheticTypes = entities ++ List(
+        ClassEntity(TypeEntity.Unknown.name, Nil, Nil),
+        ClassEntity(TypeEntity.Implicit.name, TypeParameterEntity("T", Invariant) :: Nil, Nil))
 
-      val termsWithModule = entitiesWithUnknown
+      val termsWithModule = entitiesWithSyntheticTypes
         .collect { case t: TermEntity => setModule(t) }
-      val classesWithModule = entitiesWithUnknown
+      val classesWithModule = entitiesWithSyntheticTypes
         .collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
 
-      val views = entitiesWithUnknown.flatMap(View.fromEntity)
+      val views = entitiesWithSyntheticTypes.flatMap(View.fromEntity)
 
       val f = Future.sequence(List(
         Future { termsIndex.addEntities(termsWithModule).get },
@@ -112,13 +115,18 @@ class SearchEngine private[searchEngine] (
       Await.result(f, settings.index.timeout)
 
       if (!batchMode) {
-        updateTypeFrequencies().get
+        finalizeIndexes().get
       }
 
       moduleIndex.addEntities(Seq(module)).get
     }
 
-  def updateTypeFrequencies(): Try[Unit] =
+  def finalizeIndexes(): Try[Unit] =
+    for {
+      _ <- updateTypeFrequencies()
+    } yield ()
+
+  private def updateTypeFrequencies(): Try[Unit] =
     Try {
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
 

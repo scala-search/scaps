@@ -68,7 +68,7 @@ object Common extends Logging {
           engine.indexEntities(Module("", project.name, ""), entities, batchMode = true).get
         }
 
-        engine.updateTypeFrequencies().get
+        engine.finalizeIndexes().get
       }
     }
     engine
