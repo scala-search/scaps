@@ -7,7 +7,7 @@ case class Stats(queryStats: List[QueryStats]) {
   val meanRecallAt10 = queryStats.map(_.recallAt10).sum / queryStats.size
   val duration = queryStats.map(_.duration).reduce(_ + _)
 
-  override def toString = s"no. queries: $noQueries, MAP: $meanAveragePrecision, gMAP: $geometricMeanAveragePrecision, P10: $meanRecallAt10"
+  override def toString = s"no. queries: $noQueries, MAP: $meanAveragePrecision, R10: $meanRecallAt10"
 }
 
 object Stats {

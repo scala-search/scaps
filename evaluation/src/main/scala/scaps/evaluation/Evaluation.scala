@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.io.FileWriter
 import scaps.utils.using
+import scaps.evaluation.stats.Stats
 
 object Evaluation extends App {
   import QuerySettings._
@@ -72,54 +73,62 @@ object Evaluation extends App {
   var engine = Common.initSearchEngine(baseSettings, evaluationSettings)
 
   using(new FileWriter(outputFile)) { writer =>
-    val headers = List(
-      "run",
-      QuerySettings.views,
-      QuerySettings.fractions,
-      QuerySettings.lengthNormWeight,
-      QuerySettings.depthBoostWeight,
-      QuerySettings.distanceBoostWeight,
-      QuerySettings.typeFrequencyWeight,
-      QuerySettings.nameBoost,
-      QuerySettings.docBoost,
-      QuerySettings.fingerprintFrequencyCutoff,
-      "MAP",
-      "R@10",
-      "t")
+    using(new FileWriter(statsOutputFile)) { statsWriter =>
+      val headers = List(
+        "run",
+        QuerySettings.views,
+        QuerySettings.fractions,
+        QuerySettings.lengthNormWeight,
+        QuerySettings.depthBoostWeight,
+        QuerySettings.distanceBoostWeight,
+        QuerySettings.typeFrequencyWeight,
+        QuerySettings.nameBoost,
+        QuerySettings.docBoost,
+        QuerySettings.fingerprintFrequencyCutoff,
+        "MAP",
+        "R@10",
+        "t")
 
-    println(headers.mkString("", "; ", ";\n"))
-    writer.write(headers.mkString("", "; ", ";\n"))
+      println(headers.mkString("", "; ", ";\n"))
+      writer.write(headers.mkString("", "; ", ";\n"))
 
-    runs.foreach {
-      case (runName, noConfigurations, settingsGenerator) =>
-        println(s"start '$runName'")
-        settingsGenerator.fill(noConfigurations).runUnsafe(Math.pow(42, 42).toLong).foreach { settings =>
-          engine = Common.updateSearchEngine(engine, settings)
-          Common.runQueries(engine, evaluationSettings.queries).fold(
-            errors => {
-              println(errors)
-              ???
-            },
-            stats => {
-              val cells = List[Any](
-                runName,
-                settings.query.views,
-                settings.query.fractions,
-                settings.query.lengthNormWeight,
-                settings.query.depthBoostWeight,
-                settings.query.distanceBoostWeight,
-                settings.query.typeFrequencyWeight,
-                settings.query.nameBoost,
-                settings.query.docBoost,
-                settings.query.fingerprintFrequencyCutoff,
-                stats.meanAveragePrecision,
-                stats.meanRecallAt10,
-                stats.duration.toMillis + " ms")
+      runs.foreach {
+        case (runName, noConfigurations, settingsGenerator) =>
+          println(s"start '$runName'")
+          val allStats = settingsGenerator.fill(noConfigurations).runUnsafe(Math.pow(42, 42).toLong).map { settings =>
+            engine = Common.updateSearchEngine(engine, settings)
+            Common.runQueries(engine, evaluationSettings.queries).fold(
+              errors => {
+                println(errors)
+                ???
+              },
+              stats => {
+                val cells = List[Any](
+                  runName,
+                  settings.query.views,
+                  settings.query.fractions,
+                  settings.query.lengthNormWeight,
+                  settings.query.depthBoostWeight,
+                  settings.query.distanceBoostWeight,
+                  settings.query.typeFrequencyWeight,
+                  settings.query.nameBoost,
+                  settings.query.docBoost,
+                  settings.query.fingerprintFrequencyCutoff,
+                  stats.meanAveragePrecision,
+                  stats.meanRecallAt10,
+                  stats.duration.toMillis + " ms")
 
-              println(cells.mkString("", "; ", ";\n"))
-              writer.write(cells.mkString("", "; ", ";\n"))
-            })
-        }
+                println(cells.mkString("", "; ", ";\n"))
+                writer.write(cells.mkString("", "; ", ";\n"))
+
+                (stats, cells)
+              })
+          }
+
+          val run = RunStats(runName, allStats)
+          println(run)
+          statsWriter.write(run.toString)
+      }
     }
   }.get
 
@@ -144,11 +153,34 @@ object Evaluation extends App {
       nameBoost = nb,
       docBoost = db)
 
+  lazy val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+  lazy val now = Calendar.getInstance.getTime
+
   def outputFile() = {
-    val output = new File(outputDir)
-    output.mkdirs()
-    val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
-    val now = Calendar.getInstance.getTime
+    new File(outputDir).mkdirs()
     new File(s"$outputDir/evaluation-${format.format(now)}.csv")
   }
+
+  def statsOutputFile() = {
+    new File(outputDir).mkdirs()
+    new File(s"$outputDir/evaluation-stats-${format.format(now)}.csv")
+  }
+}
+
+case class RunStats(name: String, stats: List[(Stats, List[Any])]) {
+  def topByMAP = stats.maxBy(_._1.meanAveragePrecision)
+  def topByR10 = stats.maxBy(_._1.meanRecallAt10)
+  def avgMAP = stats.map(_._1.meanAveragePrecision).sum / stats.length
+  def avgR10 = stats.map(_._1.meanRecallAt10).sum / stats.length
+  def avgRuntime = stats.map(_._1.queryStats.map(_.duration).reduce(_ + _)).reduce(_ + _) / stats.length
+
+  override def toString =
+    s"""
+      |${name}
+      |  top by MAP: ${topByMAP._2}
+      |  top by R@10: ${topByR10._2}
+      |  avg. MAP: ${avgMAP}
+      |  avg. R@10: ${avgR10}
+      |  afg. runtime: ${avgRuntime.toMillis}
+      |""".stripMargin
 }
