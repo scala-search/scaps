@@ -213,7 +213,9 @@ class QueryAnalyzer private[searchEngine] (
     }
 
     def alternatives(tpe: TypeEntity, fraction: Double, depth: Int, outerTpes: Set[TypeEntity]): Part = {
-      val alternativesWithDistance = findAlternativesWithDistance(tpe).toList
+      val alternativesWithDistance =
+        if (settings.views) findAlternativesWithDistance(tpe).toList
+        else Nil
 
       val outerTpesAndAlts = outerTpes + tpe ++ alternativesWithDistance.map(_._1)
 
@@ -248,11 +250,22 @@ class QueryAnalyzer private[searchEngine] (
         getFrequency(l.tpe.variance, l.tpe.name))
   }
 
-  private def boost(l: ExpandedQuery.Leaf): Double =
-    l.fraction * Statistic.weightedGeometricMean(
-      itf(l) -> settings.typeFrequencyWeight,
-      1d / (l.depth + 1) -> settings.depthBoostWeight,
-      1d / (l.dist + 1) -> settings.distanceBoostWeight)
+  private val fraction: (ExpandedQuery.Leaf => Double) =
+    if (settings.fractions) { l => l.fraction }
+    else { _ => 1 }
+
+  private val weightsEnabled =
+    0 != (settings.depthBoostWeight + settings.distanceBoostWeight + settings.typeFrequencyWeight)
+
+  private val boost: (ExpandedQuery.Leaf => Double) =
+    if (weightsEnabled) { l =>
+      fraction(l) * Statistic.weightedGeometricMean(
+        itf(l) -> settings.typeFrequencyWeight,
+        1d / (l.depth + 1) -> settings.depthBoostWeight,
+        1d / (l.dist + 1) -> settings.distanceBoostWeight)
+    } else {
+      fraction
+    }
 
   /**
    * The inverse type frequency is defined as log10(10 / (10f + (1 - f)))

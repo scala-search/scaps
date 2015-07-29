@@ -13,7 +13,10 @@ import com.typesafe.config.ConfigFactory
 
 case class Settings(
   index: IndexSettings,
-  query: QuerySettings)
+  query: QuerySettings) {
+
+  def modQuery(f: QuerySettings => QuerySettings) = this.copy(query = f(query))
+}
 
 object Settings {
   def fromApplicationConf =
@@ -57,6 +60,8 @@ object IndexSettings {
 
 case class QuerySettings(
   maxResults: Int,
+  views: Boolean,
+  fractions: Boolean,
   lengthNormWeight: Double,
   depthBoostWeight: Double,
   distanceBoostWeight: Double,
@@ -81,6 +86,8 @@ object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
       conf.getInt("max-results"),
+      conf.getBoolean(views),
+      conf.getBoolean(fractions),
       conf.getDouble(lengthNormWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
@@ -88,6 +95,10 @@ object QuerySettings {
       conf.getDouble(nameBoost),
       conf.getDouble(docBoost),
       conf.getDouble(fingerprintFrequencyCutoff))
+
+  val views = "views"
+
+  val fractions = "fractions"
 
   val lengthNormWeight = "length-norm-weight"
 
