@@ -32,65 +32,79 @@ object Evaluation extends App {
 
   // (name, number of configurations tested, configuration generator)
   val runs: List[(String, Int, Rng[Settings])] = List(
-    ("baseline", 50, randomize(
-      baseSettings,
-      baseRngs ++ Map(
-        nameBoost -> Rng.oneof(0.1),
-        docBoost -> Rng.choosedouble(0, 0.5)))),
-    ("pure FEM", 50, randomize(
+    //    ("Baseline", 50, randomize(
+    //      baseSettings,
+    //      baseRngs ++ Map(
+    //        nameBoost -> Rng.oneof(0.1),
+    //        docBoost -> Rng.choosedouble(0, 0.5)))),
+    ("Baseline+All", 500, randomize(
       baseSettings.modQuery(_.copy(
-        views = true)),
-      baseRngs)),
-    ("FEM + Distance", 50, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true)),
-      baseRngs ++ Map(
-        distanceBoostWeight -> Rng.choosedouble(0, 2)))),
-    ("FEM + Depth", 50, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true)),
-      baseRngs ++ Map(
-        depthBoostWeight -> Rng.choosedouble(0, 2)))),
-    ("FEM + Type Frequency", 50, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true)),
-      baseRngs ++ Map(
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("FEM + Fractions", 50, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true,
-        fractions = true)),
-      baseRngs)),
-    ("FEM + Distance + Type Frequencies", 500, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true,
-        fractions = false)),
-      baseRngs ++ Map(
-        distanceBoostWeight -> Rng.choosedouble(0, 2),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("FEM + Distance + Type Frequencies + Depth", 500, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true,
-        fractions = false)),
-      baseRngs ++ Map(
-        distanceBoostWeight -> Rng.choosedouble(0, 2),
-        depthBoostWeight -> Rng.choosedouble(0, 2),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("FEM + Distance + Type Frequencies + Fractions", 500, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true,
-        fractions = true)),
-      baseRngs ++ Map(
-        distanceBoostWeight -> Rng.choosedouble(0, 2),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("All Extensions", 500, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true,
         fractions = true)),
       baseRngs ++ Map(
         distanceBoostWeight -> Rng.choosedouble(0, 2),
         depthBoostWeight -> Rng.choosedouble(0, 2),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))))
+        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
+    //    ("FEM", 50, randomize(
+    //      baseSettings.modQuery(_.copy(
+    //        views = true)),
+    //      baseRngs)),
+    //    ("FEM+Di", 50, randomize(
+    //      baseSettings.modQuery(_.copy(
+    //        views = true)),
+    //      baseRngs ++ Map(
+    //        distanceBoostWeight -> Rng.choosedouble(0, 2)))),
+    //    ("FEM+De", 50, randomize(
+    //      baseSettings.modQuery(_.copy(
+    //        views = true)),
+    //      baseRngs ++ Map(
+    //        depthBoostWeight -> Rng.choosedouble(0, 2)))),
+    //    ("FEM+TF", 50, randomize(
+    //      baseSettings.modQuery(_.copy(
+    //        views = true)),
+    //      baseRngs ++ Map(
+    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
+    //    ("FEM+Fr", 50, randomize(
+    //      baseSettings.modQuery(_.copy(
+    //        views = true,
+    //        fractions = true)),
+    //      baseRngs)),
+    ("FEM-Di", 500, randomize(
+      baseSettings.modQuery(_.copy(
+        views = true,
+        fractions = true)),
+      baseRngs ++ Map(
+        depthBoostWeight -> Rng.choosedouble(0, 2),
+        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
+    //    ("FEM-De", 500, randomize(
+    //      baseSettings.modQuery(_.copy(
+    //        views = true,
+    //        fractions = true)),
+    //      baseRngs ++ Map(
+    //        distanceBoostWeight -> Rng.choosedouble(0, 2),
+    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
+    ("FEM-TF", 500, randomize(
+      baseSettings.modQuery(_.copy(
+        views = true,
+        fractions = true)),
+      baseRngs ++ Map(
+        distanceBoostWeight -> Rng.choosedouble(0, 2),
+        depthBoostWeight -> Rng.choosedouble(0, 2)))))
+  //    ("FEM-Fr", 500, randomize(
+  //      baseSettings.modQuery(_.copy(
+  //        views = true,
+  //        fractions = false)),
+  //      baseRngs ++ Map(
+  //        distanceBoostWeight -> Rng.choosedouble(0, 2),
+  //        depthBoostWeight -> Rng.choosedouble(0, 2),
+  //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
+  //    ("FEM+All", 500, randomize(
+  //      baseSettings.modQuery(_.copy(
+  //        views = true,
+  //        fractions = true)),
+  //      baseRngs ++ Map(
+  //        distanceBoostWeight -> Rng.choosedouble(0, 2),
+  //        depthBoostWeight -> Rng.choosedouble(0, 2),
+  //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))))
 
   var engine = Common.initSearchEngine(baseSettings, evaluationSettings)
 
@@ -100,8 +114,8 @@ object Evaluation extends App {
       QuerySettings.views,
       QuerySettings.fractions,
       QuerySettings.lengthNormWeight,
-      QuerySettings.depthBoostWeight,
       QuerySettings.distanceBoostWeight,
+      QuerySettings.depthBoostWeight,
       QuerySettings.typeFrequencyWeight,
       QuerySettings.nameBoost,
       QuerySettings.docBoost,
@@ -129,8 +143,8 @@ object Evaluation extends App {
                 settings.query.views,
                 settings.query.fractions,
                 settings.query.lengthNormWeight,
-                settings.query.depthBoostWeight,
                 settings.query.distanceBoostWeight,
+                settings.query.depthBoostWeight,
                 settings.query.typeFrequencyWeight,
                 settings.query.nameBoost,
                 settings.query.docBoost,
@@ -146,7 +160,7 @@ object Evaluation extends App {
             })
         }
 
-        using(new FileWriter(statsOutputFile)) { statsWriter =>
+        using(new FileWriter(statsOutputFile, true)) { statsWriter =>
           val run = RunStats(runName, allStats)
           println(run)
           statsWriter.write(run.toString)
@@ -162,15 +176,15 @@ object Evaluation extends App {
   def randomize(settings: QuerySettings, rngs: Map[String, Rng[Double]]): Rng[QuerySettings] =
     for {
       lnw <- rngs(lengthNormWeight)
-      depth <- rngs(depthBoostWeight)
       dist <- rngs(distanceBoostWeight)
+      depth <- rngs(depthBoostWeight)
       tf <- rngs(typeFrequencyWeight)
       nb <- rngs(nameBoost)
       db <- rngs(docBoost)
     } yield settings.copy(
       lengthNormWeight = lnw,
-      depthBoostWeight = depth,
       distanceBoostWeight = dist,
+      depthBoostWeight = depth,
       typeFrequencyWeight = tf,
       nameBoost = nb,
       docBoost = db)
