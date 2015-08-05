@@ -216,6 +216,6 @@ case class RunStats(name: String, stats: List[(Stats, List[Any])]) {
       |  top by R@10: ${topByR10._2}
       |  avg. MAP: ${avgMAP}
       |  avg. R@10: ${avgR10}
-      |  afg. runtime: ${avgRuntime.toMillis}
+      |  avg. runtime: ${avgRuntime.toMillis}
       |""".stripMargin
 }
