@@ -256,7 +256,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("-scala.Int"))))
   }
 
-  it should "ignore repeated types" in {
+  it should "not ignore repeated types" in {
     extractTerms("""
       package p
 
@@ -265,7 +265,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.O.m", _.typeFingerprint.toString() should (
-        not include (TypeEntity.Repeated.name) and
+        include(TypeEntity.Repeated.name) and
         include("-scala.Int"))))
   }
 

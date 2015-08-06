@@ -264,8 +264,6 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           }
         case ByName(arg, _) =>
           loop(arg)
-        case Repeated(arg, _) =>
-          loop(arg)
         case Implicit(arg, _) =>
           loop(arg)
         case tpe: TypeEntity =>
@@ -338,6 +336,8 @@ object TypeEntity {
   object Repeated extends GenericType("<repeated>")
   object Implicit extends GenericType("<implicit>")
   object Option extends GenericType("scala.Option")
+  object Seq extends GenericType("scala.collection.Seq")
+  object SList extends GenericType("scala.collection.immutable.List")
 
   class GenericType(val name: String) {
     def apply(arg: TypeEntity, variance: Variance = Covariant) =
@@ -346,6 +346,22 @@ object TypeEntity {
     def unapply(tpe: TypeEntity): Option[(TypeEntity, Variance)] =
       if (tpe.name == name && tpe.args.length == 1)
         Some((tpe.args.head, tpe.variance))
+      else
+        None
+
+    def matches(tpe: TypeEntity): Boolean =
+      unapply(tpe).isDefined
+  }
+
+  object SMap extends GenericType2("scala.collection.immutable.Map")
+
+  class GenericType2(val name: String) {
+    def apply(arg1: TypeEntity, arg2: TypeEntity, variance: Variance = Covariant) =
+      TypeEntity(name, variance, arg1 :: arg2 :: Nil)
+
+    def unapply(tpe: TypeEntity): Option[(TypeEntity, TypeEntity, Variance)] =
+      if (tpe.name == name && tpe.args.length == 2)
+        Some((tpe.args(0), tpe.args(1), tpe.variance))
       else
         None
 

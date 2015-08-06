@@ -2,7 +2,7 @@ package scaps.searchEngine
 
 import java.io.File
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
 import org.apache.lucene.store.FSDirectory
@@ -59,7 +59,7 @@ object SearchEngine {
    * Names from the `scala` root package are favored over other names and all names in
    * the `scala` namespace have a higher priority. This allows queries like `List => Future`.
    */
-  def favorScalaStdLib(candidates: Seq[ClassEntity]) = {
+  private[searchEngine] def favorScalaStdLib(candidates: Seq[ClassEntity]) = {
     // classes in root `scala` namespace and java.lang.String are always favored
     val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
     // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
@@ -84,7 +84,7 @@ class SearchEngine private[searchEngine] (
 
   private val indexes = List(termsIndex, classesIndex, moduleIndex, viewIndex)
 
-  def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false)(implicit ec: ExecutionContext): Try[Unit] =
+  def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false): Try[Unit] =
     Try {
       analyzers = Map()
 
@@ -157,6 +157,13 @@ class SearchEngine private[searchEngine] (
     moduleIndex.deleteModule(module).get
   }
 
+  /**
+   * Yields a list of definitions matching `query` and the `moduleIds` filter or an error if the query
+   * could not be successfully resolved.
+   *
+   * Concurrent calls to this methods are save. But calling `search` while another operation is running
+   * (particularly `indexEntities`) may result in an exception.
+   */
   def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[TermEntity]] = Try {
     for {
       parsed <- QueryParser(query)

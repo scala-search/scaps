@@ -19,9 +19,23 @@ sealed trait View {
 
 object View {
   private def fromClass(cls: ClassEntity): Seq[View] = {
-    cls.baseTypes.zipWithIndex.map {
-      case (base, idx) => SubType(cls.toType, base, idx + 1)
+    val toRepeated = {
+      if (cls.name == TypeEntity.Seq.name) {
+        val p = cls.typeParameters(0)
+        Seq(ImplicitConversion(cls.toType, TypeEntity.Repeated(TypeEntity(p.name, Covariant, Nil, true)), ""))
+      } else {
+        cls.baseTypes.collect {
+          case TypeEntity.Seq(t, _) =>
+            ImplicitConversion(cls.toType, TypeEntity.Repeated(t), "")
+        }
+      }
     }
+
+    cls.baseTypes.zipWithIndex.flatMap {
+      case (base, idx) =>
+        Seq(
+          SubType(cls.toType, base, idx + 1))
+    } ++ toRepeated
   }
 
   private def fromTerm(t: TermEntity): Seq[View] = {

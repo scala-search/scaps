@@ -85,6 +85,30 @@ class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
     i2f.to should be(TypeEntity.Float())
   }
 
+  it should "create views for all subtypes of scala.Seq to <repeated>" in {
+    val repeatedViews = views("""
+      package p
+
+      object O {
+        val l = List(1)
+        val s = Seq(1)
+      }
+      """)
+      .collect { case i @ ImplicitConversion(_, TypeEntity.Repeated(_, _), _) => i }
+
+    val l2r = repeatedViews.find(_.from.name == TypeEntity.SList.name).get
+
+    l2r should matchPattern {
+      case ImplicitConversion(TypeEntity.SList(arg1, _), TypeEntity.Repeated(arg2, _), _) if arg1 == arg2 =>
+    }
+
+    val s2r = repeatedViews.find(_.from.name == TypeEntity.Seq.name).get
+
+    s2r should matchPattern {
+      case ImplicitConversion(TypeEntity.Seq(arg1, _), TypeEntity.Repeated(arg2, _), _) if arg1 == arg2 =>
+    }
+  }
+
   def views(source: String) =
     extractAll(source).flatMap(View.fromEntity)
 }

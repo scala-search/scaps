@@ -33,6 +33,14 @@ object CompilerUtils extends Logging {
       settings.bootclasspath.append(cp)
     }
 
+    {
+      import settings.{ languageFeatures => lf }
+      settings.language.add(lf.postfixOps.name)
+      settings.language.add(lf.implicitConversions.name)
+      settings.language.add(lf.existentials.name)
+      settings.language.add(lf.higherKinds.name)
+    }
+
     logger.trace(s"Setup presentation compiler with settings ${settings.toConciseString}")
 
     val reporter = new ConsoleReporter(settings)
