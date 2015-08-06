@@ -11,6 +11,8 @@ import scaps.webapi.ScapsApi
 import akka.io.Tcp.Bound
 import scaps.webservice.ui.Pages
 import spray.http.Uri
+import spray.http.HttpHeaders._
+import spray.http.CacheDirectives._
 
 class ScapsServiceActor(val apiImpl: Scaps) extends Actor with ScapsService {
   def actorRefFactory = context
@@ -23,6 +25,8 @@ trait ScapsService extends HttpService {
 
   val apiImpl: ScapsApi
 
+  def cacheControl = respondWithHeader(`Cache-Control`(`public`, `max-age`(60 * 60)))
+
   def route =
     path("api" / Segments) { path =>
       post {
@@ -32,62 +36,74 @@ trait ScapsService extends HttpService {
               autowire.Core.Request(path, upickle.read[Map[String, String]](e)))
           }
         }
-      }
-    } ~
-      pathSingleSlash {
+      } ~
         get {
-          parameterMultiMap { params =>
-            val indexStatus = apiImpl.getStatus()
-
-            val moduleIds = indexStatus.map { status =>
-              val modulesFromQuery = (for {
-                moduleIds <- params.lift("m").toList
-                moduleId <- moduleIds
-              } yield moduleId).toSet
-
-              if (modulesFromQuery.isEmpty)
-                status.indexedModules
-                  .filter(m => m.name.contains("scala-library") || m.name.contains("scalaz"))
-                  .map(_.moduleId)
-                  .toSet
-              else
-                modulesFromQuery
+          cacheControl {
+            parameters('data) { data =>
+              complete {
+                Router.route[ScapsApi](apiImpl)(
+                  autowire.Core.Request(path, upickle.read[Map[String, String]](data)))
+              }
             }
+          }
+        }
+    } ~
+      cacheControl {
+        pathSingleSlash {
+          get {
+            parameterMultiMap { params =>
+              val indexStatus = apiImpl.getStatus()
 
-            parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
-              if (query.isEmpty())
-                reject
-              else
+              val moduleIds = indexStatus.map { status =>
+                val modulesFromQuery = (for {
+                  moduleIds <- params.lift("m").toList
+                  moduleId <- moduleIds
+                } yield moduleId).toSet
+
+                if (modulesFromQuery.isEmpty)
+                  status.indexedModules
+                    .filter(m => m.name.contains("scala-library") || m.name.contains("scalaz"))
+                    .map(_.moduleId)
+                    .toSet
+                else
+                  modulesFromQuery
+              }
+
+              parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
+                if (query.isEmpty())
+                  reject
+                else
+                  complete {
+                    val resultOffset = resultPage * ScapsApi.defaultPageSize
+
+                    for {
+                      status <- indexStatus
+                      enabledModuleIds <- moduleIds
+                      result <- apiImpl.search(query, moduleIds = enabledModuleIds, offset = resultOffset)
+                      page = HtmlPages.skeleton(status, enabledModuleIds,
+                        result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleIds, _)), query)
+                    } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+                  }
+              } ~
                 complete {
-                  val resultOffset = resultPage * ScapsApi.defaultPageSize
-
                   for {
                     status <- indexStatus
                     enabledModuleIds <- moduleIds
-                    result <- apiImpl.search(query, moduleIds = enabledModuleIds, offset = resultOffset)
-                    page = HtmlPages.skeleton(status, enabledModuleIds,
-                      result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleIds, _)), query)
+                    page = HtmlPages.skeleton(status, enabledModuleIds, HtmlPages.main(status, enabledModuleIds))
                   } yield HttpEntity(MediaTypes.`text/html`, page.toString())
                 }
-            } ~
+            }
+          }
+        } ~
+          path("scaps.css") {
+            get {
               complete {
-                for {
-                  status <- indexStatus
-                  enabledModuleIds <- moduleIds
-                  page = HtmlPages.skeleton(status, enabledModuleIds, HtmlPages.main(status, enabledModuleIds))
-                } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+                HttpEntity(MediaTypes.`text/css`, HtmlPages.ScapsStyle.styleSheetText)
               }
-          }
-        }
-      } ~
-      path("scaps.css") {
-        get {
-          complete {
-            HttpEntity(MediaTypes.`text/css`, HtmlPages.ScapsStyle.styleSheetText)
-          }
-        }
-      } ~
-      get { getFromResourceDirectory("") }
+            }
+          } ~
+          get { getFromResourceDirectory("") }
+      }
 }
 
 object HtmlPages extends Pages(scalatags.Text) {
