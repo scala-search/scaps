@@ -13,4 +13,6 @@ object DomPages extends Pages(scalatags.JsDom) {
       case (key, value) => s"${encode(key)}=${encode(value)}"
     }.mkString("?", "&", "")
   }
+
+  val prodMode = false
 }

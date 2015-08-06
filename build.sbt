@@ -89,7 +89,9 @@ lazy val webservice = (project in file("webservice"))
     libraryDependencies ++= Dependencies.webserviceDependencies,
     // parallel execution does not play well with the actor tests
     parallelExecution in Test := false,
-    (resources in Compile) += (fastOptJS in (webserviceUI, Compile)).value.data,
+    (resources in Compile) ++= Seq(
+      (fastOptJS in (webserviceUI, Compile)).value.data,
+      (fullOptJS in (webserviceUI, Compile)).value.data),
     testModules := Seq("testModule1", "testModule2"))
 
 lazy val webserviceUI = (project in file("webserviceUI"))

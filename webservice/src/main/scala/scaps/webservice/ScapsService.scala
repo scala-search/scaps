@@ -109,6 +109,8 @@ trait ScapsService extends HttpService {
 object HtmlPages extends Pages(scalatags.Text) {
   def encodeUri(path: String, params: List[(String, String)]): String =
     (Uri(path) withQuery (params: _*)).toString()
+
+  val prodMode = WebserviceSettings.fromApplicationConf.prodMode
 }
 
 object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {

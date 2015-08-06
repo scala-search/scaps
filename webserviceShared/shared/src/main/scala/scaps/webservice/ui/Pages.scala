@@ -21,6 +21,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   def encodeUri(path: String, params: List[(String, String)]): String
 
+  def prodMode: Boolean
+
   val pageTitle = "Scaps: Scala API Search"
 
   object jsCallbacks {
@@ -41,7 +43,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     encodeUri("", params)
   }
 
-  def skeleton(status: IndexStatus, enabledModuleIds: Set[String], mods: Modifier, query: String = "") = {
+  def skeleton(status: IndexStatus, enabledModuleIds: Set[String], mods: Modifier,
+               query: String = "") = {
     val searchFormId = "searchField"
     val resultContainerId = "results"
 
@@ -53,7 +56,10 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         title(pageTitle),
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
         stylesheet("scaps.css"),
-        javascript("api-search-webservice-ui-fastopt.js")),
+        if (prodMode)
+          javascript("api-search-webservice-ui-opt.js")
+        else
+          javascript("api-search-webservice-ui-fastopt.js")),
 
       body(ScapsStyle.world, onload := jsCallbacks.boot(searchFormId, resultContainerId))(
         form(id := searchFormId, method := "get", role := "search")(
