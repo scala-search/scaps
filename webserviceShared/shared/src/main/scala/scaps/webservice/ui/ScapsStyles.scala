@@ -13,6 +13,7 @@ trait ScapsStyles[Builder, Output <: FragT, FragT] {
   trait ScapsStyle extends CascadingStyleSheet {
     def world = cls(
       paddingTop := 90.px,
+      paddingBottom := 41.px,
 
       dt(
         paddingTop := 20.px))

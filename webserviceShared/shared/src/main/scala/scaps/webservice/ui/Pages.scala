@@ -121,7 +121,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           li("Links to Scala Doc"),
           li("Additional indexed libraries"),
           li("Improved support for the type class pattern"),
-          li("Full support for queries with symbolic operators")),
+          li("Full support for queries with symbolic operators"),
+          li("Type alias")),
         p("Of course, feedback would be highly appreciated (", a(href := "https://twitter.com/Luegg1")("Twitter"),
           " or l1wegman(at)hsr.ch)."),
         p("Scaps is an offspring of a master's thesis by Lukas Wegmann at the ",
@@ -201,7 +202,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       val feedbackElemId = s"feedback_${term.signature}"
 
       div(id := feedbackElemId)(
-        a(href := "#",
+        a(href := "javascript:void(0);",
           onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, term))(
             span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
