@@ -72,19 +72,19 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
                     autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
           nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
             div(cls := "container")(
-              ul(
+              ul {
+                val disabledAttr = when(status.indexedModules.length <= 1) { disabled }
+
                 status.indexedModules.sortBy(_.name).map { m =>
                   li(display.inline, paddingRight := 20.px) {
-                    val checkedAttr =
-                      if (enabledModuleIds.contains(m.moduleId))
-                        checked := true
-                      else
-                        style := "" // just some attr without effect
+                    val checkedAttr = when(enabledModuleIds.contains(m.moduleId)) { checked := true }
 
                     label(cls := "checkbox-inline")(
-                      input(tpe := "checkbox", name := "m", value := m.moduleId, checkedAttr), s"${m.name}:${m.revision} ")
+                      input(tpe := "checkbox", name := "m", value := m.moduleId, checkedAttr, disabledAttr),
+                      s"${m.name}:${m.revision} ")
                   }
-                })))),
+                }
+              }))),
 
         div(cls := "container")(
           div(cls := "row")(
