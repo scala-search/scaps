@@ -40,61 +40,26 @@ object Main {
     form.querySelectorAll("[name=m]").map(_.asInstanceOf[html.Input]))
 
   searchField
-    .flatMap(_.observeDomEvents("focus"))
-    .foreach(_._1.select())
+    .foreach { sf =>
+      sf.focus()
+      sf.selectionStart = sf.value.length()
+      sf.selectionEnd = sf.value.length()
+    }
 
   val query = searchField
-    .flatMap(_.observeValue())
+    .map(_.value)
     .map(_.trim)
-    .distinctUntilChanged
-    .debounce(400.millis)
 
   val moduleIds = moduleCheckboxes
     .flatMap(_.observeValues())
     .distinctUntilChanged
 
-  Observable.combineLatest(searchField, moduleCheckboxes)
-    .foreach {
-      case (sf, cbs) =>
-        val state = (sf.value, cbs.filter(_.checked).map(_.value))
-        dom.history.replaceState(upickle.write(state), null)
-    }
-
   Observable.combineLatest(query, moduleIds)
     .drop(1)
     .foreach {
       case (q, ms) =>
-        val uri = DomPages.searchUri(q, ms)
-        dom.history.pushState(upickle.write((q, ms)), null, uri)
+        dom.location.href = DomPages.searchUri(q, ms)
     }
-
-  val historyState = dom.window.observeDomEvents("popstate")
-    .map {
-      case (_, event) =>
-        val data = event.asInstanceOf[dom.PopStateEvent].state.asInstanceOf[String]
-        upickle.read[(String, Set[String])](data)
-    }
-
-  Observable.combineLatest(searchField, moduleCheckboxes, historyState)
-    .foreach {
-      case (sf, cbs, (q, ms)) =>
-        sf.value = q
-        cbs.foreach { cb =>
-          cb.checked = ms(cb.value)
-        }
-    }
-
-  val dynamicContent =
-    Observable.merge(Observable.combineLatest(query, moduleIds), historyState)
-      .drop(1)
-      .flatMap {
-        case (q, ms) => fetchContent(q, ms)
-      }
-      .map(_.render)
-
-  Observable.combineLatest(dynamicContent, mainContainer).foreach {
-    case (content, container) => replaceContent(container, content)
-  }
 
   val positiveAssessment = PublishSubject[(html.Div, Int, String)]
 
@@ -110,19 +75,6 @@ object Main {
         .map(_ => DomPages.feedbackReceived)
         .recover { case _ => DomPages.feedbackError }
         .foreach(answer => replaceContent(feedbackElem, answer.render))
-  }
-
-  def fetchContent(query: String, moduleIds: Set[String]) = {
-    if (query.isEmpty()) {
-      scaps.getStatus().call().map(DomPages.main(_, moduleIds))
-    } else {
-      scaps.search(query, moduleIds).call().map {
-        case Left(msg)      => DomPages.queryError(msg)
-        case Right(results) => DomPages.results(0, query, moduleIds, results)
-      }
-    }.recover {
-      case AjaxException(_) => DomPages.error("The Scaps service is currently unreachable. Please try again later.")
-    }
   }
 
   def replaceContent(outer: dom.Element, content: dom.Element): Unit = {
