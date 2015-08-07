@@ -32,9 +32,12 @@ def webapiSettings =
   commonSettings ++ Seq(
     name := "api-search-webapi",
     libraryDependencies ++= Dependencies.webapiDependencies,
-    target := baseDirectory.value / s"target-${scalaVersion.value}")
+    target := baseDirectory.value / s"target-${scalaVersion.value}",
+    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoPackage := "scaps.webapi")
 
 lazy val webapi_2_10_cross = (crossProject in file("webapi"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(webapiSettings: _*)
   .settings(
     scalaVersion := Commons.sbtPluginScalaVersion,
@@ -42,6 +45,7 @@ lazy val webapi_2_10_cross = (crossProject in file("webapi"))
     test := {})
 
 lazy val webapi_2_11_cross = (crossProject in file("webapi"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(webapiSettings: _*)
   .settings(
     scalaVersion := Commons.targetedScalaVersion,
