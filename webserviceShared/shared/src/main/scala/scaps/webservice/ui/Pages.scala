@@ -68,8 +68,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         form(id := searchFormId, method := "get", role := "search")(
           nav(cls := "navbar navbar-inverse navbar-fixed-top")(
             div(cls := "container")(
-              div(cls := "navbar-form")(
-                div(cls := "input-group")(
+              div(cls := "navbar-header")(
+                a(cls := "navbar-brand", href := "/")("Scaps"),
+                div(cls := "input-group", style := "margin-top: 8px; margin-left: 8px;")(
                   span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
                   input(tpe := "search", name := "q", value := query, autocomplete := "off",
                     autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
