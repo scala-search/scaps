@@ -22,7 +22,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   def encodeUri(path: String, params: List[(String, String)]): String
 
-  def prodMode: Boolean
+  def prodMode: Boolean = false
+
+  def analyticsScript: Option[String] = None
 
   val pageTitle = "Scaps: Scala API Search"
 
@@ -93,7 +95,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
         nav(cls := "navbar navbar-default navbar-fixed-bottom", style := "min-height: 0px;")(
           div(cls := "navbar-text", style := "width: 100%; text-align: center; margin-top: 10px; margin-bottom: 10px;")(
-            s"by Lukas Wegmann, version ${BuildInfo.version}"))))
+            s"by Lukas Wegmann, version ${BuildInfo.version}")),
+
+        raw(analyticsScript.getOrElse(""))))
   }
 
   def main(status: IndexStatus, enabledModuleIds: Set[String]) = {

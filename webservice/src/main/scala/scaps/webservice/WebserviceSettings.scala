@@ -8,7 +8,8 @@ case class WebserviceSettings(
   port: Int,
   controlInterface: String,
   controlPort: Int,
-  prodMode: Boolean)
+  prodMode: Boolean,
+  analyticsScript: String)
 
 object WebserviceSettings {
   def fromApplicationConf =
@@ -20,5 +21,6 @@ object WebserviceSettings {
       conf.getInt("port"),
       conf.getString("control-interface"),
       conf.getInt("control-port"),
-      conf.getBoolean("prod-mode"))
+      conf.getBoolean("prod-mode"),
+      conf.getString("analytics-script"))
 }
