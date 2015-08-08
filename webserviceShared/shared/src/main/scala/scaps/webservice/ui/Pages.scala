@@ -70,7 +70,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
             div(cls := "container")(
               div(cls := "navbar-header")(
                 a(cls := "navbar-brand", href := "/")("Scaps"),
-                div(cls := "input-group", style := "margin-top: 8px; margin-left: 8px;")(
+                div(cls := "input-group", style := "margin-top: 8px; margin-right: 8px;")(
                   span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
                   input(tpe := "search", name := "q", value := query, autocomplete := "off",
                     autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
@@ -95,7 +95,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
             div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods))),
 
         nav(cls := "navbar navbar-default navbar-fixed-bottom", style := "min-height: 0px;")(
-          div(cls := "navbar-text", style := "width: 100%; text-align: center; margin-top: 10px; margin-bottom: 10px;")(
+          div(cls := "navbar-text", style := "width: 100%; text-align: center; margin-top: 4px; margin-bottom: 4px;")(
             s"by Lukas Wegmann, version ${BuildInfo.version}")),
 
         raw(analyticsScript.getOrElse(""))))
