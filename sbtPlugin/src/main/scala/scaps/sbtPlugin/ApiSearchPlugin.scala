@@ -13,6 +13,7 @@ import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import org.slf4j.impl.StaticLoggerBinder
 import sbt.complete.Parser
+import scaps.webapi.IndexJob
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -24,7 +25,7 @@ object ApiSearchPlugin extends AutoPlugin {
     lazy val scaps = InputKey[Unit]("scaps", "Use Scaps to search for terms and functions in the indexed libraries.")
 
     lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
-    lazy val scapsModules = TaskKey[Seq[(Module, String)]]("scapsModules", "Modules that will be indexed.")
+    lazy val scapsModules = TaskKey[Seq[IndexJob]]("scapsModules", "Modules that will be indexed.")
     lazy val scapsIndex = InputKey[Unit]("scapsIndex", "Requests indexing this project.")
     lazy val scapsReset = TaskKey[Unit]("scapsReset")
 
@@ -81,23 +82,21 @@ object ApiSearchPlugin extends AutoPlugin {
           true
         case _ =>
           false
-      }.map { case (m, a, f) => (Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
+      }.map { case (m, a, f) => IndexJob(Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
     },
     scapsIndex := {
-      val forceReindex = indexSettingsParser.parsed.getOrElse(false)
+      val log = streams.value.log
 
       val classpath = (fullClasspath in Compile).value.map {
         case Attributed(f) => f.getAbsolutePath
       }
 
-      val f = Future.sequence(
-        scapsModules.value.map {
-          case (module, file) => controlClient.value.index(module, file, classpath, forceReindex).call()
-        })
+      val accepted = Await.result(controlClient.value.index(scapsModules.value, classpath).call(), 5.seconds)
 
-      Await.result(f, 5.seconds)
-
-      ()
+      if (accepted)
+        log.info(s"${scapsControlHost.value} accepted index jobs")
+      else
+        log.warn(s"${scapsControlHost.value} rejected index jobs")
     },
     scapsReset := {
       Await.result(controlClient.value.resetIndexes().call(), 5.seconds)

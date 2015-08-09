@@ -18,6 +18,8 @@ case class IndexBusy(workQueue: Seq[Module], indexedModules: Seq[Module], indexE
   val isReady = false
 }
 
+case class IndexJob(module: Module, artifactPath: String)
+
 /**
  * The main API exposed to search engine users.
  *
@@ -46,7 +48,7 @@ object ScapsApi {
  * The exposed methods may destroy the index or will take a long time to process.
  */
 trait ScapsControlApi extends CommonApi {
-  def index(module: Module, artifactPath: String, classpath: Seq[String], forceReindex: Boolean): Unit
+  def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean]
 
   /**
    * Reinitializes the search engine with an empty index.

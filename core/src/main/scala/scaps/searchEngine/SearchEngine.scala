@@ -84,6 +84,17 @@ class SearchEngine private[searchEngine] (
 
   private val indexes = List(termsIndex, classesIndex, moduleIndex, viewIndex)
 
+  def indexEntities(modulesWithEntities: Seq[(Module, () => Seq[Entity])]): Try[Unit] =
+    Try {
+      for {
+        (m, es) <- modulesWithEntities
+      } {
+        indexEntities(m, es(), true).get
+        logger.info(s"Successfully indexed $m")
+      }
+      finalizeIndexes().get
+    }
+
   def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false): Try[Unit] =
     Try {
       analyzers = Map()

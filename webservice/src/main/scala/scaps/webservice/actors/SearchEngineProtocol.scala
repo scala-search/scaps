@@ -3,10 +3,11 @@ package scaps.webservice.actors
 import scalaz.\/
 import scaps.webapi.TermEntity
 import scaps.webapi.Module
+import scaps.webapi.IndexJob
 
 object SearchEngineProtocol {
-  case class Index(module: Module, sourceFile: String, classpath: Seq[String], forceReindex: Boolean)
-  case class Indexed(job: Index, error: Option[Throwable])
+  case class Index(jobs: Seq[IndexJob], classpath: Seq[String])
+  case class Indexed(jobs: Seq[IndexJob], error: Option[Throwable])
   case object FinalizeIndexes
   case object Finalized
   case object Reset

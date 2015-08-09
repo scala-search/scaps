@@ -25,6 +25,8 @@ import scaps.webapi.IndexBusy
 import scaps.webapi.Module
 import scala.util.control.NonFatal
 import akka.event.LoggingReceive
+import scaps.webapi.IndexJob
+import scaps.webapi.IndexBusy
 
 object SearchEngineActor {
   def props(searchEngine: SearchEngine)(
@@ -49,10 +51,10 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
       logger.info(s"search engine ready with modules $indexedModules")
 
       {
-        case i: Index if i.forceReindex == false =>
-          enqueueJobIfNewModule(i, Nil, indexedModules, indexErrors)
-        case i: Index =>
-          enqueueJob(i, Nil, indexedModules, indexErrors)
+        case i @ Index(jobs, _) =>
+          indexWorker ! i
+          sender ! true
+          become(indexing(indexedModules, jobs, indexErrors))
         case s: Search =>
           val searcher = actorOf(searcherProps)
           searcher.tell(s, sender)
@@ -64,70 +66,32 @@ class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, sea
       }
     }
 
-    def indexing(queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
-      case i: Index if i.forceReindex == false =>
-        enqueueJobIfNewModule(i, queue, indexedModules, indexErrors)
-      case i: Index =>
-        enqueueJob(i, queue, indexedModules, indexErrors)
-      case res @ Indexed(indexJob, error) if indexJob == queue.head =>
-        val errors = indexErrors ++ error.map(_.toString())
-        val indexed = indexedModules ++
-          (if (error.isDefined) Nil else Seq(indexJob.module))
-
-        if (queue.tail.isEmpty) {
-          indexWorker ! FinalizeIndexes
-          become(finalizing(indexed, errors))
-        } else {
-          indexWorker ! queue.tail.head
-          become(indexing(queue.tail, indexed, errors))
-        }
-      case Indexed(j, _) =>
-        throw new IllegalStateException()
+    def indexing(indexedModules: Set[Module], jobs: Seq[IndexJob], indexErrors: Seq[String]): Receive = {
+      case Indexed(finishedJobs, None) =>
+        become(ready(indexedModules ++ finishedJobs.map(_.module), indexErrors))
+      case Indexed(_, Some(error)) =>
+        become(ready(indexedModules, indexErrors :+ error.toString()))
+      case _: Index =>
+        sender ! false
       case _: Search =>
-        sender ! \/.left(s"Cannot search while index is being built. ${queue.size} modules left.")
+        sender ! \/.left(s"Cannot search while index is being built.")
       case GetStatus =>
-        sender ! IndexBusy(queue.map(_.module), indexedModules.toSeq, indexErrors)
+        sender ! IndexBusy(jobs.map(_.module), indexedModules.toSeq, indexErrors)
       case Reset =>
-        become(resetting())
+        become(resetting)
     }
 
-    def finalizing(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
-      case Finalized =>
-        become(ready(indexedModules, indexErrors))
-      case _: Search =>
-        sender ! \/.left(s"Cannot search while index is updating.")
-      case GetStatus =>
-        sender ! IndexBusy(Nil, indexedModules.toSeq, indexErrors)
-    }
-
-    def resetting(): Receive = {
-      case i: Indexed =>
+    def resetting: Receive = {
+      case _: Indexed =>
         searchEngine.resetIndexes().get
         become(ready(Set(), Nil))
+      case _: Index =>
+        sender ! false
       case _: Search =>
         sender ! \/.left(s"Cannot search while index is resetting.")
       case GetStatus =>
         sender ! IndexBusy(Nil, Nil, Nil)
-    }
-
-    def enqueueJob(indexJob: Index, queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]) = {
-      if (queue.isEmpty) {
-        indexWorker ! indexJob
-      }
-
-      become(indexing(queue :+ indexJob, indexedModules, indexErrors))
-    }
-
-    def enqueueJobIfNewModule(indexJob: Index, queue: Seq[Index], indexedModules: Set[Module], indexErrors: Seq[String]) = {
-      val allModules = queue.map(_.module) ++ indexedModules
-
-      if (allModules.contains(indexJob.module)) {
-        logger.debug(s"Drop index job $indexJob")
-        sender ! Indexed(indexJob, None)
-      } else {
-        logger.debug(s"Enqueue unenforced index job $indexJob")
-        enqueueJob(indexJob, queue, indexedModules, indexErrors)
-      }
+      case Reset =>
     }
 
     val indexedModules = searchEngine.indexedModules().get
@@ -151,35 +115,33 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
   val logger = Logging(context.system, this)
 
   def receive = {
-    case FinalizeIndexes =>
-      searchEngine.finalizeIndexes().get
-      sender ! Finalized
-
-    case i @ Index(module, sourceFile, classpath, _) =>
+    case i @ Index(jobs, classpath) =>
       val requestor = sender
 
       val error = try {
         CompilerUtils.withCompiler(classpath) { compiler =>
-          val extractor = new JarExtractor(compiler)
+          val modulesWithEntities = jobs.map { job =>
+            (job.module, () => {
+              val extractor = new JarExtractor(compiler)
 
-          logger.info(s"start indexing ${module.moduleId} (${sourceFile})")
+              logger.info(s"start indexing ${job.module.moduleId} (${job.artifactPath})")
 
-          val entityStream = ExtractionError.logErrors(extractor(new File(sourceFile)), logger.info(_))
+              val entitiesWithErrors = extractor(new File(job.artifactPath))
+              ExtractionError.logErrors(entitiesWithErrors, logger.info(_))
+            })
+          }
 
-          searchEngine.indexEntities(module, entityStream, batchMode = true).get
-          logger.info(s"${module.moduleId} has been indexed successfully")
-          None
+          searchEngine.indexEntities(modulesWithEntities).get
         }
+
+        None
       } catch {
-        case e: TimeoutException =>
-          logger.error(s"Indexing ${module.moduleId} timed out")
-          Some(e)
         case NonFatal(e) =>
-          logger.error(s"Indexing ${module.moduleId} threw $e")
+          logger.error(s"Indexing ${jobs} threw $e")
           Some(e)
       }
 
-      requestor ! Indexed(i, error)
+      requestor ! Indexed(jobs, error)
   }
 }
 

@@ -3,7 +3,6 @@ package scaps.webservice
 import scala.annotation.implicitNotFound
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
 import akka.actor.ActorRefFactory
 import akka.actor.Props
 import akka.actor.actorRef2Scala
@@ -19,6 +18,7 @@ import scaps.webapi.ScapsControlApi
 import scaps.webapi.TermEntity
 import scaps.webservice.actors.SearchEngineActor
 import scaps.webservice.actors.UserInteractionLogger
+import scaps.webapi.IndexJob
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.SearchEngineProtocol._
@@ -32,8 +32,8 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
 
-  def index(module: Module, artifactPath: String, classpath: Seq[String], forceReindex: Boolean): Unit = {
-    searchEngine ! Index(module, artifactPath, classpath, forceReindex)
+  def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean] = {
+    (searchEngine ? Index(jobs, classpath)).mapTo[Boolean]
   }
 
   def resetIndexes(): Unit = {
