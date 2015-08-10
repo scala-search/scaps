@@ -152,10 +152,8 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
               settings, termIndex, classIndex, moduleIndex, viewIndex)
 
             for ((module, entities) <- modulesWithEntities) {
-              se.indexEntities(module, entities, batchMode = true).get
+              se.indexEntities(module, entities).get
             }
-
-            se.finalizeIndexes().get
 
             block(se)
           }

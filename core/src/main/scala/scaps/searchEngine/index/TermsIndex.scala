@@ -45,29 +45,38 @@ import scaps.webapi.Module
 import scaps.webapi.TermEntity
 import scaps.utils.Statistic
 import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
+import org.apache.lucene.util.QueryBuilder
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
+
+  private val nameAnalyzer = new Analyzer {
+    override def createComponents(fieldName: String, reader: Reader) = {
+      val tokenizer = new WhitespaceTokenizer(reader)
+      val ts1 = new WordDelimiterFilter(
+        tokenizer,
+        WordDelimiterFilter.GENERATE_WORD_PARTS |
+          WordDelimiterFilter.GENERATE_NUMBER_PARTS |
+          WordDelimiterFilter.PRESERVE_ORIGINAL |
+          WordDelimiterFilter.SPLIT_ON_CASE_CHANGE |
+          WordDelimiterFilter.SPLIT_ON_NUMERICS,
+        null)
+      val ts2 = new LowerCaseFilter(ts1)
+      new TokenStreamComponents(tokenizer, ts2)
+    }
+  }
+
+  private val nameQueryBuilder = new QueryBuilder(nameAnalyzer)
+
+  private val docAnalyzer = new StandardAnalyzer()
+
+  private val docQueryBuilder = new QueryBuilder(docAnalyzer)
 
   override val analyzer =
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
       fields.fingerprint -> new WhitespaceAnalyzer,
       fields.moduleId -> new KeywordAnalyzer,
-      fields.name -> new Analyzer {
-        override def createComponents(fieldName: String, reader: Reader) = {
-          val tokenizer = new WhitespaceTokenizer(reader)
-          val ts1 = new WordDelimiterFilter(
-            tokenizer,
-            WordDelimiterFilter.GENERATE_WORD_PARTS |
-              WordDelimiterFilter.GENERATE_NUMBER_PARTS |
-              WordDelimiterFilter.PRESERVE_ORIGINAL |
-              WordDelimiterFilter.SPLIT_ON_CASE_CHANGE |
-              WordDelimiterFilter.SPLIT_ON_NUMERICS,
-            null)
-          val ts2 = new LowerCaseFilter(ts1)
-          new TokenStreamComponents(tokenizer, ts2)
-        }
-      }).asJava)
+      fields.name -> nameAnalyzer).asJava)
 
   override val similarity = new PerFieldSimilarityWrapper {
     val default = new DefaultSimilarity
@@ -102,15 +111,13 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     try {
       val keys = new BooleanQuery
 
-      query.keywords.foreach { keyword =>
-        val nameQuery = new TermQuery(new Term(fields.name, keyword))
-        nameQuery.setBoost(settings.query.nameBoost.toFloat)
-        keys.add(nameQuery, Occur.SHOULD)
+      val nameQuery = nameQueryBuilder.createBooleanQuery(fields.name, query.keywords.mkString(" "))
+      nameQuery.setBoost(settings.query.nameBoost.toFloat)
+      keys.add(nameQuery, Occur.SHOULD)
 
-        val docQuery = new TermQuery(new Term(fields.doc, keyword))
-        docQuery.setBoost(settings.query.docBoost.toFloat)
-        keys.add(docQuery, Occur.SHOULD)
-      }
+      val docQuery = docQueryBuilder.createBooleanQuery(fields.doc, query.keywords.mkString(" "))
+      docQuery.setBoost(settings.query.docBoost.toFloat)
+      keys.add(docQuery, Occur.SHOULD)
 
       val docLenBoost = new FunctionQuery(
         new SimpleFloatFunction(new IntFieldSource(fields.fingerprintLength)) {

@@ -89,13 +89,20 @@ class SearchEngine private[searchEngine] (
       for {
         (m, es) <- modulesWithEntities
       } {
-        indexEntities(m, es(), true).get
+        indexModule(m, es()).get
         logger.info(s"Successfully indexed $m")
       }
-      finalizeIndexes().get
+
+      updateTypeFrequencies().get
     }
 
-  def indexEntities(module: Module, entities: Seq[Entity], batchMode: Boolean = false): Try[Unit] =
+  def indexEntities(module: Module, entities: Seq[Entity]): Try[Unit] =
+    Try {
+      indexModule(module, entities).get
+      updateTypeFrequencies().get
+    }
+
+  private def indexModule(module: Module, entities: Seq[Entity]): Try[Unit] =
     Try {
       analyzers = Map()
 
@@ -125,17 +132,8 @@ class SearchEngine private[searchEngine] (
 
       Await.result(f, settings.index.timeout)
 
-      if (!batchMode) {
-        finalizeIndexes().get
-      }
-
       moduleIndex.addEntities(Seq(module)).get
     }
-
-  def finalizeIndexes(): Try[Unit] =
-    for {
-      _ <- updateTypeFrequencies()
-    } yield ()
 
   private def updateTypeFrequencies(): Try[Unit] =
     Try {

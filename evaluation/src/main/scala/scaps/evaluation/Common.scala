@@ -55,7 +55,7 @@ object Common extends Logging {
 
         engine.resetIndexes().get
 
-        evaluationSettings.projects.foreach { project =>
+        val modules = evaluationSettings.projects.map { project =>
           val jar = new File(evaluationSettings.downloadDir, project.name)
 
           if (!jar.exists()) {
@@ -63,12 +63,10 @@ object Common extends Logging {
             (project.url #> jar).!!
           }
 
-          val entities = ExtractionError.logErrors(extractor(jar), logger.info(_))
-
-          engine.indexEntities(Module("", project.name, ""), entities, batchMode = true).get
+          (Module("", project.name, ""), () => ExtractionError.logErrors(extractor(jar), logger.info(_)))
         }
 
-        engine.finalizeIndexes().get
+        engine.indexEntities(modules).get
       }
     }
     engine
