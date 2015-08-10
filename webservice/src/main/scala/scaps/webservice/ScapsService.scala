@@ -28,7 +28,7 @@ trait ScapsService extends HttpService {
   def cacheControl = respondWithHeader(`Cache-Control`(`public`, `max-age`(60 * 60)))
 
   def route =
-    path("api" / Segments) { path =>
+    path(ScapsApi.apiPath / Segments) { path =>
       post {
         extract(_.request.entity.asString) { e =>
           complete {

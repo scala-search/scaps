@@ -13,6 +13,8 @@ object Dependencies {
   val logging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
   val logback = "ch.qos.logback" % "logback-classic" % "1.1.3"
 
+  val sbtIo = "org.scala-sbt" %% "io" % "1.0.0-M1"
+
   val rng = "com.nicta" %% "rng" % "1.3.0"
 
   val luceneVersion = "4.10.4"
@@ -72,7 +74,8 @@ object Dependencies {
     sprayRouting,
     upickle,
     autowire,
-    scalatags)
+    scalatags,
+    sbtIo)
 
   val sbtPluginDependencies = Seq(
     dispatch,

@@ -23,27 +23,20 @@ import scaps.webapi.IndexJob
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.SearchEngineProtocol._
 
-  val searchEngine = {
-    val se = SearchEngine(Settings.fromApplicationConf).get
-    context.actorOf(SearchEngineActor.props(se)(), "searcher")
-  }
+  val searchEngine = context.actorOf(SearchEngineActor.props(Settings.fromApplicationConf)(), "searcher")
   val userInteractionLogger = context.actorOf(Props[UserInteractionLogger], "userInteractionLogger")
 
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
 
-  def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean] = {
+  override def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean] = {
     (searchEngine ? Index(jobs, classpath)).mapTo[Boolean]
   }
 
-  def resetIndexes(): Unit = {
-    searchEngine ! Reset
-  }
-
-  def getStatus(): Future[IndexStatus] =
+  override def getStatus(): Future[IndexStatus] =
     (searchEngine ? GetStatus).mapTo[IndexStatus]
 
-  def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] = {
+  override def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] = {
     val searchMsg = Search(query, moduleIds, noResults, offset)
     for {
       result <- (searchEngine ? searchMsg).mapTo[String \/ Seq[TermEntity]]
@@ -53,6 +46,6 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
     }
   }
 
-  def assessPositivley(query: String, moduleIds: Set[String], resultNo: Int, termSignature: String): Unit =
+  override def assessPositivley(query: String, moduleIds: Set[String], resultNo: Int, termSignature: String): Unit =
     userInteractionLogger ! PositiveAssessement(query, moduleIds, resultNo, termSignature)
 }

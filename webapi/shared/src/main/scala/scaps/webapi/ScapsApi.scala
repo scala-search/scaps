@@ -48,12 +48,10 @@ object ScapsApi {
  * The exposed methods may destroy the index or will take a long time to process.
  */
 trait ScapsControlApi extends CommonApi {
-  def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean]
-
   /**
-   * Reinitializes the search engine with an empty index.
+   * Rebuilds the index.
    */
-  def resetIndexes(): Unit
+  def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean]
 }
 
 object ScapsControlApi {

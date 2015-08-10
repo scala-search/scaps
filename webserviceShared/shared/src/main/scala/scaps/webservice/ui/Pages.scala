@@ -4,6 +4,7 @@ package scaps.webservice.ui
 import scalatags.generic.Bundle
 import scalatags.generic.TypedTag
 import scaps.webapi.IndexStatus
+import scaps.webapi.IndexBusy
 import scaps.webapi.TermEntity
 import scaps.webapi.TypeEntity
 import scaps.webapi.TypeEntity.MemberAccess
@@ -95,8 +96,13 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
             div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods))),
 
         nav(cls := "navbar navbar-default navbar-fixed-bottom", style := "min-height: 0px;")(
-          div(cls := "navbar-text", style := "width: 100%; text-align: center; margin-top: 4px; margin-bottom: 4px;")(
-            s"by Lukas Wegmann, version ${BuildInfo.version}")),
+          div(cls := "navbar-text", style := "width: 100%; text-align: center; margin-top: 4px; margin-bottom: 4px;") {
+            val statusInfo = status match {
+              case IndexBusy(queue, _, _) => s", Index is Updating (${queue.size} Modules)"
+              case _                      => ""
+            }
+            s"by Lukas Wegmann, version ${BuildInfo.version}$statusInfo"
+          }),
 
         raw(analyticsScript.getOrElse(""))))
   }
@@ -108,33 +114,29 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     div(
       h1(pageTitle),
-      if (status.isReady) Seq(
-        p("""Scaps is a search engine for discovering functionality in Scala libraries (or in other words,
+      p("""Scaps is a search engine for discovering functionality in Scala libraries (or in other words,
               a """, a(href := "https://www.haskell.org/hoogle/")("Hoogle"), """ for Scala). You can use both
               type signatures and keywords in your search queries."""),
-        p("""Some examples you might want to try:"""),
-        ul(
-          example("max: Int", "An integer value with `max` in it's name or doc comment."),
-          example("max: (Int, Int) => Int", "A function taking two ints and returning Int."),
-          example("max: Int => Int => Int", "Same query as above but in curried form."),
-          example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings."),
-          example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consiting of a single character are treated as type parameters."),
-          example("List => Int => Option", "The identical query as above but with omitted type parameters.")),
-        p("""This is an early release reduced to the max. For the future, we plan to include additional features to
+      p("""Some examples you might want to try:"""),
+      ul(
+        example("max: Int", "An integer value with `max` in it's name or doc comment."),
+        example("max: (Int, Int) => Int", "A function taking two ints and returning Int."),
+        example("max: Int => Int => Int", "Same query as above but in curried form."),
+        example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings."),
+        example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consiting of a single character are treated as type parameters."),
+        example("List => Int => Option", "The identical query as above but with omitted type parameters.")),
+      p("""This is an early release reduced to the max. For the future, we plan to include additional features to
               improve user experience and the quality of the search results:"""),
-        ul(
-          li("Links to Scala Doc"),
-          li("Additional indexed libraries"),
-          li("Improved support for the type class pattern"),
-          li("Full support for queries with symbolic operators"),
-          li("Type alias")),
-        p("Of course, feedback would be highly appreciated (", a(href := "https://twitter.com/Luegg1")("Twitter"),
-          " or l1wegman(at)hsr.ch)."),
-        p("Scaps is an offspring of a master's thesis by Lukas Wegmann at the ",
-          a(href := "http://www.hsr.ch/")("University of Applied Science Rapperswil (HSR)"), "."))
-      else
-        div(cls := "alert alert-info")(s"building index with ${status.workQueue.size} modules remaining:",
-          ul(for { module <- status.workQueue } yield li(module.moduleId))))
+      ul(
+        li("Links to Scala Doc"),
+        li("Additional indexed libraries"),
+        li("Improved support for the type class pattern"),
+        li("Full support for queries with symbolic operators"),
+        li("Type alias")),
+      p("Of course, feedback would be highly appreciated (", a(href := "https://twitter.com/Luegg1")("Twitter"),
+        " or l1wegman(at)hsr.ch)."),
+      p("Scaps is an offspring of a master's thesis by Lukas Wegmann at the ",
+        a(href := "http://www.hsr.ch/")("University of Applied Science Rapperswil (HSR)"), "."))
   }
 
   def queryError(msg: String) =

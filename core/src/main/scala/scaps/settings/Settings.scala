@@ -36,12 +36,14 @@ object Settings {
 }
 
 case class IndexSettings(
-  classesDir: File,
-  termsDir: File,
-  modulesDir: File,
-  viewsDir: File,
+  indexDir: String,
   timeout: Duration,
   typeFrequenciesSampleSize: Int) {
+
+  val classesDir = new File(indexDir + "/classes")
+  val modulesDir = new File(indexDir + "/modules")
+  val termsDir = new File(indexDir + "/terms")
+  val viewsDir = new File(indexDir + "/views")
 
   import Settings._
   assertPositive(typeFrequenciesSampleSize)
@@ -50,10 +52,7 @@ case class IndexSettings(
 object IndexSettings {
   def apply(conf: Config): IndexSettings =
     IndexSettings(
-      new File(conf.getString("classes-dir")),
-      new File(conf.getString("terms-dir")),
-      new File(conf.getString("modules-dir")),
-      new File(conf.getString("views-dir")),
+      conf.getString("index-dir"),
       conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
       conf.getInt("type-frequencies-sample-size"))
 }

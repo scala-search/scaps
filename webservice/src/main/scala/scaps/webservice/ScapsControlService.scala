@@ -16,7 +16,7 @@ trait ScapsControlService extends HttpService {
   def apiImpl: ScapsControlApi
 
   def route =
-    path("api" / Segments) { path =>
+    path(ScapsControlApi.apiPath / Segments) { path =>
       post {
         extract(_.request.entity.asString) { e =>
           complete {

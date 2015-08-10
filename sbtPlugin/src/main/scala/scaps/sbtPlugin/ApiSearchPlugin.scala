@@ -97,9 +97,6 @@ object ApiSearchPlugin extends AutoPlugin {
         log.info(s"${scapsControlHost.value} accepted index jobs")
       else
         log.warn(s"${scapsControlHost.value} rejected index jobs")
-    },
-    scapsReset := {
-      Await.result(controlClient.value.resetIndexes().call(), 5.seconds)
     })
 
   lazy val scapsClient = Def.task {

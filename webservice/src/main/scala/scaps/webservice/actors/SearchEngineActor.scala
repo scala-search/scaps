@@ -1,102 +1,110 @@
 package scaps.webservice.actors
 
 import java.io.File
-import scala.concurrent.Await
-import scala.concurrent.duration._
+
+import scala.util.control.NonFatal
+
+import SearchEngineProtocol.GetStatus
+import SearchEngineProtocol.Index
+import SearchEngineProtocol.Indexed
+import SearchEngineProtocol.Search
+import akka.actor.Actor
+import akka.actor.Props
+import akka.actor.actorRef2Scala
+import akka.event.Logging
+import scalaz.std.stream.streamInstance
 import scaps.featureExtraction.CompilerUtils
 import scaps.featureExtraction.ExtractionError
 import scaps.featureExtraction.JarExtractor
+import scaps.searchEngine.NameAmbiguous
+import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
+import scaps.searchEngine.SyntaxError
+import scaps.searchEngine.TooUnspecific
+import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
-import scala.util.Try
-import akka.actor.Actor
-import akka.actor.FSM
-import akka.actor.Props
-import akka.event.Logging
-import akka.actor.actorRef2Scala
-import scala.concurrent.Future
-import akka.actor.ActorRef
-import scalaz.\/
-import scalaz.std.stream._
-import java.util.concurrent.TimeoutException
-import scaps.webapi.IndexStatus
+import scaps.utils.TraversableOps
+import scaps.webapi.IndexBusy
 import scaps.webapi.IndexReady
-import scaps.webapi.IndexBusy
-import scaps.webapi.Module
-import scala.util.control.NonFatal
-import akka.event.LoggingReceive
-import scaps.webapi.IndexJob
-import scaps.webapi.IndexBusy
+import scaps.webapi.IndexStatus
 
 object SearchEngineActor {
-  def props(searchEngine: SearchEngine)(
-    indexWorkerProps: Props = IndexWorkerActor.props(searchEngine),
-    searcherProps: Props = Searcher.props(searchEngine)) =
-    Props(classOf[SearchEngineActor], searchEngine, indexWorkerProps, searcherProps)
+  def props(settings: Settings)(
+    indexWorkerProps: SearchEngine => Props = IndexWorkerActor.props _,
+    searcherProps: SearchEngine => Props = Searcher.props _) =
+    Props(classOf[SearchEngineActor], settings, indexWorkerProps, searcherProps)
 }
 
 /**
- * Manages the state of an instance of the search engine.
+ * Manages the state of an instance of the search engine. Allows concurrent searching
+ * while another index is being built.
  */
-class SearchEngineActor(searchEngine: SearchEngine, indexWorkerProps: Props, searcherProps: Props) extends Actor {
+class SearchEngineActor(baseSettings: Settings, indexWorkerProps: SearchEngine => Props, searcherProps: SearchEngine => Props) extends Actor {
   import SearchEngineProtocol._
   import context._
 
-  val logger = Logging(context.system, this)
+  val logger = Logging(system, this)
 
   def receive = {
-    val indexWorker = actorOf(indexWorkerProps, "indexWorker")
+    def ready(searchEngine: SearchEngine, indexNo: Int): Receive = {
+      logger.info(s"Search engine uses index at ${searchEngine.settings.index.indexDir}")
 
-    def ready(indexedModules: Set[Module], indexErrors: Seq[String]): Receive = {
-      logger.info(s"search engine ready with modules $indexedModules")
+      val indexedModules = searchEngine.indexedModules().get
+      val status = IndexReady(indexedModules, Nil)
 
       {
-        case i @ Index(jobs, _) =>
+        case i: Index =>
+          val workerIndexPath = mkIndexPath(baseSettings.index.indexDir, indexNo + 1)
+          val workerSettings = baseSettings.copy(index = baseSettings.index.copy(indexDir = workerIndexPath))
+          val workerEngine = SearchEngine(workerSettings).get
+          val indexWorker = actorOf(indexWorkerProps(workerEngine))
+
           indexWorker ! i
           sender ! true
-          become(indexing(indexedModules, jobs, indexErrors))
+
+          become(indexing(searchEngine, IndexBusy(i.jobs.map(_.module), status.indexedModules, Nil), indexNo, workerEngine))
         case s: Search =>
-          val searcher = actorOf(searcherProps)
+          val searcher = actorOf(searcherProps(searchEngine))
           searcher.tell(s, sender)
         case GetStatus =>
-          sender ! IndexReady(indexedModules.toSeq, indexErrors)
-        case Reset =>
-          searchEngine.resetIndexes().get
-          become(ready(Set(), Nil))
+          sender ! status
       }
     }
 
-    def indexing(indexedModules: Set[Module], jobs: Seq[IndexJob], indexErrors: Seq[String]): Receive = {
-      case Indexed(finishedJobs, None) =>
-        become(ready(indexedModules ++ finishedJobs.map(_.module), indexErrors))
-      case Indexed(_, Some(error)) =>
-        become(ready(indexedModules, indexErrors :+ error.toString()))
-      case _: Index =>
+    def indexing(searchEngine: SearchEngine, status: IndexStatus, indexNo: Int, workerEngine: SearchEngine): Receive = {
+      case i: Index =>
         sender ! false
-      case _: Search =>
-        sender ! \/.left(s"Cannot search while index is being built.")
+      case i: Indexed =>
+        val indexedModules = workerEngine.indexedModules().get
+        become(ready(workerEngine, indexNo + 1))
+      case s: Search =>
+        val searcher = actorOf(searcherProps(searchEngine))
+        searcher.tell(s, sender)
       case GetStatus =>
-        sender ! IndexBusy(jobs.map(_.module), indexedModules.toSeq, indexErrors)
-      case Reset =>
-        become(resetting)
+        sender ! status
     }
 
-    def resetting: Receive = {
-      case _: Indexed =>
-        searchEngine.resetIndexes().get
-        become(ready(Set(), Nil))
-      case _: Index =>
-        sender ! false
-      case _: Search =>
-        sender ! \/.left(s"Cannot search while index is resetting.")
-      case GetStatus =>
-        sender ! IndexBusy(Nil, Nil, Nil)
-      case Reset =>
-    }
+    val (indexPath, indexNo) = findCurrentIndexWithNo(new File(baseSettings.index.indexDir))
+    val currentSettings = baseSettings.copy(index = baseSettings.index.copy(indexDir = indexPath))
+    val searchEngine = SearchEngine(currentSettings).get
 
-    val indexedModules = searchEngine.indexedModules().get
+    ready(searchEngine, indexNo)
+  }
 
-    ready(indexedModules.toSet, Nil)
+  val indexName = """index-(\d+)""".r
+
+  def mkIndexPath(basePath: String, indexNo: Int): String =
+    s"$basePath/index-$indexNo"
+
+  def findCurrentIndexWithNo(baseDir: File): (String, Int) = {
+    baseDir.listFiles().toSeq
+      .filter(f => f.isDirectory())
+      .flatMap(f => f.getName match {
+        case indexName(n) => Some((f.getAbsolutePath, n.toInt))
+        case _            => None
+      })
+      .maxByOpt(_._2)
+      .getOrElse((mkIndexPath(baseDir.getAbsolutePath, 0), 0))
   }
 }
 
