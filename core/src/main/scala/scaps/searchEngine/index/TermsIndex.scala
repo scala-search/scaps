@@ -46,13 +46,14 @@ import scaps.webapi.TermEntity
 import scaps.utils.Statistic
 import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
 import org.apache.lucene.util.QueryBuilder
+import org.apache.lucene.analysis.util.CharTokenizer
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
 
   private val nameAnalyzer = new Analyzer {
     override def createComponents(fieldName: String, reader: Reader) = {
-      val tokenizer = new WhitespaceTokenizer(reader)
+      val tokenizer = new IdentifierAndWhitespaceDelimiterTokenizer(reader)
       val ts1 = new WordDelimiterFilter(
         tokenizer,
         WordDelimiterFilter.GENERATE_WORD_PARTS |
@@ -68,7 +69,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
 
   private val nameQueryBuilder = new QueryBuilder(nameAnalyzer)
 
-  private val docAnalyzer = new StandardAnalyzer()
+  private val docAnalyzer = nameAnalyzer
 
   private val docQueryBuilder = new QueryBuilder(docAnalyzer)
 
@@ -76,7 +77,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
       fields.fingerprint -> new WhitespaceAnalyzer,
       fields.moduleId -> new KeywordAnalyzer,
-      fields.name -> nameAnalyzer).asJava)
+      fields.name -> nameAnalyzer,
+      fields.doc -> docAnalyzer).asJava)
 
   override val similarity = new PerFieldSimilarityWrapper {
     val default = new DefaultSimilarity
@@ -111,13 +113,17 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     try {
       val keys = new BooleanQuery
 
-      val nameQuery = nameQueryBuilder.createBooleanQuery(fields.name, query.keywords.mkString(" "))
-      nameQuery.setBoost(settings.query.nameBoost.toFloat)
-      keys.add(nameQuery, Occur.SHOULD)
+      Option(nameQueryBuilder.createBooleanQuery(fields.name, query.keywords))
+        .foreach { nameQuery =>
+          nameQuery.setBoost(settings.query.nameBoost.toFloat)
+          keys.add(nameQuery, Occur.SHOULD)
+        }
 
-      val docQuery = docQueryBuilder.createBooleanQuery(fields.doc, query.keywords.mkString(" "))
-      docQuery.setBoost(settings.query.docBoost.toFloat)
-      keys.add(docQuery, Occur.SHOULD)
+      Option(docQueryBuilder.createBooleanQuery(fields.doc, query.keywords))
+        .foreach { docQuery =>
+          docQuery.setBoost(settings.query.docBoost.toFloat)
+          keys.add(docQuery, Occur.SHOULD)
+        }
 
       val docLenBoost = new FunctionQuery(
         new SimpleFloatFunction(new IntFieldSource(fields.fingerprintLength)) {
@@ -163,7 +169,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     search(new MatchAllDocsQuery)
 
   private[index] def findTermsByName(name: String): Try[Seq[TermEntity]] =
-    search(new TermQuery(new Term(fields.name, name)))
+    search(nameQueryBuilder.createBooleanQuery(fields.name, name))
 
   override def toDocument(entity: TermEntity): Document = {
     val doc = new Document
@@ -216,5 +222,11 @@ object TermsIndex {
 
   class ModuleIdSimilarity extends DefaultSimilarity {
     override def idf(docFreq: Long, numDocs: Long) = 1f
+  }
+
+  class IdentifierAndWhitespaceDelimiterTokenizer(reader: Reader) extends CharTokenizer(reader) {
+    override def isTokenChar(c: Int): Boolean = {
+      !(Character.isWhitespace(c) || c == '.' || c == '#')
+    }
   }
 }

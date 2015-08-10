@@ -162,7 +162,7 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def isTypeParam(name: String): Boolean =
-    name.length() == 1
+    name.length() == 1 && (name(0).isLetter || name(0) == '_')
 
   private def toType(resolved: ResolvedQuery): TypeEntity = {
     def rec(resolved: ResolvedQuery, variance: Variance): TypeEntity =

@@ -77,11 +77,15 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   }
 
   it should "parse single keywords preceding the type" in {
-    parse("keyword: Int").keywords should contain("keyword")
+    parse("keyword: Int").keywords should be("keyword")
   }
 
   it should "parse multiple keywords" in {
-    parse("k1 k2 k3: Int").keywords should be(List("k1", "k2", "k3"))
+    parse("k1 k2 k3: Int").keywords should be("k1 k2 k3")
+  }
+
+  it should "parse multiple keywords in quotes" in {
+    parse("\"k1 k2 k3\": Int").keywords should be("k1 k2 k3")
   }
 
   it should "allow colons in types" in {

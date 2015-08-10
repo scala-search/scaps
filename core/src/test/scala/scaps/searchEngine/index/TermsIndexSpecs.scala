@@ -15,7 +15,8 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val v = 1
       }
       """) { index =>
-      index.findTermsByName("p.o.v").get should (have size 1)
+      val v = TermEntity("p.O.v", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
+      index.findTermsByName("v").get should (have size 1)
     }
   }
 
@@ -31,6 +32,7 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       index.findTermsByName("value").get should contain(value)
       index.findTermsByName("obj").get should contain(value)
       index.findTermsByName("pkg").get should contain(value)
+      index.findTermsByName("Pkg Obj").get should contain(value)
     }
   }
 
@@ -46,6 +48,21 @@ class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       index.findTermsByName("value").get should contain(value)
       index.findTermsByName("another").get should contain(value)
       index.findTermsByName("pkg").get should contain(value)
+      index.findTermsByName("another Value").get should contain(value)
+    }
+  }
+
+  it should "tokenize operators" in {
+    withTermIndex("""
+      package p
+
+      object ::{
+        val ++ = 1
+      }
+      """) { index =>
+      val value = TermEntity("p.::.++", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
+      index.findTermsByName("::").get should contain(value)
+      index.findTermsByName("++").get should contain(value)
     }
   }
 }

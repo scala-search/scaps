@@ -2,13 +2,13 @@ package scaps.searchEngine
 
 import scaps.webapi.Variance
 
-case class ApiQuery(keywords: List[String], tpe: ApiTypeQuery, queryFingerprintLength: Int) {
+case class ApiQuery(keywords: String, tpe: ApiTypeQuery, queryFingerprintLength: Int) {
   override def toString =
-    s"${keywords.mkString(" ")}: $tpe"
+    s""""$keywords": $tpe"""
 
   def allTypes = tpe.allTypes
 
-  def prettyPrint = s"${keywords.mkString(" ")}: ${tpe.prettyPrint()}"
+  def prettyPrint = s""""$keywords": ${tpe.prettyPrint()}"""
 }
 
 sealed trait ApiTypeQuery {

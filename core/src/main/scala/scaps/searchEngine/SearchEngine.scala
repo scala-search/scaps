@@ -210,6 +210,11 @@ class SearchEngine private[searchEngine] (
       analyzer
     } { identity }
 
-    analyzer(raw)
+    analyzer(raw).swapped(_.flatMap {
+      case _: NameNotFound if raw.keywords == "" && raw.tpe.args.length == 0 =>
+        analyzer(RawQuery(raw.tpe.name, RawQuery.Type("_"))).swap
+      case e =>
+        \/.right(e)
+    })
   }
 }
