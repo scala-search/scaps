@@ -16,6 +16,7 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Explanation
+import org.apache.lucene.search.MatchAllDocsQuery
 
 trait Index[E] {
   private[index] def dir: Directory
@@ -27,6 +28,9 @@ trait Index[E] {
     dir.listAll().foreach(dir.deleteFile(_))
     writerInitialized = false
   }
+
+  def allEntities(): Try[Seq[E]] =
+    search(new MatchAllDocsQuery)
 
   private[index] def toDocument(e: E): Document
   private[index] def toEntity(d: Document): E
@@ -73,14 +77,7 @@ trait Index[E] {
     }
   }
 
-  def initWriter() = {
+  private def initWriter() = {
     withWriter(_ => ()).get
   }
-
-  def replaceAllEntities(entities: Seq[E]): Try[Unit] =
-    withWriter { writer =>
-      val docs = entities.map(toDocument)
-      writer.deleteAll()
-      writer.addDocuments(docs.asJavaCollection)
-    }
 }

@@ -25,9 +25,6 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
       }
     }
 
-  def allModules(): Try[Seq[Module]] =
-    search(new MatchAllDocsQuery)
-
   def deleteModule(module: Module): Try[Unit] =
     withWriter { writer =>
       writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))

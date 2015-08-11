@@ -137,11 +137,11 @@ class SearchEngine private[searchEngine] (
 
   private def updateTypeFrequencies(): Try[Unit] =
     Try {
-      logger.info(s"Start updating type frequencies for modules ${moduleIndex.allModules().get}")
+      logger.info(s"Start updating type frequencies for modules ${moduleIndex.allEntities().get}")
 
       val tfs = TypeFrequencies(
         viewIndex.findAlternativesWithDistance(_).get.map(_._1),
-        termsIndex.allTerms().get,
+        termsIndex.allEntities().get,
         settings.index.typeFrequenciesSampleSize)
 
       val adjustedTfs = TypeFrequencies.adjustInvariantTopType(tfs)
@@ -185,7 +185,7 @@ class SearchEngine private[searchEngine] (
   }
 
   def indexedModules(): Try[Seq[Module]] =
-    moduleIndex.allModules()
+    moduleIndex.allEntities()
 
   def resetIndexes(): Try[Unit] = Try {
     for {

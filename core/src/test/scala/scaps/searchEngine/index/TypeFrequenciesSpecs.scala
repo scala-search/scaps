@@ -128,7 +128,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       withViewIndex { viewIndex =>
         viewIndex.addEntities(views)
 
-        val terms = termIndex.allTerms().get
+        val terms = termIndex.allEntities().get
 
         (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), terms, Int.MaxValue),
           terms.filter(!_.isOverride).length)

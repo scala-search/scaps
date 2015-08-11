@@ -58,7 +58,6 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         tokenizer,
         WordDelimiterFilter.GENERATE_WORD_PARTS |
           WordDelimiterFilter.GENERATE_NUMBER_PARTS |
-          WordDelimiterFilter.PRESERVE_ORIGINAL |
           WordDelimiterFilter.SPLIT_ON_CASE_CHANGE |
           WordDelimiterFilter.SPLIT_ON_NUMERICS,
         null)
@@ -67,11 +66,7 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  private val nameQueryBuilder = new QueryBuilder(nameAnalyzer)
-
   private val docAnalyzer = nameAnalyzer
-
-  private val docQueryBuilder = new QueryBuilder(docAnalyzer)
 
   override val analyzer =
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
@@ -80,13 +75,14 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
       fields.name -> nameAnalyzer,
       fields.doc -> docAnalyzer).asJava)
 
+  private val queryBuilder = new QueryBuilder(analyzer)
+
   override val similarity = new PerFieldSimilarityWrapper {
     val default = new DefaultSimilarity
 
     override def get(field: String) = field match {
-      case fields.fingerprint => new FingerprintSimilarity(settings)
-      case fields.moduleId    => new ModuleIdSimilarity()
-      case _                  => default
+      case fields.moduleId => new ModuleIdSimilarity()
+      case _               => default
     }
   }
 
@@ -113,13 +109,13 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     try {
       val keys = new BooleanQuery
 
-      Option(nameQueryBuilder.createBooleanQuery(fields.name, query.keywords))
+      Option(queryBuilder.createBooleanQuery(fields.name, query.keywords))
         .foreach { nameQuery =>
           nameQuery.setBoost(settings.query.nameBoost.toFloat)
           keys.add(nameQuery, Occur.SHOULD)
         }
 
-      Option(docQueryBuilder.createBooleanQuery(fields.doc, query.keywords))
+      Option(queryBuilder.createBooleanQuery(fields.doc, query.keywords))
         .foreach { docQuery =>
           docQuery.setBoost(settings.query.docBoost.toFloat)
           keys.add(docQuery, Occur.SHOULD)
@@ -165,11 +161,8 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  def allTerms(): Try[Seq[TermEntity]] =
-    search(new MatchAllDocsQuery)
-
   private[index] def findTermsByName(name: String): Try[Seq[TermEntity]] =
-    search(nameQueryBuilder.createBooleanQuery(fields.name, name))
+    search(queryBuilder.createBooleanQuery(fields.name, name))
 
   override def toDocument(entity: TermEntity): Document = {
     val doc = new Document
@@ -209,15 +202,6 @@ object TermsIndex {
     val moduleId = "moduleId"
     val flags = "flags"
     val fingerprintLength = "fingerprintLength"
-  }
-
-  class FingerprintSimilarity(settings: Settings) extends DefaultSimilarity {
-    // We use type frequencies instead of document term frequency to boost uncommon
-    // types in queries
-    override def idf(docFreq: Long, numDocs: Long) = 1f
-
-    // Use the `fingerprintLength` field to normalize fingerprint length
-    override def lengthNorm(state: FieldInvertState): Float = 1f
   }
 
   class ModuleIdSimilarity extends DefaultSimilarity {
