@@ -124,14 +124,14 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         example("max: Int => Int => Int", "Same query as above but in curried form."),
         example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings."),
         example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consiting of a single character are treated as type parameters."),
-        example("List => Int => Option", "The identical query as above but with omitted type parameters.")),
+        example("List => Int => Option", "The identical query as above but with omitted type parameters."),
+        example("&~", "Searches for symbolic operators are also possible.")),
       p("""This is an early release reduced to the max. For the future, we plan to include additional features to
               improve user experience and the quality of the search results:"""),
       ul(
         li("Links to Scala Doc"),
         li("Additional indexed libraries"),
         li("Improved support for the type class pattern"),
-        li("Full support for queries with symbolic operators"),
         li("Type alias")),
       p("Of course, feedback would be highly appreciated (", a(href := "https://twitter.com/Luegg1")("Twitter"),
         " or l1wegman(at)hsr.ch)."),
