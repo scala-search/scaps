@@ -25,7 +25,7 @@ object RawQuery {
 object QueryParser extends RegexParsers {
   import RawQuery._
 
-  def query: Parser[RawQuery] = fullQuery | tpeQuery
+  def query: Parser[RawQuery] = phrase(fullQuery) | phrase(tpeQuery) | keywordQuery
 
   def tpeQuery: Parser[RawQuery] = tpe ^^ { RawQuery("", _) }
 
@@ -33,10 +33,14 @@ object QueryParser extends RegexParsers {
     case keywords ~ tpe => RawQuery(keywords, tpe)
   }
 
+  def keywordQuery: Parser[RawQuery] = keywords ^^ {
+    case keys => RawQuery(keys, Type("_"))
+  }
+
   def keywords: Parser[String] = quotedKeywords | unquotedKeywords
 
   def quotedKeywords: Parser[String] = "\"" ~> """[^\"]*""".r <~ "\""
-  def unquotedKeywords: Parser[String] = """[^\:]*""".r
+  def unquotedKeywords: Parser[String] = """[^\:\.\,\[\]\(\)]*""".r
 
   def tpe: Parser[Type] = functionTpe | tupleTpe | simpleTpe
 
@@ -57,7 +61,7 @@ object QueryParser extends RegexParsers {
     case tpes       => tuple(tpes: _*)
   }
 
-  def name: Parser[String] = identifier ~ rep("""[\.\#]""".r ~ identifier) ^^ {
+  def name: Parser[String] = identifier ~ rep("""[\.]""".r ~ identifier) ^^ {
     case head ~ rest => head + rest.map { case sep ~ ident => s"$sep$ident" }.mkString("")
   }
 
@@ -67,7 +71,7 @@ object QueryParser extends RegexParsers {
    * This does not really implement Scala's identifier but suffices to distinguish them from whitespaces, brackets and
    * namespace delimiters.
    */
-  def identifier: Parser[String] = """[^\.\#\,\[\]\s\(\)`]+""".r
+  def identifier: Parser[String] = """[^\.\,\[\]\s\(\)]+""".r
 
   def apply(input: String): SyntaxError \/ RawQuery =
     parseAll(query, input) match {

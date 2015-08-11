@@ -8,12 +8,12 @@ object TermEntitySpecs extends TestSuite {
     'termEntity{
       'shortName{
         'simple{
-          val name = TermEntity("p.C#m", Nil, TypeEntity.Any(Covariant), "").shortName
+          val name = TermEntity("p.C.m", Nil, TypeEntity.Any(Covariant), "").shortName
           assert(name == "m")
         }
 
         'beginningWithE{
-          val name = TermEntity("p.C#Executor", Nil, TypeEntity.Any(Covariant), "").shortName
+          val name = TermEntity("p.C.Executor", Nil, TypeEntity.Any(Covariant), "").shortName
           assert(name == "Executor")
         }
       }

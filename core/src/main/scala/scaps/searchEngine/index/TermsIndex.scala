@@ -1,30 +1,31 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
+
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.analysis.core.LowerCaseFilter
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
-import org.apache.lucene.analysis.core.WhitespaceTokenizer
+import org.apache.lucene.analysis.en.KStemFilter
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter
 import org.apache.lucene.analysis.standard.StandardAnalyzer
+import org.apache.lucene.analysis.util.CharTokenizer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document.NumericDocValuesField
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
-import org.apache.lucene.index.FieldInvertState
 import org.apache.lucene.index.Term
-import org.apache.lucene.queries.CustomScoreQuery
 import org.apache.lucene.queries.function.FunctionQuery
 import org.apache.lucene.queries.function.FunctionValues
-import org.apache.lucene.queries.function.valuesource.DualFloatFunction
 import org.apache.lucene.queries.function.valuesource.IntFieldSource
+import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.MatchAllDocsQuery
@@ -32,9 +33,9 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
-import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.store.Directory
-import org.apache.lucene.util.BytesRef
+import org.apache.lucene.util.QueryBuilder
+
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
 import scaps.searchEngine.ApiQuery
@@ -43,10 +44,6 @@ import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
-import scaps.utils.Statistic
-import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
-import org.apache.lucene.util.QueryBuilder
-import org.apache.lucene.analysis.util.CharTokenizer
 
 class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
   import TermsIndex._
@@ -59,10 +56,12 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
         WordDelimiterFilter.GENERATE_WORD_PARTS |
           WordDelimiterFilter.GENERATE_NUMBER_PARTS |
           WordDelimiterFilter.SPLIT_ON_CASE_CHANGE |
-          WordDelimiterFilter.SPLIT_ON_NUMERICS,
+          WordDelimiterFilter.SPLIT_ON_NUMERICS |
+          WordDelimiterFilter.PRESERVE_ORIGINAL,
         null)
       val ts2 = new LowerCaseFilter(ts1)
-      new TokenStreamComponents(tokenizer, ts2)
+      val ts3 = new KStemFilter(ts2)
+      new TokenStreamComponents(tokenizer, ts3)
     }
   }
 
@@ -210,7 +209,7 @@ object TermsIndex {
 
   class IdentifierAndWhitespaceDelimiterTokenizer(reader: Reader) extends CharTokenizer(reader) {
     override def isTokenChar(c: Int): Boolean = {
-      !(Character.isWhitespace(c) || c == '.' || c == '#')
+      !(Character.isWhitespace(c) || c == '.')
     }
   }
 }

@@ -22,81 +22,32 @@ sealed trait Entity extends EntityLike
  */
 object EntityName {
   /**
-   * Creates a new name referring to a class member and takes care of the encoding.
-   */
-  def appendClassMember(ownerName: String, memberId: String): String =
-    append(ownerName, memberId, '#')
-
-  /**
    * Creates a new name referring to a static member (package/module member)
    * and takes care of the encoding.
    */
-  def appendStaticMember(ownerName: String, memberId: String): String =
-    append(ownerName, memberId, '.')
-
-  private def append(ownerName: String, memberId: String, separator: Char): String =
+  def appendMember(ownerName: String, memberId: String): String =
     if (ownerName == "")
       memberId
     else
-      ownerName + separator + encodeIdentifier(memberId)
+      ownerName + '.' + encodeIdentifier(memberId)
 
   /**
    * Splits an encoded name into the decoded identifiers it is composed of.
-   * E.g. "pkg.Cls#member" becomes List("pkg", "Cls", "member").
+   * E.g. "pkg.Cls.member" becomes List("pkg", "Cls", "member").
    */
   def splitName(name: String): List[String] = {
-    val lb = new ListBuffer[String]
-    var currentName = new StringBuilder
-    var i = 0
-    while (i < name.length()) {
-      val c = name(i)
-      if (c == ''') {
-        i += 1
-        currentName.append(name(i))
-      } else if (c == '#' || c == '.') {
-        lb.append(currentName.mkString)
-        currentName = new StringBuilder
-      } else {
-        currentName.append(c)
-      }
-      i += 1
-    }
-    lb.append(currentName.mkString)
-    lb.result()
+    name.split('.').toList
   }
 
   def decodeFullName(name: String): String = {
-    val decoded = new StringBuilder
-    var i = 0
-    while (i < name.length()) {
-      val c = name(i)
-      if (c == ''') {
-        i += 1
-        decoded.append(name(i))
-      } else {
-        decoded.append(c)
-      }
-      i += 1
-    }
-    decoded.mkString
+    name
   }
 
   /**
    * Encodes a Scala identifier such that # characters are escaped by single quotes (').
    */
   def encodeIdentifier(id: String): String = {
-    if (id.indexOf('#') == -1) {
-      id
-    } else {
-      val sb = new StringBuilder
-      for (c <- id) {
-        if (c == '#')
-          sb.append("'#")
-        else
-          sb.append(c)
-      }
-      sb.mkString
-    }
+    id
   }
 }
 

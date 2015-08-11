@@ -123,10 +123,8 @@ trait EntityFactory extends Logging {
         ""
       else if (s.isPackageObject)
         rec(owner)
-      else if (owner.hasPackageFlag || owner.hasModuleFlag || s.isConstructor)
-        EntityName.appendStaticMember(rec(owner), s.decodedName)
       else
-        EntityName.appendClassMember(rec(owner), s.decodedName)
+        EntityName.appendMember(rec(owner), s.decodedName)
     }
 
     val name =

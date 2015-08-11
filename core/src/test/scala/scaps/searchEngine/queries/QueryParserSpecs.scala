@@ -28,11 +28,6 @@ class QueryParserSpecs extends FlatSpec with Matchers {
     parse("p.q.C[argument.Name]").tpe should equal(Type("p.q.C", List(Type("argument.Name"))))
   }
 
-  it should "parse type projections" in {
-    parse("Outer#Inner").tpe should equal(Type("Outer#Inner"))
-    parse("Outer#Inner[A#B]").tpe should equal(Type("Outer#Inner", List(Type("A#B"))))
-  }
-
   val A = Type("A")
   val B = Type("B")
   val C = Type("C")
@@ -90,6 +85,10 @@ class QueryParserSpecs extends FlatSpec with Matchers {
 
   it should "allow colons in types" in {
     parse("::[A, B]").tpe should equal(Type("::", A :: B :: Nil))
+  }
+
+  it should "parse multiple keywords without type" in {
+    parse("k1 k2 k3").keywords should be("k1 k2 k3")
   }
 
   def parse(query: String) = {

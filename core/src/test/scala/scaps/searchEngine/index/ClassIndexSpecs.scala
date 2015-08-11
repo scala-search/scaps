@@ -42,12 +42,12 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         trait T
       }
       """) { index =>
-      val T = cls("p.q.C#T")()()
+      val T = cls("p.q.C.T")()()
 
       index.findClassBySuffix("T").get should contain(T)
-      index.findClassBySuffix("C#T").get should contain(T)
-      index.findClassBySuffix("q.C#T").get should contain(T)
-      index.findClassBySuffix("p.q.C#T").get should contain(T)
+      index.findClassBySuffix("C.T").get should contain(T)
+      index.findClassBySuffix("q.C.T").get should contain(T)
+      index.findClassBySuffix("p.q.C.T").get should contain(T)
     }
   }
 
@@ -63,8 +63,8 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         trait T
       }
       """) { index =>
-      val CT = cls("p.C#T")()()
-      val DT = cls("p.D#T")()()
+      val CT = cls("p.C.T")()()
+      val DT = cls("p.D.T")()()
 
       val result = index.findClassBySuffix("T").get
 

@@ -24,7 +24,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class C {
         val a = 1
       }
-      """)("p.C#a")
+      """)("p.C.a")
   }
 
   it should "extract inherited members" in {
@@ -32,7 +32,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       package p
 
       class C
-      """)("p.C#toString")
+      """)("p.C.toString")
   }
 
   it should "decode operator names" in {
@@ -42,25 +42,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class C {
         def =:=(x: C): Boolean
       }
-      """)("p.C#=:=")
-  }
-
-  it should "escape # character in names" in {
-    shouldExtractTerms("""
-      package p
-
-      class C {
-        def ### = 1
-      }
-
-      object ### {
-        def ### = 1
-      }
-      """)(
-      "p.C#'#'#", // inherited from Any
-      "p.C#'#'#'#",
-      "p.'#'#'#.'#'#",
-      "p.'#'#'#.'#'#'#")
+      """)("p.C.=:=")
   }
 
   it should "extract doc comments" in {
@@ -149,8 +131,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m2(i: Int) = 1
       }
       """)(
-      ("p.T#m1", _.tpe.toString should be("+<memberAccess>[-p.T, +scala.Int]")),
-      ("p.T#m2", _.tpe.toString should be("+<memberAccess>[-p.T, +<methodInvocation1>[-scala.Int, +scala.Int]]")))
+      ("p.T.m1", _.tpe.toString should be("+<memberAccess>[-p.T, +scala.Int]")),
+      ("p.T.m2", _.tpe.toString should be("+<memberAccess>[-p.T, +<methodInvocation1>[-scala.Int, +scala.Int]]")))
   }
 
   it should "treat nested member access like function application" in {
@@ -163,7 +145,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         }
       }
       """)(
-      ("p.Outer#Inner#m", _.tpe.toString should be("+<memberAccess>[-p.Outer#Inner, +scala.Int]")))
+      ("p.Outer.Inner.m", _.tpe.toString should be("+<memberAccess>[-p.Outer.Inner, +scala.Int]")))
   }
 
   it should "include type args in owner type of member access" in {
@@ -178,8 +160,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m = 1
       }
       """)(
-      ("p.T#m", _.tpe.toString should be("+<memberAccess>[-p.T[A], +scala.Int]")),
-      ("p.S#m", _.tpe.toString should be("+<memberAccess>[-p.S[-A], +scala.Int]")))
+      ("p.T.m", _.tpe.toString should be("+<memberAccess>[-p.T[A], +scala.Int]")),
+      ("p.S.m", _.tpe.toString should be("+<memberAccess>[-p.S[-A], +scala.Int]")))
   }
 
   it should "add correct variance annotations" in {
@@ -249,12 +231,12 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m3[A](y: A): T
       }
       """)(
-      ("p.C#m1", _.typeParameters should be(List(TypeParameterEntity("T", Invariant)))),
-      ("p.C#m2", m => {
+      ("p.C.m1", _.typeParameters should be(List(TypeParameterEntity("T", Invariant)))),
+      ("p.C.m2", m => {
         m.typeParameters should be(List(TypeParameterEntity("T", Invariant)))
         m.tpe.args(1).args.foreach(_.isTypeParam should be(true))
       }),
-      ("p.C#m3", m => {
+      ("p.C.m3", m => {
         m.typeParameters should be(List(TypeParameterEntity("T", Invariant), TypeParameterEntity("A", Invariant)))
         m.tpe.args(1).args.foreach(_.isTypeParam should be(true))
       }))
@@ -270,7 +252,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         }
       }
       """)(
-      ("p.Outer#Inner#m", m => {
+      ("p.Outer.Inner.m", m => {
         m.typeParameters should be(List(TypeParameterEntity("A", Invariant), TypeParameterEntity("B", Invariant)))
         m.tpe.args(1).args.foreach(_.isTypeParam should be(true))
       }))
@@ -310,7 +292,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       trait T
       """)
 
-    terms.find(_.name == "p.T#<init>") should not be ('defined)
+    terms.find(_.name == "p.T.<init>") should not be ('defined)
   }
 
   it should "extract inherited members from super traits" in {
@@ -324,8 +306,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class C extends T
       object O extends T
       """)(
-      ("p.T#m", _ => ()),
-      ("p.C#m", _ => ()),
+      ("p.T.m", _ => ()),
+      ("p.C.m", _ => ()),
       ("p.O.m", _ => ()))
   }
 
@@ -567,10 +549,10 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def n = 1
       }
       """)(
-      ("p.A#m", _.isOverride should be(true)),
-      ("p.A#n", _.isOverride should be(false)),
-      ("p.B#m", _.isOverride should be(true)),
-      ("p.B#n", _.isOverride should be(false)),
+      ("p.A.m", _.isOverride should be(true)),
+      ("p.A.n", _.isOverride should be(false)),
+      ("p.B.m", _.isOverride should be(true)),
+      ("p.B.n", _.isOverride should be(false)),
       ("p.O.m", _.isOverride should be(true)),
       ("p.O.n", _.isOverride should be(false)),
       ("p.P.m", _.isOverride should be(true)),
@@ -625,8 +607,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.P.n", _.isStatic should be(true)),
       ("p.O.P.toString", _.isStatic should be(true)),
       ("p.O.C.<init>", _.isStatic should be(true)),
-      ("p.O.C#o", _.isStatic should be(false)),
-      ("p.O.C#Q", _.isStatic should be(false)),
-      ("p.O.C#Q.p", _.isStatic should be(false)))
+      ("p.O.C.o", _.isStatic should be(false)),
+      ("p.O.C.Q", _.isStatic should be(false)),
+      ("p.O.C.Q.p", _.isStatic should be(false)))
   }
 }

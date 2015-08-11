@@ -47,7 +47,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)
 
-    val i = ts.find(_.name == "p.C#i").get
+    val i = ts.find(_.name == "p.C.i").get
     val m = ts.find(_.name == "p.O.m").get
     val f = ts.find(_.name == "p.O.f").get
 
@@ -69,7 +69,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)
 
-    val m1 = ts.find(_.name == "p.C#m1").get
+    val m1 = ts.find(_.name == "p.C.m1").get
     val m2 = ts.find(_.name == "p.O.m2").get
     val m3 = ts.find(_.name == "p.O.m3").get
 
@@ -102,7 +102,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("-scala.Char") and
         include("-scala.Float") and
         include("+java.lang.String"))),
-      ("p.C#m", _.typeFingerprint.toString should (
+      ("p.C.m", _.typeFingerprint.toString should (
         include("-p.C") and
         include("+scala.Int") and
         include("-scala.Char") and
@@ -131,7 +131,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A <: scala.AnyVal](x: A): Unit
       }
       """)(
-      ("p.T#m", _.typeFingerprint.toString should (
+      ("p.T.m", _.typeFingerprint.toString should (
         include("-scala.AnyVal") and
         not include ("-A"))))
   }
@@ -144,7 +144,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A >: scala.AnyVal]: A
       }
       """)(
-      ("p.T#m", _.typeFingerprint.toString should (
+      ("p.T.m", _.typeFingerprint.toString should (
         include("+scala.AnyVal") and
         not include ("+A"))))
   }
@@ -157,7 +157,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A](x: A): Unit
       }
       """)(
-      ("p.T#m", _.typeFingerprint.toString should (
+      ("p.T.m", _.typeFingerprint.toString should (
         include("-scala.Any"))))
   }
 
@@ -169,7 +169,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[A]: A
       }
       """)(
-      ("p.T#m", _.typeFingerprint.toString should (
+      ("p.T.m", _.typeFingerprint.toString should (
         include("+scala.Nothing"))))
   }
 
@@ -226,7 +226,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         def m[B <: AnyVal, C >: Int](x: Cl[B]): Cl[C]
       }
       """)(
-      ("p.Cl#m", _.typeFingerprint.toString should (
+      ("p.Cl.m", _.typeFingerprint.toString should (
         include("-scala.Any") and
         include("-scala.AnyVal") and
         include("+scala.Int"))))
