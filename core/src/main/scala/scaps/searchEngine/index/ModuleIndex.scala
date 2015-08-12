@@ -33,11 +33,7 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
   override def toDocument(entity: Module): Document = {
     val doc = new Document
 
-    def add(field: String, value: String) =
-      doc.add(new TextField(field, value, Store.YES))
-
-    add(fields.moduleId, entity.moduleId)
-
+    doc.add(new TextField(fields.moduleId, entity.moduleId, Store.YES))
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
     doc

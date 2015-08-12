@@ -166,20 +166,16 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
   override def toDocument(entity: TermEntity): Document = {
     val doc = new Document
 
-    def add(field: String, value: String) =
-      doc.add(new TextField(field, value, Store.NO))
+    doc.add(new TextField(fields.name, entity.name, Store.NO))
 
-    add(fields.name, entity.name)
-    add(fields.moduleId, entity.module.moduleId)
+    doc.add(new TextField(fields.doc, entity.comment, Store.NO))
+    doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
+
     entity.typeFingerprint.foreach { fp =>
       doc.add(new TextField(fields.fingerprint, fp, Store.YES))
     }
-    add(fields.doc, entity.comment)
-    entity.flags.foreach { flag =>
-      add(fields.flags, flag.name)
-    }
-    doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
+    doc.add(new StoredField(fields.entity, upickle.write(entity)))
     doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.toList.length))
 
     doc
@@ -199,7 +195,6 @@ object TermsIndex {
     val doc = "doc"
     val entity = "entity"
     val moduleId = "moduleId"
-    val flags = "flags"
     val fingerprintLength = "fingerprintLength"
   }
 
