@@ -1,6 +1,4 @@
-package scaps.searchEngine
-
-import scaps.webapi._
+package scaps.webapi
 
 sealed trait View {
   import View._

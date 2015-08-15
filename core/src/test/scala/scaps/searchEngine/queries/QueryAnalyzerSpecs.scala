@@ -1,21 +1,20 @@
 package scaps.searchEngine.queries
 
 import scala.collection.immutable.Map
+
+import org.apache.lucene.store.RAMDirectory
 import org.scalatest.FlatSpec
+
 import scaps.featureExtraction.ExtractionUtils
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
-import scaps.settings.Settings
-import scaps.webapi.TypeEntity
-import scaps.searchEngine.View
-import scaps.webapi.Covariant
-import scaps.webapi.Contravariant
-import scaps.webapi.Invariant
-import org.apache.lucene.store.RAMDirectory
 import scaps.searchEngine.index.ViewIndex
+import scaps.settings.Settings
 import scaps.webapi.ClassEntity
+import scaps.webapi.TypeEntity
+import scaps.webapi.View
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 

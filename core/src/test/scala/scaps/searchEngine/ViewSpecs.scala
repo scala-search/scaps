@@ -2,8 +2,11 @@ package scaps.searchEngine
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
+
 import scaps.featureExtraction.ExtractionUtils
+import scaps.webapi.ImplicitConversion
 import scaps.webapi.TypeEntity
+import scaps.webapi.View
 
 class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "the views creator" should "create views from implicit defs" in {

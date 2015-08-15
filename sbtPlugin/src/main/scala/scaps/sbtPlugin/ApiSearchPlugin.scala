@@ -27,11 +27,6 @@ object ApiSearchPlugin extends AutoPlugin {
     lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
     lazy val scapsModules = TaskKey[Seq[IndexJob]]("scapsModules", "Modules that will be indexed.")
     lazy val scapsIndex = InputKey[Unit]("scapsIndex", "Requests indexing this project.")
-    lazy val scapsReset = TaskKey[Unit]("scapsReset")
-
-    lazy val scapsTestCollection = SettingKey[Map[String, Set[String]]]("scapsTestCollection")
-    //lazy val scapsBenchmarkReport = SettingKey[String]("scapsBenchmarkReport")
-    lazy val scapsBenchmark = TaskKey[Double]("scapsBenchmark")
   }
 
   import autoImport._
@@ -39,7 +34,6 @@ object ApiSearchPlugin extends AutoPlugin {
   override lazy val projectSettings = Seq(
     scapsHost := "localhost:8080",
     scapsControlHost := "localhost:8081",
-    scapsTestCollection := Map(),
     scaps := {
       val log = streams.value.log
       val query = spaceDelimited("<query>").parsed
@@ -107,15 +101,5 @@ object ApiSearchPlugin extends AutoPlugin {
   lazy val controlClient = Def.task {
     StaticLoggerBinder.sbtLogger = streams.value.log
     new DispatchClient(scapsControlHost.value, ScapsControlApi.apiPath)[ScapsControlApi]
-  }
-
-  val indexSettingsParser: Parser[Option[Boolean]] = boolOpt("force-reindex").?
-
-  def boolOpt(key: String): Parser[Boolean] = {
-    import sbt.complete.DefaultParsers._
-    (Space ~> key ~> ("=" ~> (literal("true") | "false"))) map {
-      case "true"  => true
-      case "false" => false
-    }
   }
 }

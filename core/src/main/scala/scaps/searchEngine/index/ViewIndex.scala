@@ -1,18 +1,21 @@
 package scaps.searchEngine.index
 
-import scaps.searchEngine.View
-import scaps.searchEngine.ImplicitConversion
+import scala.util.Try
+
 import org.apache.lucene.analysis.core.KeywordAnalyzer
-import org.apache.lucene.store.Directory
 import org.apache.lucene.document.Document
-import org.apache.lucene.document.TextField
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document.StoredField
-import upickle._
-import scaps.webapi._
-import org.apache.lucene.search.TermQuery
+import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
-import scala.util.Try
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.store.Directory
+
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.Invariant
+import scaps.webapi.TypeEntity
+import scaps.webapi.View
 
 class ViewIndex(val dir: Directory) extends Index[View] {
   import ViewIndex._

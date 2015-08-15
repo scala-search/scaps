@@ -1,13 +1,16 @@
 package scaps.searchEngine
 
 import java.io.File
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
-import org.apache.lucene.store.FSDirectory
+
+import org.apache.lucene.store.NIOFSDirectory
 import org.apache.lucene.store.RAMDirectory
-import scalaz.Memo
+
+import scalaz._
 import scalaz.{ \/ => \/ }
 import scaps.searchEngine.index.ClassIndex
 import scaps.searchEngine.index.ModuleIndex
@@ -27,9 +30,9 @@ import scaps.webapi.Invariant
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
 import scaps.webapi.TypeEntity
-import scaps.webapi.Variance
-import org.apache.lucene.store.NIOFSDirectory
 import scaps.webapi.TypeParameterEntity
+import scaps.webapi.Variance
+import scaps.webapi.View
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {

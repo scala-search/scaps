@@ -1,11 +1,17 @@
 package scaps.searchEngine.index
 
+import org.apache.lucene.store.RAMDirectory
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scaps.webapi._
-import scaps.searchEngine.View
-import scaps.searchEngine.SubType
-import org.apache.lucene.store.RAMDirectory
+import org.scalatest.matchers.MatcherFactory3.produceMatcher
+
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.Invariant
+import scaps.webapi.SubType
+import scaps.webapi.TypeEntity
+import scaps.webapi.Variance
+import scaps.webapi.View
 
 class ViewIndexSpecs extends FlatSpec with Matchers {
   /*

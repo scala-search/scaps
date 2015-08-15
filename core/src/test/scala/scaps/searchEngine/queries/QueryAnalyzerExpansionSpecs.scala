@@ -1,13 +1,24 @@
 package scaps.searchEngine.queries
 
+import scala.Ordering
+
+import org.apache.lucene.store.RAMDirectory
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scaps.webapi._
-import scaps.searchEngine.View
-import scaps.searchEngine.SubType
-import scaps.settings.Settings
+
+import ExpandedQuery.Alternative
+import ExpandedQuery.Leaf
+import ExpandedQuery.Max
+import ExpandedQuery.Part
+import ExpandedQuery.Sum
 import scaps.searchEngine.index.ViewIndex
-import org.apache.lucene.store.RAMDirectory
+import scaps.settings.Settings
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.SubType
+import scaps.webapi.TypeEntity
+import scaps.webapi.Variance
+import scaps.webapi.View
 
 class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._

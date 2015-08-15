@@ -1,8 +1,13 @@
 package scaps.searchEngine.index
 
 import org.scalatest.FlatSpec
-import scaps.webapi._
-import scaps.searchEngine.View
+
+import scaps.webapi.Contravariant
+import scaps.webapi.Covariant
+import scaps.webapi.Invariant
+import scaps.webapi.TermEntity
+import scaps.webapi.TypeEntity
+import scaps.webapi.View
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {

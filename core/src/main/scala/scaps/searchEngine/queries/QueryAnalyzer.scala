@@ -16,7 +16,7 @@ import scaps.webapi.Covariant
 import scaps.webapi.Invariant
 import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
-import scaps.searchEngine.View
+import scaps.webapi.View
 import scaps.utils._
 
 private[queries] sealed trait ResolvedQuery
@@ -25,7 +25,7 @@ private[queries] object ResolvedQuery {
   case class Type(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
 }
 
-sealed trait ExpandedQuery {
+private[queries] sealed trait ExpandedQuery {
   import ExpandedQuery._
 
   def children: List[ExpandedQuery]

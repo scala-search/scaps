@@ -4,7 +4,6 @@ import scalaz.{ Contravariant => _, _ }
 import scaps.webapi._
 import scala.util.Random
 import scaps.utils._
-import scaps.searchEngine.View
 
 object TypeFrequencies {
   def apply(findAlternatives: TypeEntity => Seq[TypeEntity],

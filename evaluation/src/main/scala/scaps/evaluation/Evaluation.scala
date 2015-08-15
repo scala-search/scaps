@@ -198,7 +198,7 @@ object Evaluation extends App {
 
   def statsOutputFile() = {
     new File(outputDir).mkdirs()
-    new File(s"$outputDir/evaluation-stats-${format.format(now)}.csv")
+    new File(s"$outputDir/evaluation-stats-${format.format(now)}.txt")
   }
 }
 
