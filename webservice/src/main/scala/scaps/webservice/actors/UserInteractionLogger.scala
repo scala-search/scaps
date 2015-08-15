@@ -6,7 +6,7 @@ import scaps.webapi.TermEntity
 import akka.event.Logging
 
 class UserInteractionLogger extends Actor {
-  import SearchEngineProtocol._
+  import ActorProtocol._
 
   val logger = Logging(context.system, this)
 

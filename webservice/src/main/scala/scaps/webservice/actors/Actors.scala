@@ -4,10 +4,7 @@ import java.io.File
 
 import scala.util.control.NonFatal
 
-import SearchEngineProtocol.GetStatus
-import SearchEngineProtocol.Index
-import SearchEngineProtocol.Indexed
-import SearchEngineProtocol.Search
+import ActorProtocol._
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.actorRef2Scala
@@ -28,19 +25,18 @@ import scaps.webapi.IndexBusy
 import scaps.webapi.IndexReady
 import scaps.webapi.IndexStatus
 
-object SearchEngineActor {
+object Director {
   def props(settings: Settings)(
     indexWorkerProps: SearchEngine => Props = IndexWorkerActor.props _,
     searcherProps: SearchEngine => Props = Searcher.props _) =
-    Props(classOf[SearchEngineActor], settings, indexWorkerProps, searcherProps)
+    Props(classOf[Director], settings, indexWorkerProps, searcherProps)
 }
 
 /**
  * Manages the state of an instance of the search engine. Allows concurrent searching
  * while another index is being built.
  */
-class SearchEngineActor(baseSettings: Settings, indexWorkerProps: SearchEngine => Props, searcherProps: SearchEngine => Props) extends Actor {
-  import SearchEngineProtocol._
+class Director(baseSettings: Settings, indexWorkerProps: SearchEngine => Props, searcherProps: SearchEngine => Props) extends Actor {
   import context._
 
   val logger = Logging(system, this)
@@ -62,7 +58,7 @@ class SearchEngineActor(baseSettings: Settings, indexWorkerProps: SearchEngine =
           indexWorker ! i
           sender ! true
 
-          become(indexing(searchEngine, IndexBusy(i.jobs.map(_.module), status.indexedModules, Nil), indexNo, workerEngine))
+          become(indexing(searchEngine, IndexBusy(i.jobs.map(_.module), status.indexedModules, Nil), indexNo))
         case s: Search =>
           val searcher = actorOf(searcherProps(searchEngine))
           searcher.tell(s, sender)
@@ -71,12 +67,11 @@ class SearchEngineActor(baseSettings: Settings, indexWorkerProps: SearchEngine =
       }
     }
 
-    def indexing(searchEngine: SearchEngine, status: IndexStatus, indexNo: Int, workerEngine: SearchEngine): Receive = {
+    def indexing(searchEngine: SearchEngine, status: IndexStatus, indexNo: Int): Receive = {
       case i: Index =>
         sender ! false
-      case i: Indexed =>
-        val indexedModules = workerEngine.indexedModules().get
-        become(ready(workerEngine, indexNo + 1))
+      case Indexed(_, _, updatedEngine) =>
+        become(ready(updatedEngine, indexNo + 1))
       case s: Search =>
         val searcher = actorOf(searcherProps(searchEngine))
         searcher.tell(s, sender)
@@ -117,7 +112,6 @@ object IndexWorkerActor {
  * Indexes source files.
  */
 class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
-  import SearchEngineProtocol._
   import scala.concurrent.ExecutionContext.Implicits.global
 
   val logger = Logging(context.system, this)
@@ -149,7 +143,7 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
           Some(e)
       }
 
-      requestor ! Indexed(jobs, error)
+      requestor ! Indexed(jobs, error, searchEngine)
   }
 }
 
@@ -159,7 +153,6 @@ object Searcher {
 }
 
 class Searcher(searchEngine: SearchEngine) extends Actor {
-  import SearchEngineProtocol._
   import scaps.searchEngine._
 
   def receive = {

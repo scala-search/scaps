@@ -16,30 +16,30 @@ import scaps.webapi.Module
 import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
 import scaps.webapi.TermEntity
-import scaps.webservice.actors.SearchEngineActor
+import scaps.webservice.actors.Director
 import scaps.webservice.actors.UserInteractionLogger
 import scaps.webapi.IndexJob
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
-  import scaps.webservice.actors.SearchEngineProtocol._
+  import scaps.webservice.actors.ActorProtocol._
 
-  val searchEngine = context.actorOf(SearchEngineActor.props(Settings.fromApplicationConf)(), "searcher")
+  val director = context.actorOf(Director.props(Settings.fromApplicationConf)(), "director")
   val userInteractionLogger = context.actorOf(Props[UserInteractionLogger], "userInteractionLogger")
 
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
 
   override def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean] = {
-    (searchEngine ? Index(jobs, classpath)).mapTo[Boolean]
+    (director ? Index(jobs, classpath)).mapTo[Boolean]
   }
 
   override def getStatus(): Future[IndexStatus] =
-    (searchEngine ? GetStatus).mapTo[IndexStatus]
+    (director ? GetStatus).mapTo[IndexStatus]
 
   override def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[TermEntity]]] = {
     val searchMsg = Search(query, moduleIds, noResults, offset)
     for {
-      result <- (searchEngine ? searchMsg).mapTo[String \/ Seq[TermEntity]]
+      result <- (director ? searchMsg).mapTo[String \/ Seq[TermEntity]]
     } yield {
       userInteractionLogger ! ((searchMsg, result))
       result.toEither
