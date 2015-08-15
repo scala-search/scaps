@@ -161,10 +161,15 @@ object TypeFingerprintQuery extends Logging {
       val (termScores, preparedScorer) = prepare(fingerprint.distinct)
 
       val terms = {
-        val maxScores = termScores.groupBy(_._1).mapValues(_.maxBy(_._2)._2)
-
-        val termsWithMaxScore = fingerprint
-          .flatMap(t => maxScores.get(t).map((t, _)))
+        val (termsWithMaxScore, _) = termScores
+          .sortBy(-_._2)
+          .foldLeft((List[(String, Float)](), fingerprint)) {
+            case ((acc, fp), (term, score)) =>
+              if (fp.contains(term))
+                ((term, score) :: acc, fp.diff(List(term)))
+              else
+                (acc, fp)
+          }
 
         termsWithMaxScore
           .filter(_._2 > 0f)

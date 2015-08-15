@@ -66,6 +66,19 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
     scorer.score("+B" :: "+A" :: "+A" :: Nil) should be(2.5f)
   }
 
+  it should "score repeated types with widly varying values" in {
+    val scorer = FingerprintScorer(
+      Sum(
+        Max(
+          tpe("A", 0.3),
+          tpe("B", 0.5)),
+        tpe("A", 1)))
+
+    scorer.score("+A" :: "+B" :: Nil) should be(1.5f)
+    scorer.score("+A" :: "+A" :: "+B" :: Nil) should be(1.5f)
+  }
+
+  // not relevant because up to now such expression trees do not exists
   ignore should "score sums with a total higher match" in {
     val scorer = FingerprintScorer(
       Max(

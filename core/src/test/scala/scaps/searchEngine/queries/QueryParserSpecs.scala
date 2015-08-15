@@ -67,6 +67,29 @@ class QueryParserSpecs extends FlatSpec with Matchers {
     ()
   }
 
+  it should "fail on missing parens" in {
+    val tpes = List(
+      "(A, B",
+      "A, B)",
+      "(A, B => C",
+      "A, B) => C",
+      "A, B => C")
+
+    tpes.flatMap(t => List(t, s"k1 k2: $t")).foreach { t =>
+      failParse(t)
+    }
+  }
+
+  it should "fail on missing brackets" in {
+    val tpes = List(
+      "List[A",
+      "Map[A, List[C]")
+
+    tpes.flatMap(t => List(t, s"k1 k2: $t")).foreach { t =>
+      failParse(t)
+    }
+  }
+
   it should "allow empty argument lists" in {
     parse("() => A").tpe should equal(function(Nil, A))
   }
