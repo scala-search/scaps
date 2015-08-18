@@ -3,7 +3,7 @@
 lazy val utestFramework = new TestFramework("utest.runner.Framework")
 
 lazy val commonSettings = Seq(
-    organization := "ch.hsr",
+    organization := "org.scala-search",
     scalaVersion := Commons.targetedScalaVersion,
     version := Commons.appVersion,
     resolvers += Opts.resolver.mavenLocalFile,
@@ -30,7 +30,7 @@ lazy val root = (project in file("."))
 
 def webapiSettings = 
   commonSettings ++ Seq(
-    name := "api-search-webapi",
+    name := "scaps-webapi",
     libraryDependencies ++= Dependencies.webapiDependencies,
     target := baseDirectory.value / s"target-${scalaVersion.value}",
     buildInfoKeys := Seq[BuildInfoKey](version),
@@ -60,7 +60,7 @@ lazy val core = (project in file("core"))
   .dependsOn(webapi_2_11)
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-core",
+    name := "scaps-core",
     libraryDependencies ++= Dependencies.coreDependencies,
     testModules += "jarExtractorTests")
 
@@ -68,7 +68,7 @@ lazy val evaluation = (project in file("evaluation"))
   .dependsOn(core)
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-evaluation",
+    name := "scaps-evaluation",
     publishArtifact := false,
     libraryDependencies ++= Dependencies.evaluationDependencies)
 
@@ -76,7 +76,7 @@ lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
   .dependsOn(webapi_2_11_cross)
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-webservice-shared",
+    name := "scaps-webservice-shared",
     publishArtifact := false,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion))
@@ -88,7 +88,7 @@ lazy val webservice = (project in file("webservice"))
   .dependsOn(webserviceShared_JVM, core)
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-webservice",
+    name := "scaps-webservice",
     publishArtifact := false,
     libraryDependencies ++= Dependencies.webserviceDependencies,
     // parallel execution does not play well with the actor tests
@@ -103,7 +103,7 @@ lazy val webserviceUI = (project in file("webserviceUI"))
   .enablePlugins(ScalaJSPlugin)
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-webservice-ui",
+    name := "scaps-webservice-ui",
     publishArtifact := false,
     // disable fatal warnings in this project because there are some unavoidable warnings
     scalacOptions := scalacOptions.value.filter(_ != "-Xfatal-warnings"),
@@ -119,7 +119,7 @@ lazy val sbtPlug = (project in file("sbtPlugin"))
   .dependsOn(webapi_2_10)
   .settings(commonSettings: _*)
   .settings(
-    name := "api-search-sbt",
+    name := "scaps-sbt",
     scalaVersion := Commons.sbtPluginScalaVersion,
     sbtPlugin := true,
     libraryDependencies ++= Dependencies.sbtPluginDependencies)

@@ -6,6 +6,10 @@ version := "1.0"
 
 scalaVersion := "2.11.6"
 
+// scapsHost := "localhost:80"
+
+// scapsControlHost := "localhost:9000"
+
 libraryDependencies += "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2"
 
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
