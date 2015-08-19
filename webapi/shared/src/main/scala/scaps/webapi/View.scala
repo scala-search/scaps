@@ -48,7 +48,7 @@ object View {
       Nil
   }
 
-  def fromEntity(e: Entity): Seq[View] = e match {
+  def fromEntity(e: Definition): Seq[View] = e match {
     case c: ClassEntity => fromClass(c)
     case t: TermEntity  => fromTerm(t)
   }

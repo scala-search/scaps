@@ -4,7 +4,7 @@ import java.io.File
 import java.util.jar.JarFile
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.reflect.internal.util.BatchSourceFile
-import scaps.webapi.Entity
+import scaps.webapi.Definition
 import scala.tools.nsc.interactive.Global
 import scala.io.Codec
 import scalaz._
@@ -12,7 +12,7 @@ import scalaz._
 class JarExtractor(val compiler: Global) {
   val scalaExtractor = new ScalaSourceExtractor(compiler)
 
-  def apply(file: File): Stream[ExtractionError \/ Entity] = {
+  def apply(file: File): Stream[ExtractionError \/ Definition] = {
     val jar = new JarFile(file)
 
     jar.entries().toStream.flatMap { entry =>

@@ -25,7 +25,7 @@ import scaps.utils.Logging
 import scaps.webapi.ClassEntity
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
-import scaps.webapi.Entity
+import scaps.webapi.Definition
 import scaps.webapi.Invariant
 import scaps.webapi.Module
 import scaps.webapi.TermEntity
@@ -87,7 +87,7 @@ class SearchEngine private[searchEngine] (
 
   private val indexes = List(termsIndex, classesIndex, moduleIndex, viewIndex)
 
-  def indexEntities(modulesWithEntities: Seq[(Module, () => Seq[Entity])]): Try[Unit] =
+  def indexEntities(modulesWithEntities: Seq[(Module, () => Seq[Definition])]): Try[Unit] =
     Try {
       for {
         (m, es) <- modulesWithEntities
@@ -99,13 +99,13 @@ class SearchEngine private[searchEngine] (
       updateTypeFrequencies().get
     }
 
-  def indexEntities(module: Module, entities: Seq[Entity]): Try[Unit] =
+  def indexEntities(module: Module, entities: Seq[Definition]): Try[Unit] =
     Try {
       indexModule(module, entities).get
       updateTypeFrequencies().get
     }
 
-  private def indexModule(module: Module, entities: Seq[Entity]): Try[Unit] =
+  private def indexModule(module: Module, entities: Seq[Definition]): Try[Unit] =
     Try {
       analyzers = Map()
 

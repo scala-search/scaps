@@ -2,7 +2,7 @@ package scaps.featureExtraction
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile
-import scaps.webapi.Entity
+import scaps.webapi.Definition
 import scala.tools.nsc.interactive.Global
 import scala.util.Failure
 import scala.util.Success
@@ -12,7 +12,7 @@ import scalaz._
 class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logging {
   import compiler._
 
-  def apply(sourceFile: SourceFile): List[ExtractionError \/ Entity] = {
+  def apply(sourceFile: SourceFile): List[ExtractionError \/ Definition] = {
     logger.trace(s"Extracting source file ${sourceFile.path}")
 
     withTypedTree(sourceFile) { root =>

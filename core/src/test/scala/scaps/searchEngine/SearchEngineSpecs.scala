@@ -6,7 +6,6 @@ import scaps.searchEngine.index.IndexUtils
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import scala.concurrent.ExecutionContext.Implicits.global
-import scaps.webapi.Entity
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -141,7 +140,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
   def withSearchEngine(block: SearchEngine => Unit): Unit =
     withSearchEngine(module1, module2)(block)
 
-  def withSearchEngine(modulesWithEntities: (Module, Seq[Entity])*)(block: SearchEngine => Unit) =
+  def withSearchEngine(modulesWithEntities: (Module, Seq[Definition])*)(block: SearchEngine => Unit) =
     withTermIndex { termIndex =>
       withClassIndex { classIndex =>
         withModuleIndex { moduleIndex =>

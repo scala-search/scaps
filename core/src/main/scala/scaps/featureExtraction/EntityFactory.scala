@@ -12,7 +12,7 @@ trait EntityFactory extends Logging {
 
   import compiler._
 
-  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Entity] =
+  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Definition] =
     if (isClassOfInterest(classSym)) {
       logger.trace(s"Extract entities in ${qualifiedName(classSym, true)}")
 
@@ -129,7 +129,7 @@ trait EntityFactory extends Logging {
 
     val name =
       if (sym.isTypeParameter)
-        EntityName.encodeIdentifier(sym.decodedName)
+        sym.decodedName
       else
         rec(sym)
 

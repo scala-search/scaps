@@ -9,7 +9,7 @@ import org.scalatest.Matchers
 
 trait ExtractionUtils extends Matchers {
 
-  def extractAll(source: String): Seq[Entity] =
+  def extractAll(source: String): Seq[Definition] =
     CompilerUtils.withCompiler() { compiler =>
       val extractor = new ScalaSourceExtractor(compiler)
       val randomFileName = s"${Random.nextInt()}.scala"

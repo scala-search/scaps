@@ -168,7 +168,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def result(resultNo: Int, term: TermEntity) = {
     def typeName(t: TypeEntity) =
       if (term.typeParameters.exists(_.name == t.name))
-        em(ScapsStyle.typeParameter)(t.decodedName)
+        em(ScapsStyle.typeParameter)(t.name)
       else
         em(a(attrs.title := t.name)(t.shortName))
 
@@ -222,10 +222,10 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
           span(tpe(owner), ".", strong(term.shortName), typeParams(memberTypeParams), signature(member))
         case t =>
-          span(strong(term.decodedName), typeParams(term.typeParameters), signature(t))
+          span(strong(term.name), typeParams(term.typeParameters), signature(t))
       })),
       dd(div(term.comment),
-        div(span(cls := "label label-default")(term.module.name), " ", term.decodedName),
+        div(span(cls := "label label-default")(term.module.name), " ", term.name),
         feedback))
   }
 

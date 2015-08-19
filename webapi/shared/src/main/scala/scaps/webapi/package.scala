@@ -5,14 +5,9 @@ import scala.collection.mutable.ListBuffer
 trait EntityLike {
   def name: String
 
-  def decodedName: String =
-    EntityName.decodeFullName(name)
-
   def shortName: String =
     EntityName.splitName(name).last
 }
-
-sealed trait Entity extends EntityLike
 
 /**
  * Helper methods for de-/encoding entity names.
@@ -29,7 +24,7 @@ object EntityName {
     if (ownerName == "")
       memberId
     else
-      ownerName + '.' + encodeIdentifier(memberId)
+      ownerName + '.' + memberId
 
   /**
    * Splits an encoded name into the decoded identifiers it is composed of.
@@ -38,18 +33,9 @@ object EntityName {
   def splitName(name: String): List[String] = {
     name.split('.').toList
   }
-
-  def decodeFullName(name: String): String = {
-    name
-  }
-
-  /**
-   * Encodes a Scala identifier such that # characters are escaped by single quotes (').
-   */
-  def encodeIdentifier(id: String): String = {
-    id
-  }
 }
+
+sealed trait Definition extends EntityLike
 
 case class ClassEntity(
   name: String,
@@ -58,7 +44,7 @@ case class ClassEntity(
   referencedFrom: Set[Module] = Set(),
   comment: String = "",
   typeFrequency: Map[Variance, Float] = Map())
-  extends Entity {
+  extends Definition {
 
   override def toString() = {
     val params = typeParameters match {
@@ -86,7 +72,7 @@ case class TermEntity(
   comment: String,
   flags: Set[TermEntity.Flag] = Set(),
   module: Module = Module.Unknown)
-  extends Entity {
+  extends Definition {
 
   override def toString() = {
     val c = comment match {
