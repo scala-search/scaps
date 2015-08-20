@@ -4,7 +4,7 @@ import org.scalatest.Matchers
 import org.scalatest.FlatSpec
 import scaps.featureExtraction.ExtractionUtils
 import scaps.webapi.Covariant
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.Variance
 
 class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
@@ -16,7 +16,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = 1
       }
       """)(
-      ("p.O.i", _.typeFingerprint should be(List(TypeEntity.Int(Covariant).fingerprint))))
+      ("p.O.i", _.typeFingerprint should be(List(TypeRef.Int(Covariant).fingerprint))))
   }
 
   it should "support repeated types" in {
@@ -252,7 +252,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.O.m", _.typeFingerprint.toString() should (
-        not include (TypeEntity.ByName.name) and
+        not include (TypeRef.ByName.name) and
         include("-scala.Int"))))
   }
 
@@ -265,7 +265,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.O.m", _.typeFingerprint.toString() should (
-        include(TypeEntity.Repeated.name) and
+        include(TypeRef.Repeated.name) and
         include("-scala.Int"))))
   }
 
@@ -278,6 +278,6 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.O.m", _.typeFingerprint.toString() should (
-        include(TypeEntity.Function.name(1)))))
+        include(TypeRef.Function.name(1)))))
   }
 }

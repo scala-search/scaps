@@ -10,7 +10,7 @@ import scala.annotation.tailrec
 trait EntityFactory extends Logging {
   val compiler: Global
 
-  import compiler.{ TypeDef => _, _ }
+  import compiler.{ TypeDef => _, TypeRef => _, _ }
 
   def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Definition] =
     if (isTypeOfInterest(classSym)) {
@@ -50,7 +50,7 @@ trait EntityFactory extends Logging {
     \/.fromTryCatchNonFatal {
       val baseTypes = sym.tpe.baseTypeSeq.toList.tail
         .filter(tpe => isTypeOfInterest(tpe.typeSymbol))
-        .map(tpe => createTypeEntity(tpe, Covariant))
+        .map(tpe => createTypeRef(tpe, Covariant))
       TypeDef(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
     }.leftMap(ExtractionError(qualifiedName(sym, true), _))
 
@@ -62,7 +62,7 @@ trait EntityFactory extends Logging {
 
   def createValueDef(sym: Symbol, isPrimaryCtor: Boolean, rawComment: String): ExtractionError \/ ValueDef =
     \/.fromTryCatchNonFatal {
-      val (typeParams, tpe) = createTypeEntity(sym)
+      val (typeParams, tpe) = createTypeRef(sym)
 
       val flags = Set.newBuilder[ValueDef.Flag]
 
@@ -90,20 +90,20 @@ trait EntityFactory extends Logging {
       sym.isPublic &&
       !sym.isSynthetic
 
-  def createTypeEntity(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
+  def createTypeRef(sym: Symbol): (List[TypeParameterEntity], TypeRef) = {
     val (params, memberType) =
       if (sym.isMethod)
         methodType(sym)
       else if (sym.isModule)
         moduleType(sym)
       else
-        (Nil, createTypeEntity(sym.tpe, Covariant))
+        (Nil, createTypeRef(sym.tpe, Covariant))
 
     if (sym.owner.isClass && !sym.owner.isModuleClass && !sym.isConstructor) {
       val ownerParams = typeParamsFromOwningTemplates(sym)
-      val ownerArgs = ownerParams.map(p => TypeEntity(p.name, Contravariant * p.variance, Nil))
+      val ownerArgs = ownerParams.map(p => TypeRef(p.name, Contravariant * p.variance, Nil))
       (ownerParams ++ params,
-        TypeEntity.MemberAccess(TypeEntity(qualifiedName(sym.owner, true), Contravariant, ownerArgs), memberType))
+        TypeRef.MemberAccess(TypeRef(qualifiedName(sym.owner, true), Contravariant, ownerArgs), memberType))
     } else {
       (params, memberType)
     }
@@ -139,7 +139,7 @@ trait EntityFactory extends Logging {
       name
   }
 
-  private def createTypeEntity(tpe: Type, variance: Variance): TypeEntity = {
+  private def createTypeRef(tpe: Type, variance: Variance): TypeRef = {
     def getVariance(idx: Int) = {
       val nscVariance =
         if (tpe.typeSymbol.isTypeParameter && tpe.bounds.hi.typeSymbol.typeParams.isDefinedAt(idx))
@@ -155,49 +155,49 @@ trait EntityFactory extends Logging {
     }
 
     val args = tpe.typeArgs.zipWithIndex.map {
-      case (arg, idx) => createTypeEntity(arg, getVariance(idx))
+      case (arg, idx) => createTypeRef(arg, getVariance(idx))
     }
 
     if (tpe.typeSymbol.name == compiler.typeNames.BYNAME_PARAM_CLASS_NAME) {
       assert(args.length == 1)
-      TypeEntity.ByName(args.head, variance)
+      TypeRef.ByName(args.head, variance)
     } else if (tpe.typeSymbol.name == compiler.typeNames.REPEATED_PARAM_CLASS_NAME) {
       assert(args.length == 1)
-      TypeEntity.Repeated(args.head, variance)
+      TypeRef.Repeated(args.head, variance)
     } else if (tpe.typeSymbol.name == compiler.typeNames.REFINE_CLASS_NAME) {
-      val parents = tpe.parents.map(createTypeEntity(_, variance))
-      TypeEntity.Refinement(parents, variance)
+      val parents = tpe.parents.map(createTypeRef(_, variance))
+      TypeRef.Refinement(parents, variance)
     } else {
-      TypeEntity(qualifiedName(tpe.typeSymbol, true), variance, args, tpe.typeSymbol.isTypeParameter)
+      TypeRef(qualifiedName(tpe.typeSymbol, true), variance, args, tpe.typeSymbol.isTypeParameter)
     }
   }
 
-  private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
+  private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeRef) = {
     val typeParams = sym.tpe.typeParams.map(createTypeParamEntity)
 
-    def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeEntity = paramss match {
-      case Nil => createTypeEntity(resultTpe, Covariant)
+    def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeRef = paramss match {
+      case Nil => createTypeRef(resultTpe, Covariant)
       case params :: rest =>
         val paramTypes = params.map { p =>
-          val pTpe = createTypeEntity(p.tpe, Contravariant)
+          val pTpe = createTypeRef(p.tpe, Contravariant)
           if (p.isImplicit)
-            TypeEntity.Implicit(pTpe, Contravariant)
+            TypeRef.Implicit(pTpe, Contravariant)
           else
             pTpe
         }
         val resultType = rec(rest, resultTpe.resultType)
-        TypeEntity.MethodInvocation(paramTypes, resultType)
+        TypeRef.MethodInvocation(paramTypes, resultType)
     }
 
     (typeParams, rec(sym.paramss, sym.tpe.resultType))
   }
 
-  private def moduleType(sym: Symbol): (List[TypeParameterEntity], TypeEntity) = {
+  private def moduleType(sym: Symbol): (List[TypeParameterEntity], TypeRef) = {
     val args = sym.tpe.parents.map { parent =>
-      createTypeEntity(parent, Covariant)
+      createTypeRef(parent, Covariant)
     }
 
-    (Nil, TypeEntity.Refinement(args))
+    (Nil, TypeRef.Refinement(args))
   }
 
   private def createTypeParamEntity(typeSym: Symbol) =

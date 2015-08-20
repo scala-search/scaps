@@ -100,7 +100,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("p.O.a", m => {
-        m.tpe should be(TypeEntity("scala.Int", Covariant, Nil))
+        m.tpe should be(TypeRef("scala.Int", Covariant, Nil))
         m.tpe.args.foreach(_.isTypeParam should be(false))
       }))
   }
@@ -386,7 +386,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m(v: => Int) = v
       }
       """)(
-      ("p.O.m", _.tpe.args should contain(TypeEntity.ByName(TypeEntity.Int(Contravariant), Contravariant))))
+      ("p.O.m", _.tpe.args should contain(TypeRef.ByName(TypeRef.Int(Contravariant), Contravariant))))
   }
 
   it should "extract by repeated parameters" in {
@@ -397,7 +397,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def m(v: Int*) = v
       }
       """)(
-      ("p.O.m", _.tpe.args should contain(TypeEntity.Repeated(TypeEntity.Int(Contravariant), Contravariant))))
+      ("p.O.m", _.tpe.args should contain(TypeRef.Repeated(TypeRef.Int(Contravariant), Contravariant))))
   }
 
   it should "extract implicit parameters" in {
@@ -410,11 +410,11 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
         def n[T: Option](o: T) = ???
       }
       """)(
-      ("p.O.m", _.tpe.args should contain(TypeEntity.Implicit(TypeEntity.Int(Contravariant), Contravariant))),
+      ("p.O.m", _.tpe.args should contain(TypeRef.Implicit(TypeRef.Int(Contravariant), Contravariant))),
       ("p.O.n", _.tpe.args(1).args should contain(
-        TypeEntity.Implicit(
-          TypeEntity.Option(
-            TypeEntity("T", Contravariant, Nil, isTypeParam = true), Contravariant), Contravariant))))
+        TypeRef.Implicit(
+          TypeRef.Option(
+            TypeRef("T", Contravariant, Nil, isTypeParam = true), Contravariant), Contravariant))))
   }
 
   it should "not extract private values and typeDefs" in {
@@ -476,14 +476,14 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class E extends C
       """)(
       ("p.C", _.baseTypes should (
-        contain(TypeEntity("p.T", Covariant, Nil)) and
-        contain(TypeEntity.Any()))),
+        contain(TypeRef("p.T", Covariant, Nil)) and
+        contain(TypeRef.Any()))),
       ("p.D", _.baseTypes should (
-        contain(TypeEntity("p.C", Covariant, Nil)) and
-        contain(TypeEntity("p.T", Covariant, Nil)))),
+        contain(TypeRef("p.C", Covariant, Nil)) and
+        contain(TypeRef("p.T", Covariant, Nil)))),
       ("p.E", _.baseTypes should (
-        contain(TypeEntity("p.C", Covariant, Nil)) and
-        contain(TypeEntity("p.T", Covariant, Nil)))))
+        contain(TypeRef("p.C", Covariant, Nil)) and
+        contain(TypeRef("p.T", Covariant, Nil)))))
   }
 
   it should "extract class entities with type parameters" in {

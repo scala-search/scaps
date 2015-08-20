@@ -40,7 +40,7 @@ sealed trait Definition extends EntityLike
 case class TypeDef(
   name: String,
   typeParameters: List[TypeParameterEntity],
-  baseTypes: List[TypeEntity],
+  baseTypes: List[TypeRef],
   referencedFrom: Set[Module] = Set(),
   comment: String = "",
   typeFrequency: Map[Variance, Float] = Map())
@@ -56,19 +56,19 @@ case class TypeDef(
     s"$name$params $bases"
   }
 
-  def isFunction = typeParameters.length > 0 && name == TypeEntity.Function.name(typeParameters.length - 1)
+  def isFunction = typeParameters.length > 0 && name == TypeRef.Function.name(typeParameters.length - 1)
 
   def frequency(v: Variance) =
     typeFrequency.get(v).getOrElse(0f)
 
-  def toType: TypeEntity =
-    TypeEntity(name, Covariant, typeParameters.map(p => TypeEntity(p.name, p.variance, Nil, true)))
+  def toType: TypeRef =
+    TypeRef(name, Covariant, typeParameters.map(p => TypeRef(p.name, p.variance, Nil, true)))
 }
 
 case class ValueDef(
   name: String,
   typeParameters: List[TypeParameterEntity],
-  tpe: TypeEntity,
+  tpe: TypeRef,
   comment: String,
   flags: Set[ValueDef.Flag] = Set(),
   module: Module = Module.Unknown)
@@ -125,8 +125,8 @@ object ValueDef {
   }
 }
 
-case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], isTypeParam: Boolean = false) extends EntityLike {
-  import TypeEntity._
+case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isTypeParam: Boolean = false) extends EntityLike {
+  import TypeRef._
 
   override def toString() = {
     val argStr = args match {
@@ -152,35 +152,35 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
 
   def typeFingerprint: List[String] = this.toList
     .filter {
-      case TypeEntity.Ignored(_, _) => false
+      case TypeRef.Ignored(_, _) => false
       case _                        => true
     }
     .map(_.fingerprint)
     .sorted
 
-  def toList: List[TypeEntity] = this :: args.flatMap(_.toList)
+  def toList: List[TypeRef] = this :: args.flatMap(_.toList)
 
-  def withVariance(v: Variance): TypeEntity =
+  def withVariance(v: Variance): TypeRef =
     if (variance == v) this
     else copy(variance = v, args = args.map(arg => arg.withVariance(arg.variance * v)))
 
-  def transform(f: TypeEntity => TypeEntity): TypeEntity =
+  def transform(f: TypeRef => TypeRef): TypeRef =
     f(this.copy(args = args.map(_.transform(f))))
 
-  def renameTypeParams(getName: String => String): TypeEntity =
+  def renameTypeParams(getName: String => String): TypeRef =
     transform { tpe =>
       if (tpe.isTypeParam) tpe.copy(name = getName(name))
       else tpe
     }
 
-  def withArgsAsParams: TypeEntity =
+  def withArgsAsParams: TypeRef =
     copy(args = args.zipWithIndex.map {
       case (arg, idx) =>
-        TypeEntity(s"$$$idx", arg.variance, Nil, isTypeParam = true)
+        TypeRef(s"$$$idx", arg.variance, Nil, isTypeParam = true)
     })
 
-  def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeEntity = {
-    def loop(tpe: TypeEntity): TypeEntity =
+  def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeRef = {
+    def loop(tpe: TypeRef): TypeRef =
       tpe match {
         case MemberAccess(owner, member) =>
           loop(Function(owner :: Nil, loop(member)))
@@ -203,7 +203,7 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           loop(arg)
         case Implicit(arg, _) =>
           loop(arg)
-        case tpe: TypeEntity =>
+        case tpe: TypeRef =>
           val normalizedArgs = tpe.args.map(loop)
           typeParams.find(_.name == tpe.name).fold {
             tpe.copy(args = normalizedArgs)
@@ -217,7 +217,7 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
           }
       }
 
-    def paramsAndReturnTpes(tpe: TypeEntity): List[TypeEntity] = tpe match {
+    def paramsAndReturnTpes(tpe: TypeRef): List[TypeRef] = tpe match {
       case Function(args, res, v) =>
         args ++ paramsAndReturnTpes(res)
       case tpe => List(tpe)
@@ -227,24 +227,24 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
     Ignored((loop _ andThen paramsAndReturnTpes)(this))
   }
 
-  def withoutImplicitParams: TypeEntity = this match {
-    case TypeEntity.MethodInvocation(a :: as, res, _) if a.name == TypeEntity.Implicit.name =>
+  def withoutImplicitParams: TypeRef = this match {
+    case TypeRef.MethodInvocation(a :: as, res, _) if a.name == TypeRef.Implicit.name =>
       res.withoutImplicitParams
-    case TypeEntity.MethodInvocation(args, res, v) =>
-      TypeEntity.MethodInvocation(args, res.withoutImplicitParams, v)
+    case TypeRef.MethodInvocation(args, res, v) =>
+      TypeRef.MethodInvocation(args, res.withoutImplicitParams, v)
     case t =>
       t
   }
 
-  def etaExpanded: TypeEntity = this match {
-    case TypeEntity.MethodInvocation(args, res, v) =>
-      TypeEntity.Function(args, res.etaExpanded, v)
+  def etaExpanded: TypeRef = this match {
+    case TypeRef.MethodInvocation(args, res, v) =>
+      TypeRef.Function(args, res.etaExpanded, v)
     case t =>
       t
   }
 }
 
-object TypeEntity {
+object TypeRef {
   object Any extends PrimitiveType("scala.Any")
   object AnyVal extends PrimitiveType("scala.AnyVal")
   object AnyRef extends PrimitiveType("java.lang.Object")
@@ -260,9 +260,9 @@ object TypeEntity {
   object Unknown extends PrimitiveType("<unknown>")
 
   class PrimitiveType(val name: String) {
-    def apply(variance: Variance = Covariant) = TypeEntity(name, variance, Nil)
+    def apply(variance: Variance = Covariant) = TypeRef(name, variance, Nil)
 
-    def unapply(tpe: TypeEntity): Option[Variance] =
+    def unapply(tpe: TypeRef): Option[Variance] =
       if (tpe.name == name && tpe.args.isEmpty)
         Some(tpe.variance)
       else
@@ -277,32 +277,32 @@ object TypeEntity {
   object SList extends GenericType("scala.collection.immutable.List")
 
   class GenericType(val name: String) {
-    def apply(arg: TypeEntity, variance: Variance = Covariant) =
-      TypeEntity(name, variance, arg :: Nil)
+    def apply(arg: TypeRef, variance: Variance = Covariant) =
+      TypeRef(name, variance, arg :: Nil)
 
-    def unapply(tpe: TypeEntity): Option[(TypeEntity, Variance)] =
+    def unapply(tpe: TypeRef): Option[(TypeRef, Variance)] =
       if (tpe.name == name && tpe.args.length == 1)
         Some((tpe.args.head, tpe.variance))
       else
         None
 
-    def matches(tpe: TypeEntity): Boolean =
+    def matches(tpe: TypeRef): Boolean =
       unapply(tpe).isDefined
   }
 
   object SMap extends GenericType2("scala.collection.immutable.Map")
 
   class GenericType2(val name: String) {
-    def apply(arg1: TypeEntity, arg2: TypeEntity, variance: Variance = Covariant) =
-      TypeEntity(name, variance, arg1 :: arg2 :: Nil)
+    def apply(arg1: TypeRef, arg2: TypeRef, variance: Variance = Covariant) =
+      TypeRef(name, variance, arg1 :: arg2 :: Nil)
 
-    def unapply(tpe: TypeEntity): Option[(TypeEntity, TypeEntity, Variance)] =
+    def unapply(tpe: TypeRef): Option[(TypeRef, TypeRef, Variance)] =
       if (tpe.name == name && tpe.args.length == 2)
         Some((tpe.args(0), tpe.args(1), tpe.variance))
       else
         None
 
-    def matches(tpe: TypeEntity): Boolean =
+    def matches(tpe: TypeRef): Boolean =
       unapply(tpe).isDefined
   }
 
@@ -312,10 +312,10 @@ object TypeEntity {
   class VariantType(val tpePrefix: String, val tpeSuffix: String = "") {
     def name(n: Int) = s"$tpePrefix$n$tpeSuffix"
 
-    def apply(args: List[TypeEntity], variance: Variance = Covariant) =
-      TypeEntity(name(args.size), variance, args.map(pt => pt.copy(variance = variance)))
+    def apply(args: List[TypeRef], variance: Variance = Covariant) =
+      TypeRef(name(args.size), variance, args.map(pt => pt.copy(variance = variance)))
 
-    def unapply(tpe: TypeEntity): Option[(List[TypeEntity], Variance)] =
+    def unapply(tpe: TypeRef): Option[(List[TypeRef], Variance)] =
       if (!tpe.args.isEmpty && tpe.name == name(tpe.args.size))
         Some((tpe.args, tpe.variance))
       else
@@ -328,12 +328,12 @@ object TypeEntity {
   class FunctionLikeType(val tpePrefix: String, val tpeSuffix: String = "") {
     def name(n: Int) = s"$tpePrefix$n$tpeSuffix"
 
-    def apply(paramTypes: List[TypeEntity], resultType: TypeEntity, variance: Variance = Covariant) = {
+    def apply(paramTypes: List[TypeRef], resultType: TypeRef, variance: Variance = Covariant) = {
       val typeArgs = paramTypes.map(pt => pt.copy(variance = variance.flip)) :+ resultType.copy(variance = variance)
-      TypeEntity(name(paramTypes.length), variance, typeArgs)
+      TypeRef(name(paramTypes.length), variance, typeArgs)
     }
 
-    def unapply(tpe: TypeEntity) =
+    def unapply(tpe: TypeRef) =
       if (!tpe.args.isEmpty && tpe.name == name(tpe.args.size - 1))
         Some((tpe.args.init, tpe.args.last, tpe.variance))
       else
@@ -343,10 +343,10 @@ object TypeEntity {
   object MemberAccess {
     val name = "<memberAccess>"
 
-    def apply(owner: TypeEntity, member: TypeEntity): TypeEntity =
-      TypeEntity(name, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
+    def apply(owner: TypeRef, member: TypeRef): TypeRef =
+      TypeRef(name, Covariant, owner.copy(variance = Contravariant) :: member :: Nil)
 
-    def unapply(tpe: TypeEntity) =
+    def unapply(tpe: TypeRef) =
       if (tpe.args.size == 2 && tpe.name == name)
         Some((tpe.args.head, tpe.args.tail.head))
       else
@@ -356,10 +356,10 @@ object TypeEntity {
   object Ignored {
     def name(n: Int) = s"<ignored$n>"
 
-    def apply(typeArgs: List[TypeEntity], variance: Variance = Covariant) =
-      TypeEntity(name(typeArgs.length), variance, typeArgs)
+    def apply(typeArgs: List[TypeRef], variance: Variance = Covariant) =
+      TypeRef(name(typeArgs.length), variance, typeArgs)
 
-    def unapply(tpe: TypeEntity) =
+    def unapply(tpe: TypeRef) =
       if (tpe.name == name(tpe.args.length))
         Some((tpe.args, tpe.variance))
       else
@@ -370,9 +370,9 @@ object TypeEntity {
 case class TypeParameterEntity(
   name: String,
   variance: Variance,
-  lowerBound: String = TypeEntity.Nothing.name,
-  upperBound: String = TypeEntity.Any.name) {
-  import TypeEntity._
+  lowerBound: String = TypeRef.Nothing.name,
+  upperBound: String = TypeRef.Any.name) {
+  import TypeRef._
 
   override def toString() = {
     val lbound =

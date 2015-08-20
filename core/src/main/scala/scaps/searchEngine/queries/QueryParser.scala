@@ -1,6 +1,6 @@
 package scaps.searchEngine.queries
 
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.searchEngine.SyntaxError
 import scala.util.parsing.combinator.RegexParsers
 
@@ -13,10 +13,10 @@ object RawQuery {
   case class Type(name: String, args: List[Type] = Nil)
 
   def function(args: List[Type], res: Type) =
-    Type(TypeEntity.Function.name(args.length), args :+ res)
+    Type(TypeRef.Function.name(args.length), args :+ res)
 
   def tuple(tpes: Type*) =
-    Type(TypeEntity.Tuple.name(tpes.length), tpes.toList)
+    Type(TypeRef.Tuple.name(tpes.length), tpes.toList)
 }
 
 /**

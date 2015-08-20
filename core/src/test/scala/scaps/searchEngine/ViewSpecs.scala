@@ -5,7 +5,7 @@ import org.scalatest.Matchers
 
 import scaps.featureExtraction.ExtractionUtils
 import scaps.webapi.ImplicitConversion
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.View
 
 class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
@@ -23,12 +23,12 @@ class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
       .collect { case i: ImplicitConversion => i }
 
     val i2l = is.find(_.evidence.contains("int2long")).get
-    i2l.from should be(TypeEntity.Int())
-    i2l.to should be(TypeEntity.Long())
+    i2l.from should be(TypeRef.Int())
+    i2l.to should be(TypeRef.Long())
 
     val i2fn = is.find(_.evidence.contains("int2fn")).get
-    i2fn.from should be(TypeEntity.Int())
-    i2fn.to should be(TypeEntity.Function(TypeEntity.Long() :: Nil, TypeEntity.String()))
+    i2fn.from should be(TypeRef.Int())
+    i2fn.to should be(TypeRef.Function(TypeRef.Long() :: Nil, TypeRef.String()))
   }
 
   it should "create views from implicit vals of function type" in {
@@ -43,12 +43,12 @@ class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
       .collect { case i: ImplicitConversion => i }
 
     val i2l = is.find(_.evidence.contains("int2long")).get
-    i2l.from should be(TypeEntity.Int())
-    i2l.to should be(TypeEntity.Long())
+    i2l.from should be(TypeRef.Int())
+    i2l.to should be(TypeRef.Long())
 
     val i2fn = is.find(_.evidence.contains("int2fn")).get
-    i2fn.from should be(TypeEntity.Int())
-    i2fn.to should be(TypeEntity.Function(TypeEntity.Long() :: Nil, TypeEntity.String()))
+    i2fn.from should be(TypeRef.Int())
+    i2fn.to should be(TypeRef.Function(TypeRef.Long() :: Nil, TypeRef.String()))
   }
 
   it should "create views from implicit classes" in {
@@ -62,7 +62,7 @@ class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
       .collectFirst { case i: ImplicitConversion => i }
       .get
 
-    i2l.from should be(TypeEntity.Int())
+    i2l.from should be(TypeRef.Int())
     i2l.to.name should be("p.O.IntExt")
   }
 
@@ -79,13 +79,13 @@ class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
     val i2l = vs.find(_.evidence.contains("int2long")).get
 
-    i2l.from should be(TypeEntity.Int())
-    i2l.to should be(TypeEntity.Long())
+    i2l.from should be(TypeRef.Int())
+    i2l.to should be(TypeRef.Long())
 
     val i2f = vs.find(_.evidence.contains("int2float")).get
 
-    i2f.from should be(TypeEntity.Int())
-    i2f.to should be(TypeEntity.Float())
+    i2f.from should be(TypeRef.Int())
+    i2f.to should be(TypeRef.Float())
   }
 
   it should "create views for all subtypes of scala.Seq to <repeated>" in {
@@ -97,18 +97,18 @@ class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val s = Seq(1)
       }
       """)
-      .collect { case i @ ImplicitConversion(_, TypeEntity.Repeated(_, _), _) => i }
+      .collect { case i @ ImplicitConversion(_, TypeRef.Repeated(_, _), _) => i }
 
-    val l2r = repeatedViews.find(_.from.name == TypeEntity.SList.name).get
+    val l2r = repeatedViews.find(_.from.name == TypeRef.SList.name).get
 
     l2r should matchPattern {
-      case ImplicitConversion(TypeEntity.SList(arg1, _), TypeEntity.Repeated(arg2, _), _) if arg1 == arg2 =>
+      case ImplicitConversion(TypeRef.SList(arg1, _), TypeRef.Repeated(arg2, _), _) if arg1 == arg2 =>
     }
 
-    val s2r = repeatedViews.find(_.from.name == TypeEntity.Seq.name).get
+    val s2r = repeatedViews.find(_.from.name == TypeRef.Seq.name).get
 
     s2r should matchPattern {
-      case ImplicitConversion(TypeEntity.Seq(arg1, _), TypeEntity.Repeated(arg2, _), _) if arg1 == arg2 =>
+      case ImplicitConversion(TypeRef.Seq(arg1, _), TypeRef.Repeated(arg2, _), _) if arg1 == arg2 =>
     }
   }
 

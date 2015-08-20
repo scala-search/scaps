@@ -9,7 +9,7 @@ import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Invariant
 import scaps.webapi.SubType
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.Variance
 import scaps.webapi.View
 
@@ -25,25 +25,25 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
    *            |
    *            D
    */
-  val A = new TypeEntity.PrimitiveType("A")
-  val B = new TypeEntity.PrimitiveType("B")
-  val C = new TypeEntity.PrimitiveType("C")
-  val D = new TypeEntity.PrimitiveType("D")
-  val X = new TypeEntity.PrimitiveType("X")
+  val A = new TypeRef.PrimitiveType("A")
+  val B = new TypeRef.PrimitiveType("B")
+  val C = new TypeRef.PrimitiveType("C")
+  val D = new TypeRef.PrimitiveType("D")
+  val X = new TypeRef.PrimitiveType("X")
 
-  val T = (v: Variance) => TypeEntity("T", v, Nil, isTypeParam = true)
-  val U = (v: Variance) => TypeEntity("U", v, Nil, isTypeParam = true)
-  val Wildcard = (v: Variance) => TypeEntity("_", v, Nil, isTypeParam = true)
-  val Box = new TypeEntity.GenericType("Box")
-  val MyBox = new TypeEntity.GenericType("MyBox")
-  val CBox = new TypeEntity.PrimitiveType("CBox")
-  val Loop = new TypeEntity.GenericType("Loop")
-  val InvarBox = new TypeEntity.GenericType("InvarBox")
+  val T = (v: Variance) => TypeRef("T", v, Nil, isTypeParam = true)
+  val U = (v: Variance) => TypeRef("U", v, Nil, isTypeParam = true)
+  val Wildcard = (v: Variance) => TypeRef("_", v, Nil, isTypeParam = true)
+  val Box = new TypeRef.GenericType("Box")
+  val MyBox = new TypeRef.GenericType("MyBox")
+  val CBox = new TypeRef.PrimitiveType("CBox")
+  val Loop = new TypeRef.GenericType("Loop")
+  val InvarBox = new TypeRef.GenericType("InvarBox")
 
-  val Nothing = TypeEntity.Nothing
+  val Nothing = TypeRef.Nothing
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int): View =
       SubType(cls(Covariant), base(Covariant), dist)
 
     List(
@@ -88,7 +88,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     alternatives should (
       have length (1) and
-      contain((TypeEntity.Unknown(Invariant), 1)))
+      contain((TypeRef.Unknown(Invariant), 1)))
   }
 
   it should "retrieve subtypes of parametric types" in {

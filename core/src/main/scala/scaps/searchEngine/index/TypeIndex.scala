@@ -17,7 +17,7 @@ import scaps.settings.Settings
 import scaps.webapi.TypeDef
 import scaps.webapi.Covariant
 import scaps.webapi.Module
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scala.annotation.tailrec
 
 /**

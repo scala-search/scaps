@@ -14,7 +14,7 @@ import org.apache.lucene.store.Directory
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Invariant
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.View
 
 class ViewIndex(val dir: Directory) extends Index[View] {
@@ -30,11 +30,11 @@ class ViewIndex(val dir: Directory) extends Index[View] {
       }
     }
 
-  def findAlternativesWithDistance(tpe: TypeEntity): Try[Seq[(TypeEntity, Float)]] = Try {
-    def alignVariance(alt: TypeEntity) =
+  def findAlternativesWithDistance(tpe: TypeRef): Try[Seq[(TypeRef, Float)]] = Try {
+    def alignVariance(alt: TypeRef) =
       alt.withVariance(tpe.variance)
 
-    def alignTypeArgs(source: TypeEntity, alt: TypeEntity): TypeEntity = {
+    def alignTypeArgs(source: TypeRef, alt: TypeRef): TypeRef = {
       val alignedArgs = alt.args.map { arg =>
         source.args.indexWhere(_.name == arg.name) match {
           case -1     => alignTypeArgs(source, arg)
@@ -46,17 +46,17 @@ class ViewIndex(val dir: Directory) extends Index[View] {
     }
 
     val (sources, alternatives, distances) = (tpe.variance match {
-      case Covariant if tpe.name == TypeEntity.Nothing.name =>
+      case Covariant if tpe.name == TypeRef.Nothing.name =>
         Nil
       case Covariant =>
-        (tpe, TypeEntity.Nothing(Covariant), 1f) +:
+        (tpe, TypeRef.Nothing(Covariant), 1f) +:
           findViewsTo(tpe).get.map(view => (view.to, view.from, view.distance))
       case Contravariant =>
         findViewsFrom(tpe).get.map(view => (view.from, view.to, view.distance))
-      case Invariant if tpe.name == TypeEntity.Unknown.name =>
+      case Invariant if tpe.name == TypeRef.Unknown.name =>
         Nil
       case Invariant =>
-        List((tpe, TypeEntity.Unknown(Invariant), 1f))
+        List((tpe, TypeRef.Unknown(Invariant), 1f))
     }).unzip3
 
     sources.map(alignVariance)
@@ -65,13 +65,13 @@ class ViewIndex(val dir: Directory) extends Index[View] {
       .zip(distances)
   }
 
-  private def findViewsFrom(tpe: TypeEntity): Try[Seq[View]] =
+  private def findViewsFrom(tpe: TypeRef): Try[Seq[View]] =
     findViews(tpe, fields.from)
 
-  private def findViewsTo(tpe: TypeEntity): Try[Seq[View]] =
+  private def findViewsTo(tpe: TypeRef): Try[Seq[View]] =
     findViews(tpe, fields.to)
 
-  private def findViews(tpe: TypeEntity, field: String): Try[Seq[View]] =
+  private def findViews(tpe: TypeRef, field: String): Try[Seq[View]] =
     Try {
       val altsOfGenericTpe =
         if (tpe.args.exists(!_.isTypeParam))

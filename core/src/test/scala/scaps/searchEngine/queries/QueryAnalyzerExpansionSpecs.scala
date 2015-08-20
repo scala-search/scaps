@@ -16,7 +16,7 @@ import scaps.settings.Settings
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.SubType
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.Variance
 import scaps.webapi.View
 
@@ -34,28 +34,28 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
    *            |                                                            |
    *            D                                                        MyLoop[+T]
    */
-  val A = new TypeEntity.PrimitiveType("A")
-  val B = new TypeEntity.PrimitiveType("B")
-  val C = new TypeEntity.PrimitiveType("C")
-  val D = new TypeEntity.PrimitiveType("D")
-  val X = new TypeEntity.PrimitiveType("X")
-  val Y = new TypeEntity.PrimitiveType("Y")
+  val A = new TypeRef.PrimitiveType("A")
+  val B = new TypeRef.PrimitiveType("B")
+  val C = new TypeRef.PrimitiveType("C")
+  val D = new TypeRef.PrimitiveType("D")
+  val X = new TypeRef.PrimitiveType("X")
+  val Y = new TypeRef.PrimitiveType("Y")
 
-  val T = (v: Variance) => TypeEntity("T", v, Nil, isTypeParam = true)
-  val Wildcard = (v: Variance) => TypeEntity("_", v, Nil, isTypeParam = true)
+  val T = (v: Variance) => TypeRef("T", v, Nil, isTypeParam = true)
+  val Wildcard = (v: Variance) => TypeRef("_", v, Nil, isTypeParam = true)
 
-  val Box = new TypeEntity.GenericType("Box")
-  val MyBox = new TypeEntity.GenericType("MyBox")
-  val CBox = new TypeEntity.PrimitiveType("CBox")
-  val GenericCBox = new TypeEntity.GenericType("GenericCBox")
-  val Loop = new TypeEntity.GenericType("Loop")
-  val MyLoop = new TypeEntity.GenericType("MyLoop")
-  val Bag = new TypeEntity.GenericType("Bag")
-  val YBag = new TypeEntity.GenericType("YBag")
-  val Tup = new TypeEntity.VariantType("Tup")
+  val Box = new TypeRef.GenericType("Box")
+  val MyBox = new TypeRef.GenericType("MyBox")
+  val CBox = new TypeRef.PrimitiveType("CBox")
+  val GenericCBox = new TypeRef.GenericType("GenericCBox")
+  val Loop = new TypeRef.GenericType("Loop")
+  val MyLoop = new TypeRef.GenericType("MyLoop")
+  val Bag = new TypeRef.GenericType("Bag")
+  val YBag = new TypeRef.GenericType("YBag")
+  val Tup = new TypeRef.VariantType("Tup")
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeEntity, base: Variance => TypeEntity, dist: Int): View =
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int): View =
       SubType(cls(Covariant), base(Covariant), dist)
 
     List(
@@ -77,7 +77,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {
     // Corresponds to the query "(A, X) => D"
-    val q = TypeEntity.Ignored(A(Contravariant) :: X(Contravariant) :: D(Covariant) :: Nil)
+    val q = TypeRef.Ignored(A(Contravariant) :: X(Contravariant) :: D(Covariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -101,7 +101,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "use alternative types at contravariant positions" in {
     // D => _
-    val q = TypeEntity.Ignored(D(Contravariant) :: Nil)
+    val q = TypeRef.Ignored(D(Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -113,7 +113,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "split types with args into a sum query" in {
     // Box[A] => _
-    val q = TypeEntity.Ignored(Box(A(Contravariant), Contravariant) :: Nil)
+    val q = TypeRef.Ignored(Box(A(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -125,7 +125,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "handle alternatives of types with args" in {
     // MyBox[B] => _
-    val q = TypeEntity.Ignored(MyBox(B(Contravariant), Contravariant) :: Nil)
+    val q = TypeRef.Ignored(MyBox(B(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -144,7 +144,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "handle alternatives with additional args" in {
     // CBox => _
-    val q = TypeEntity.Ignored(CBox(Contravariant) :: Nil)
+    val q = TypeRef.Ignored(CBox(Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -160,7 +160,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "handle alternatives with unrelated args" in {
     // GenericCBox[X] => _
-    val q = TypeEntity.Ignored(GenericCBox(X(Contravariant), Contravariant) :: Nil)
+    val q = TypeRef.Ignored(GenericCBox(X(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -214,7 +214,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "expand types with a subtype equal to one of the type arguments" in {
     // YBag[Y] => _
-    val q = TypeEntity.Ignored(YBag(Y(Contravariant), Contravariant) :: Nil)
+    val q = TypeRef.Ignored(YBag(Y(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -230,7 +230,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
   it should "not recurse on self referencing types" in {
     // MyLoop[A] => _
-    val q = TypeEntity.Ignored(MyLoop(A(Contravariant), Contravariant) :: Nil)
+    val q = TypeRef.Ignored(MyLoop(A(Contravariant), Contravariant) :: Nil)
 
     expand(q) should be(unified(
       Sum(
@@ -258,9 +258,9 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val analyzer = new QueryAnalyzer(
     Settings.fromApplicationConf.query,
     _ => ???,
-    viewIndex.findAlternativesWithDistance(_).get.filter(_._1.name != TypeEntity.Nothing.name))
+    viewIndex.findAlternativesWithDistance(_).get.filter(_._1.name != TypeRef.Nothing.name))
 
-  def expand(q: TypeEntity) =
+  def expand(q: TypeRef) =
     unified(analyzer.expandQuery(q))
 
   implicit val ordering: Ordering[ExpandedQuery] = Ordering[(Int, Int)].on {

@@ -6,8 +6,8 @@ import scalatags.generic.TypedTag
 import scaps.webapi.IndexStatus
 import scaps.webapi.IndexBusy
 import scaps.webapi.ValueDef
-import scaps.webapi.TypeEntity
-import scaps.webapi.TypeEntity.MemberAccess
+import scaps.webapi.TypeRef
+import scaps.webapi.TypeRef.MemberAccess
 import scaps.webapi.TypeParameterEntity
 import scaps.webapi.ScapsApi
 import scaps.webapi.BuildInfo
@@ -166,36 +166,36 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   }
 
   def result(resultNo: Int, value: ValueDef) = {
-    def typeName(t: TypeEntity) =
+    def typeName(t: TypeRef) =
       if (value.typeParameters.exists(_.name == t.name))
         em(ScapsStyle.typeParameter)(t.name)
       else
         em(a(attrs.title := t.name)(t.shortName))
 
-    def tpe(t: TypeEntity): Modifier = t match {
-      case TypeEntity.Function(params, res, _) =>
+    def tpe(t: TypeRef): Modifier = t match {
+      case TypeRef.Function(params, res, _) =>
         val paramTypes =
           span("(", intersperse[Modifier](params.map(tpe(_)), ", "), ")")
         span(paramTypes, " => ", tpe(res))
-      case TypeEntity.Tuple(tpes, _) =>
+      case TypeRef.Tuple(tpes, _) =>
         span("(", intersperse[Modifier](tpes.map(tpe(_)), ", "), ")")
-      case TypeEntity.Refinement(tpes, _) =>
+      case TypeRef.Refinement(tpes, _) =>
         span(intersperse[Modifier](tpes.map(tpe(_)), " with "))
-      case TypeEntity.ByName(arg, _) =>
+      case TypeRef.ByName(arg, _) =>
         span(" => ", tpe(arg))
-      case TypeEntity.Repeated(arg, _) =>
+      case TypeRef.Repeated(arg, _) =>
         span(tpe(arg), "*")
-      case TypeEntity.Implicit(arg, _) =>
+      case TypeRef.Implicit(arg, _) =>
         span("implicit ", tpe(arg))
-      case t @ TypeEntity(_, _, args, _) =>
+      case t @ TypeRef(_, _, args, _) =>
         val typeArgs =
           if (args.isEmpty) span()
           else span("[", intersperse[Modifier](args.map(tpe(_)), ", "), "]")
         span(typeName(t), typeArgs)
     }
 
-    def signature(t: TypeEntity): Modifier = t match {
-      case TypeEntity.MethodInvocation(args, res, _) =>
+    def signature(t: TypeRef): Modifier = t match {
+      case TypeRef.MethodInvocation(args, res, _) =>
         span("(", intersperse[Modifier](args.map(tpe(_)), ", "), ")", signature(res))
       case t =>
         span(": ", tpe(t))
@@ -216,7 +216,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     Seq(
       dt(code(value.tpe match {
-        case TypeEntity.MemberAccess(owner, member) =>
+        case TypeRef.MemberAccess(owner, member) =>
           val memberTypeParams = value.typeParameters
             .filterNot(p => owner.toList.exists(_.name == p.name))
 

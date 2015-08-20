@@ -13,7 +13,7 @@ import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.searchEngine.index.ViewIndex
 import scaps.settings.Settings
 import scaps.webapi.TypeDef
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.View
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
@@ -139,8 +139,8 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   it should "yield a lower boost for types in deeper nested positions" in {
     val res = expectSuccess("(Float, (Int, _))")
 
-    val Float = res.allTypes.find(_.typeName == TypeEntity.Float.name).get
-    val Int = res.allTypes.find(_.typeName == TypeEntity.Int.name).get
+    val Float = res.allTypes.find(_.typeName == TypeRef.Float.name).get
+    val Int = res.allTypes.find(_.typeName == TypeRef.Int.name).get
 
     Float.boost should be > (Int.boost)
   }

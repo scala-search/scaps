@@ -6,18 +6,18 @@ import scala.util.Random
 import scaps.utils._
 
 object TypeFrequencies {
-  def apply(findAlternatives: TypeEntity => Seq[TypeEntity],
+  def apply(findAlternatives: TypeRef => Seq[TypeRef],
             values: Seq[ValueDef],
             maxSampleSize: Int): Map[(Variance, String), Float] = {
     // use weak hash map to avoid out of memory exceptions
     val findAlternativesCached = Memo.weakHashMapMemo { findAlternatives }
 
-    def types(tpe: TypeEntity): Seq[TypeEntity] = {
-      def rec(tpe: TypeEntity): Seq[TypeEntity] =
+    def types(tpe: TypeRef): Seq[TypeRef] = {
+      def rec(tpe: TypeRef): Seq[TypeRef] =
         tpe match {
-          case TypeEntity.Ignored(args, _) =>
+          case TypeRef.Ignored(args, _) =>
             args.flatMap(rec)
-          case t @ TypeEntity(_, _, args, false) =>
+          case t @ TypeRef(_, _, args, false) =>
             (t +: findAlternativesCached(t.withArgsAsParams)) ++ args.flatMap(rec)
           case _ => Nil
         }
@@ -50,6 +50,6 @@ object TypeFrequencies {
     // the query expression for ListOps[Any] achieves usually higher scores than the one for List[Any].
     // This method is a dirty fix and rather arbitrarily but helps significantly in achieving better results!
     tfs
-      .updated((Invariant, TypeEntity.Any.name), tfs((Contravariant, TypeEntity.Any.name)))
-      .updated((Invariant, TypeEntity.Nothing.name), tfs((Covariant, TypeEntity.Nothing.name)))
+      .updated((Invariant, TypeRef.Any.name), tfs((Contravariant, TypeRef.Any.name)))
+      .updated((Invariant, TypeRef.Nothing.name), tfs((Covariant, TypeRef.Nothing.name)))
 }

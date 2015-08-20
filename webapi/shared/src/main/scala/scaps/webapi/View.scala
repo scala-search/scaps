@@ -3,8 +3,8 @@ package scaps.webapi
 sealed trait View {
   import View._
 
-  def from: TypeEntity
-  def to: TypeEntity
+  def from: TypeRef
+  def to: TypeRef
 
   assert(from.variance == Covariant, s"$from is not covariant")
   assert(to.variance == Covariant, s"$to is not covariant")
@@ -18,13 +18,13 @@ sealed trait View {
 object View {
   private def fromTypeDef(cls: TypeDef): Seq[View] = {
     val toRepeated = {
-      if (cls.name == TypeEntity.Seq.name) {
+      if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
-        Seq(ImplicitConversion(cls.toType, TypeEntity.Repeated(TypeEntity(p.name, Covariant, Nil, true)), ""))
+        Seq(ImplicitConversion(cls.toType, TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), ""))
       } else {
         cls.baseTypes.collect {
-          case TypeEntity.Seq(t, _) =>
-            ImplicitConversion(cls.toType, TypeEntity.Repeated(t), "")
+          case TypeRef.Seq(t, _) =>
+            ImplicitConversion(cls.toType, TypeRef.Repeated(t), "")
         }
       }
     }
@@ -39,7 +39,7 @@ object View {
   private def fromValue(t: ValueDef): Seq[View] = {
     if (t.isImplicit && t.isStatic) {
       t.tpe.withoutImplicitParams.etaExpanded match {
-        case TypeEntity.Function(from :: Nil, to, _) =>
+        case TypeRef.Function(from :: Nil, to, _) =>
           Seq(ImplicitConversion(from.withVariance(Covariant), to, t.name))
         case _ =>
           Nil
@@ -53,11 +53,11 @@ object View {
     case t: ValueDef  => fromValue(t)
   }
 
-  def key(tpe: TypeEntity) =
+  def key(tpe: TypeRef) =
     tpe.renameTypeParams(_ => "_").signature
 }
 
-case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Float) extends View {
+case class SubType(cls: TypeRef, baseType: TypeRef, distance: Float) extends View {
   def from = cls
   def to = baseType
 
@@ -65,7 +65,7 @@ case class SubType(cls: TypeEntity, baseType: TypeEntity, distance: Float) exten
     s"$fromKey is subtype of $toKey ($distance)"
 }
 
-case class ImplicitConversion(from: TypeEntity, to: TypeEntity, evidence: String) extends View {
+case class ImplicitConversion(from: TypeRef, to: TypeRef, evidence: String) extends View {
   def distance = 0.5f
 
   override def toString =

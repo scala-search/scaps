@@ -14,7 +14,7 @@ import scaps.webapi.TypeDef
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Invariant
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.Variance
 import scaps.webapi.View
 import scaps.utils._
@@ -57,7 +57,7 @@ private[queries] object ExpandedQuery {
       Max(alts.toList)
   }
 
-  case class Leaf(tpe: TypeEntity, fraction: Double, depth: Int, dist: Float) extends Part with Alternative {
+  case class Leaf(tpe: TypeRef, fraction: Double, depth: Int, dist: Float) extends Part with Alternative {
     val children = Nil
 
     override def toString =
@@ -119,7 +119,7 @@ private[queries] object ExpandedQuery {
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
   findTypeDefsBySuffix: (String) => Seq[TypeDef],
-  findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Float)]) {
+  findAlternativesWithDistance: (TypeRef) => Seq[(TypeRef, Float)]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the values index.
@@ -164,23 +164,23 @@ class QueryAnalyzer private[searchEngine] (
   private def isTypeParam(name: String): Boolean =
     name.length() == 1 && (name(0).isLetter || name(0) == '_')
 
-  private def toType(resolved: ResolvedQuery): TypeEntity = {
-    def rec(resolved: ResolvedQuery, variance: Variance): TypeEntity =
+  private def toType(resolved: ResolvedQuery): TypeRef = {
+    def rec(resolved: ResolvedQuery, variance: Variance): TypeRef =
       resolved match {
         case ResolvedQuery.Wildcard =>
-          TypeEntity.Unknown(variance)
+          TypeRef.Unknown(variance)
         case ResolvedQuery.Type(cls, args) =>
           val tpeArgs = cls.typeParameters.zip(args).map {
             case (tpeParam, ResolvedQuery.Wildcard) =>
               (variance * tpeParam.variance) match {
-                case Covariant     => TypeEntity(tpeParam.lowerBound, Covariant, Nil)
-                case Contravariant => TypeEntity(tpeParam.upperBound, Contravariant, Nil)
-                case Invariant     => TypeEntity.Unknown(Invariant)
+                case Covariant     => TypeRef(tpeParam.lowerBound, Covariant, Nil)
+                case Contravariant => TypeRef(tpeParam.upperBound, Contravariant, Nil)
+                case Invariant     => TypeRef.Unknown(Invariant)
               }
             case (tpeParam, arg) =>
               rec(arg, variance * tpeParam.variance)
           }
-          TypeEntity(cls.name, variance, tpeArgs)
+          TypeRef(cls.name, variance, tpeArgs)
       }
 
     rec(resolved, Covariant)
@@ -189,12 +189,12 @@ class QueryAnalyzer private[searchEngine] (
   /**
    * Builds the query structure of parts and alternatives for a type.
    */
-  private[queries] def expandQuery(tpe: TypeEntity): ExpandedQuery.Alternative = {
+  private[queries] def expandQuery(tpe: TypeRef): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
-    def parts(tpe: TypeEntity, fraction: Double, depth: Int, dist: Float, outerTpes: Set[TypeEntity]): Alternative = {
+    def parts(tpe: TypeRef, fraction: Double, depth: Int, dist: Float, outerTpes: Set[TypeRef]): Alternative = {
       tpe match {
-        case TypeEntity.Ignored(args, v) =>
+        case TypeRef.Ignored(args, v) =>
           val partFraction = fraction / args.length
 
           Sum(args.map(alternatives(_, partFraction, depth, outerTpes)))
@@ -212,7 +212,7 @@ class QueryAnalyzer private[searchEngine] (
       }
     }
 
-    def alternatives(tpe: TypeEntity, fraction: Double, depth: Int, outerTpes: Set[TypeEntity]): Part = {
+    def alternatives(tpe: TypeRef, fraction: Double, depth: Int, outerTpes: Set[TypeRef]): Part = {
       val alternativesWithDistance =
         if (settings.views) findAlternativesWithDistance(tpe).toList
         else Nil
@@ -230,10 +230,10 @@ class QueryAnalyzer private[searchEngine] (
     }
 
     tpe match {
-      case TypeEntity.Ignored(args, _) =>
+      case TypeRef.Ignored(args, _) =>
         parts(tpe, 1, 0, 0, Set())
       case _ =>
-        parts(TypeEntity.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
+        parts(TypeRef.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
     }
   }
 

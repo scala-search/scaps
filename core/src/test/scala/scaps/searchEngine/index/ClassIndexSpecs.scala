@@ -72,12 +72,12 @@ class TypeIndexSpecs extends FlatSpec with Matchers with IndexUtils {
     }
   }
 
-  def tpe(name: String, args: List[TypeEntity] = Nil) =
-    TypeEntity(name, Covariant, args)
+  def tpe(name: String, args: List[TypeRef] = Nil) =
+    TypeRef(name, Covariant, args)
 
-  def cls(name: String)(args: String*)(baseTypes: TypeEntity*) =
+  def cls(name: String)(args: String*)(baseTypes: TypeRef*) =
     TypeDef(
       name,
       args.map(TypeParameterEntity(_, Invariant)).toList,
-      baseTypes.toList ++ List(TypeEntity.AnyRef(), TypeEntity.Any()))
+      baseTypes.toList ++ List(TypeRef.AnyRef(), TypeRef.Any()))
 }

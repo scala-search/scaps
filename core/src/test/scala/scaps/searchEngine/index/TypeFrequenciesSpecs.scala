@@ -6,7 +6,7 @@ import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Invariant
 import scaps.webapi.ValueDef
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.View
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
@@ -26,12 +26,12 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       }
       """)
 
-    val tfAny = tfs((Covariant, TypeEntity.Any.name))
+    val tfAny = tfs((Covariant, TypeRef.Any.name))
     val tfA = tfs((Covariant, "p.A"))
     val tfB = tfs((Covariant, "p.B"))
     val tfB2 = tfs((Covariant, "p.B2"))
     val tfC = tfs((Covariant, "p.C"))
-    val tfNothing = tfs((Covariant, TypeEntity.Nothing.name))
+    val tfNothing = tfs((Covariant, TypeRef.Nothing.name))
 
     tfAny should be(0f)
     tfA should be(1f / maxFreq) // m1
@@ -58,12 +58,12 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       }
       """)
 
-    val tfAny = tfs((Contravariant, TypeEntity.Any.name))
+    val tfAny = tfs((Contravariant, TypeRef.Any.name))
     val tfA = tfs((Contravariant, "p.A"))
     val tfB = tfs((Contravariant, "p.B"))
     val tfB2 = tfs((Contravariant, "p.B2"))
     val tfC = tfs((Contravariant, "p.C"))
-    val tfNothing = tfs((Contravariant, TypeEntity.Nothing.name))
+    val tfNothing = tfs((Contravariant, TypeRef.Nothing.name))
 
     tfAny should be >= tfA
     tfA should (

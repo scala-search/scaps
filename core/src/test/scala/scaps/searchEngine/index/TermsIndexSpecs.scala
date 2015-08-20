@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
 import scaps.webapi.ValueDef
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
@@ -15,7 +15,7 @@ class ValuesIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val v = 1
       }
       """) { index =>
-      val v = ValueDef("p.O.v", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      val v = ValueDef("p.O.v", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
       index.findValuesByName("v").get should (have size 1)
     }
   }
@@ -28,7 +28,7 @@ class ValuesIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val value = 1
       }
       """) { index =>
-      val value = ValueDef("pkg.Obj.value", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      val value = ValueDef("pkg.Obj.value", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
       index.findValuesByName("value").get should contain(value)
       index.findValuesByName("obj").get should contain(value)
       index.findValuesByName("pkg").get should contain(value)
@@ -44,7 +44,7 @@ class ValuesIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val myValue = 1
       }
       """) { index =>
-      val value = ValueDef("somePkg.AnotherObj.myValue", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      val value = ValueDef("somePkg.AnotherObj.myValue", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
       index.findValuesByName("value").get should contain(value)
       index.findValuesByName("another").get should contain(value)
       index.findValuesByName("pkg").get should contain(value)
@@ -60,7 +60,7 @@ class ValuesIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val ++ = 1
       }
       """) { index =>
-      val value = ValueDef("p.::.++", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      val value = ValueDef("p.::.++", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
       index.findValuesByName("::").get should contain(value)
       index.findValuesByName("++").get should contain(value)
     }

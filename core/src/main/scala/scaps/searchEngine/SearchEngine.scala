@@ -29,7 +29,7 @@ import scaps.webapi.Definition
 import scaps.webapi.Invariant
 import scaps.webapi.Module
 import scaps.webapi.ValueDef
-import scaps.webapi.TypeEntity
+import scaps.webapi.TypeRef
 import scaps.webapi.TypeParameterEntity
 import scaps.webapi.Variance
 import scaps.webapi.View
@@ -118,8 +118,8 @@ class SearchEngine private[searchEngine] (
           t.copy(module = module)
 
       val entitiesWithSyntheticTypes = entities ++ List(
-        TypeDef(TypeEntity.Unknown.name, Nil, Nil),
-        TypeDef(TypeEntity.Implicit.name, TypeParameterEntity("T", Invariant) :: Nil, Nil))
+        TypeDef(TypeRef.Unknown.name, Nil, Nil),
+        TypeDef(TypeRef.Implicit.name, TypeParameterEntity("T", Invariant) :: Nil, Nil))
 
       val valuesWithModule = entitiesWithSyntheticTypes
         .collect { case t: ValueDef => setModule(t) }
