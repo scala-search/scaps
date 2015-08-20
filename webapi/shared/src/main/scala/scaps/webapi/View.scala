@@ -18,6 +18,7 @@ sealed trait View {
 object View {
   private def fromTypeDef(cls: TypeDef): Seq[View] = {
     val toRepeated = {
+      // create implicit conversions from Seq and subtypes thereof to repeated args
       if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
         Seq(ImplicitConversion(cls.toType, TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), ""))
@@ -49,8 +50,8 @@ object View {
   }
 
   def fromEntity(e: Definition): Seq[View] = e match {
-    case c: TypeDef => fromTypeDef(c)
-    case t: ValueDef  => fromValue(t)
+    case c: TypeDef  => fromTypeDef(c)
+    case t: ValueDef => fromValue(t)
   }
 
   def key(tpe: TypeRef) =
