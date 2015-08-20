@@ -114,15 +114,15 @@ private[queries] object ExpandedQuery {
  * Analyzes parsed queries.
  *
  * Instances require access to the class and view index which can be injected via
- * `findClassesBySuffix` and `findAlternativesWithDistance`
+ * `findTypeDefsBySuffix` and `findAlternativesWithDistance`
  */
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
-  findClassesBySuffix: (String) => Seq[TypeDef],
+  findTypeDefsBySuffix: (String) => Seq[TypeDef],
   findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Float)]) {
 
   /**
-   * Transforms a parsed query into a query that can be passed to the terms index.
+   * Transforms a parsed query into a query that can be passed to the values index.
    */
   def apply(raw: RawQuery): SemanticError \/ ApiQuery =
     for {
@@ -144,7 +144,7 @@ class QueryAnalyzer private[searchEngine] (
       raw.args.map(arg => resolveNames(arg)).sequenceU
 
     resolvedArgs.flatMap { resolvedArgs =>
-      findClassesBySuffix(raw.name) match {
+      findTypeDefsBySuffix(raw.name) match {
         case Seq() if isTypeParam(raw.name) =>
           \/.right(ResolvedQuery.Wildcard)
         case Seq() =>
@@ -278,5 +278,5 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private def getFrequency(v: Variance, t: String) =
-    findClassesBySuffix(t).headOption.map(_.frequency(v)).getOrElse(0f)
+    findTypeDefsBySuffix(t).headOption.map(_.frequency(v)).getOrElse(0f)
 }

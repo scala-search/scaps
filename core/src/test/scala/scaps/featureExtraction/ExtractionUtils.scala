@@ -19,12 +19,12 @@ trait ExtractionUtils extends Matchers {
       }
     }
 
-  def extractAllTerms(source: String): Seq[TermEntity] = {
-    extractAll(source).collect { case t: TermEntity => t }
+  def extractAllValues(source: String): Seq[ValueDef] = {
+    extractAll(source).collect { case t: ValueDef => t }
   }
 
-  def extractTerms(source: String)(entityHandlers: (String, TermEntity => Unit)*): Unit = {
-    val entities = extractAllTerms(source)
+  def extractValues(source: String)(entityHandlers: (String, ValueDef => Unit)*): Unit = {
+    val entities = extractAllValues(source)
     val names = entities.map(_.name)
 
     entityHandlers.foreach { handler =>
@@ -36,15 +36,15 @@ trait ExtractionUtils extends Matchers {
     }
   }
 
-  def shouldExtractTerms(source: String)(entityNames: String*): Unit =
-    extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
+  def shouldExtractValues(source: String)(entityNames: String*): Unit =
+    extractValues(source)(entityNames.map(n => (n, (_: ValueDef) => ())): _*)
 
-  def extractAllClasses(source: String): Seq[TypeDef] = {
+  def extractAllTypeDefs(source: String): Seq[TypeDef] = {
     extractAll(source).collect { case c: TypeDef => c }
   }
 
-  def extractClasses(source: String)(entityHandlers: (String, TypeDef => Unit)*): Unit = {
-    val entities = extractAllClasses(source)
+  def extractTypeDefs(source: String)(entityHandlers: (String, TypeDef => Unit)*): Unit = {
+    val entities = extractAllTypeDefs(source)
     val names = entities.map(_.name)
 
     entityHandlers.foreach { handler =>

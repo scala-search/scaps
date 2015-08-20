@@ -38,7 +38,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       class C
       """))
 
-  "the search engine" should "index terms from various modules" in
+  "the search engine" should "index values from various modules" in
     withSearchEngine { searchEngine =>
       val results = searchEngine.search("Int").get.fold(qe => fail(qe.toString), identity)
 
@@ -66,10 +66,10 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "accumulate referencedFrom fields from class entities" in
     withSearchEngine { searchEngine =>
-      val intClasses = searchEngine.classesIndex.findClassBySuffix("Int").get
+      val intTypeDefs = searchEngine.typeDefsIndex.findTypeDefsBySuffix("Int").get
 
-      intClasses.size should be(1)
-      intClasses.head.referencedFrom should be(
+      intTypeDefs.size should be(1)
+      intTypeDefs.head.referencedFrom should be(
         Set(module1._1, module2._1))
     }
 
@@ -81,10 +81,10 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         // empty, float is no longer referenced from module1
         """)).get
 
-      val floatClasses = searchEngine.classesIndex.findClassBySuffix("Float").get
+      val floatTypeDefs = searchEngine.typeDefsIndex.findTypeDefsBySuffix("Float").get
 
-      floatClasses.size should be(1)
-      floatClasses.head.referencedFrom should be(
+      floatTypeDefs.size should be(1)
+      floatTypeDefs.head.referencedFrom should be(
         Set(module2._1))
     }
 
@@ -106,7 +106,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       }
     }
 
-  it should "overwritte terms when reindexed with the same module id" in
+  it should "overwritte values when reindexed with the same module id" in
     withSearchEngine { searchEngine =>
       val f = searchEngine.indexEntities(module1._1, extractAll("""
         package p
@@ -124,7 +124,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         and contain("p.O.neu"))
     }
 
-  it should "overwritte classes when reindexed with the same module id" in
+  it should "overwritte typeDefs when reindexed with the same module id" in
     withSearchEngine { searchEngine =>
       searchEngine.indexEntities(module1._1, extractAll("""
         package p
@@ -132,7 +132,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         // empty, p.C does no longer exist in module1
         """)).get
 
-      val c = searchEngine.classesIndex.findClassBySuffix("p.C").get
+      val c = searchEngine.typeDefsIndex.findTypeDefsBySuffix("p.C").get
 
       c should be(Seq())
     }
@@ -141,14 +141,14 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
     withSearchEngine(module1, module2)(block)
 
   def withSearchEngine(modulesWithEntities: (Module, Seq[Definition])*)(block: SearchEngine => Unit) =
-    withTermIndex { termIndex =>
-      withClassIndex { classIndex =>
+    withValueIndex { valueIndex =>
+      withTypeIndex { typeIndex =>
         withModuleIndex { moduleIndex =>
           withViewIndex { viewIndex =>
             val settings = Settings.fromApplicationConf
 
             val se = new SearchEngine(
-              settings, termIndex, classIndex, moduleIndex, viewIndex)
+              settings, valueIndex, typeIndex, moduleIndex, viewIndex)
 
             for ((module, entities) <- modulesWithEntities) {
               se.indexEntities(module, entities).get

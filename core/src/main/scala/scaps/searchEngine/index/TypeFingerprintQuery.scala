@@ -45,7 +45,7 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
 
       def score(doc: Int): Float = {
         // There is probably a faster way to access the field value for every matched document.
-        // Accessing the fingerprint through term vectors resulted in slightly worse performance.
+        // Accessing the fingerprint through value vectors resulted in slightly worse performance.
         val fingerprint = reader.document(doc).getValues(field)
 
         scorer.score(fingerprint)
@@ -82,14 +82,14 @@ object TypeFingerprintQuery extends Logging {
   def matcherQuery(field: String, typeQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double) = {
     val fingerprintMatcher = new BooleanQuery
 
-    val terms = termsBelowCutoff(typeQuery, frequencyCutoff)
+    val values = valuesBelowCutoff(typeQuery, frequencyCutoff)
 
-    logger.debug(s"Matching documents with fingerprint types: $terms")
+    logger.debug(s"Matching documents with fingerprint types: $values")
 
     for {
-      term <- terms
+      value <- values
     } {
-      fingerprintMatcher.add(new TermQuery(new Term(field, term)), Occur.SHOULD)
+      fingerprintMatcher.add(new TermQuery(new Term(field, value)), Occur.SHOULD)
     }
 
     val matcherQuery = new BooleanQuery
@@ -99,21 +99,21 @@ object TypeFingerprintQuery extends Logging {
     matcherQuery
   }
 
-  def termsBelowCutoff(typeQuery: ApiTypeQuery, frequencyCutoff: Double): List[String] = {
+  def valuesBelowCutoff(typeQuery: ApiTypeQuery, frequencyCutoff: Double): List[String] = {
     val rankedTermsWithFreq = typeQuery.allTypes
       .sortBy(-_.boost)
       .map(t => (t.fingerprint, t.typeFrequency))
       .distinct
 
-    val (terms, _) = rankedTermsWithFreq.foldLeft((List[String](), 0f)) {
-      case (acc @ (accTerms, accFreq), (term, freq)) =>
+    val (values, _) = rankedTermsWithFreq.foldLeft((List[String](), 0f)) {
+      case (acc @ (accTerms, accFreq), (value, freq)) =>
         if (accFreq + freq < frequencyCutoff)
-          (term :: accTerms, accFreq + freq)
+          (value :: accTerms, accFreq + freq)
         else
           acc
     }
 
-    terms
+    values
   }
 
   object FingerprintScorer {
@@ -149,35 +149,35 @@ object TypeFingerprintQuery extends Logging {
        * may not return the maximum score for a fingerprint (see ignored test cases).
        *
        * Scoring a fingerprint against a query is a harder problem as one would
-       * intuitively think. An additional term in the fingerprint may require
-       * reassignment of all previously matched terms. Thus, probably the only
+       * intuitively think. An additional value in the fingerprint may require
+       * reassignment of all previously matched values. Thus, probably the only
        * approach to yield an optimal result is to check all permutations of the
        * fingerprint.
        *
        * The following heuristic first orders the fingerprint by the maximum
-       * achievable score of each individual term and uses this order to score
+       * achievable score of each individual value and uses this order to score
        * the fingerprint as a whole.
        */
-      val (termScores, preparedScorer) = prepare(fingerprint.distinct)
+      val (valueScores, preparedScorer) = prepare(fingerprint.distinct)
 
-      val terms = {
-        val (termsWithMaxScore, _) = termScores
+      val values = {
+        val (valuesWithMaxScore, _) = valueScores
           .sortBy(-_._2)
           .foldLeft((List[(String, Float)](), fingerprint)) {
-            case ((acc, fp), (term, score)) =>
-              if (fp.contains(term))
-                ((term, score) :: acc, fp.diff(List(term)))
+            case ((acc, fp), (value, score)) =>
+              if (fp.contains(value))
+                ((value, score) :: acc, fp.diff(List(value)))
               else
                 (acc, fp)
           }
 
-        termsWithMaxScore
+        valuesWithMaxScore
           .filter(_._2 > 0f)
           .sortBy(-_._2)
           .map(_._1)
       }
 
-      terms.foldLeft((0f, FingerprintScorer.minimize(preparedScorer))) {
+      values.foldLeft((0f, FingerprintScorer.minimize(preparedScorer))) {
         case ((score, scorer), fpt) =>
           scorer.score(fpt).fold {
             (score, scorer)

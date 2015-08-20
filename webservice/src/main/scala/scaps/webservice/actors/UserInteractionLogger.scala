@@ -2,7 +2,7 @@ package scaps.webservice.actors
 
 import akka.actor.Actor
 import scalaz._
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 import akka.event.Logging
 
 class UserInteractionLogger extends Actor {

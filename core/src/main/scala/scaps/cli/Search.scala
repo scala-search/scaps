@@ -27,10 +27,10 @@ object Search extends App {
         case TooUnspecific() =>
           println(s"Query too unspecific consider using wildcards '_' instead of 'Any' types")
       },
-      results => results.take(10).foreach { term =>
-        println(term.signature)
-        println(term.tpe.normalize(term.typeParameters))
-        println(term.typeFingerprint)
+      results => results.take(10).foreach { value =>
+        println(value.signature)
+        println(value.tpe.normalize(value.typeParameters))
+        println(value.typeFingerprint)
         println()
       })
   }

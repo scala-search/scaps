@@ -9,15 +9,15 @@ import scala.collection.generic.CanBuildFrom
 case class ExtractionError(entityName: String, error: Throwable)
 
 object ExtractionError {
-  def handleErrors[M[_]: MonadPlus](errorOrEntities: M[ExtractionError \/ Definition])(handler: ExtractionError => Unit): M[Definition] =
+  def handleErrors[M[_]: MonadPlus](errorOrDefs: M[ExtractionError \/ Definition])(handler: ExtractionError => Unit): M[Definition] =
     for {
-      errorOrEntity <- errorOrEntities
-      entity <- errorOrEntity.fold(e => { handler(e); MonadPlus[M].empty }, MonadPlus[M].point(_))
-    } yield entity
+      errorOrDef <- errorOrDefs
+      definition <- errorOrDef.fold(e => { handler(e); MonadPlus[M].empty }, MonadPlus[M].point(_))
+    } yield definition
 
-  def ignoreErrors[M[_]: MonadPlus](errorOrEntities: M[ExtractionError \/ Definition]): M[Definition] =
-    handleErrors(errorOrEntities)(_ => ())
+  def ignoreErrors[M[_]: MonadPlus](errorOrDefs: M[ExtractionError \/ Definition]): M[Definition] =
+    handleErrors(errorOrDefs)(_ => ())
 
-  def logErrors[M[_]: MonadPlus](errorOrEntities: M[ExtractionError \/ Definition], log: String => Unit): M[Definition] =
-    handleErrors(errorOrEntities) { e => log(s"Error during extraction of ${e.entityName}: ${e.error}") }
+  def logErrors[M[_]: MonadPlus](errorOrDefs: M[ExtractionError \/ Definition], log: String => Unit): M[Definition] =
+    handleErrors(errorOrDefs) { e => log(s"Error during extraction of ${e.entityName}: ${e.error}") }
 }

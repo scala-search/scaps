@@ -65,12 +65,12 @@ case class TypeDef(
     TypeEntity(name, Covariant, typeParameters.map(p => TypeEntity(p.name, p.variance, Nil, true)))
 }
 
-case class TermEntity(
+case class ValueDef(
   name: String,
   typeParameters: List[TypeParameterEntity],
   tpe: TypeEntity,
   comment: String,
-  flags: Set[TermEntity.Flag] = Set(),
+  flags: Set[ValueDef.Flag] = Set(),
   module: Module = Module.Unknown)
   extends Definition {
 
@@ -88,7 +88,7 @@ case class TermEntity(
   }
 
   /**
-   * A unique description of the term including its name and type.
+   * A unique description of the value including its name and type.
    */
   def signature: String = {
     val params = typeParameters match {
@@ -103,14 +103,14 @@ case class TermEntity(
 
   def withoutComment = copy(comment = "")
 
-  def isOverride = flags(TermEntity.Overrides)
+  def isOverride = flags(ValueDef.Overrides)
 
-  def isImplicit = flags(TermEntity.Implicit)
+  def isImplicit = flags(ValueDef.Implicit)
 
-  def isStatic = flags(TermEntity.Static)
+  def isStatic = flags(ValueDef.Static)
 }
 
-object TermEntity {
+object ValueDef {
   sealed trait Flag {
     def name: String
   }
@@ -223,7 +223,7 @@ case class TypeEntity(name: String, variance: Variance, args: List[TypeEntity], 
       case tpe => List(tpe)
     }
 
-    // outermost function applications are ignored
+    // ouvalueost function applications are ignored
     Ignored((loop _ andThen paramsAndReturnTpes)(this))
   }
 

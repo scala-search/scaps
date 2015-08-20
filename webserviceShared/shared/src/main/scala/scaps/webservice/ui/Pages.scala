@@ -5,7 +5,7 @@ import scalatags.generic.Bundle
 import scalatags.generic.TypedTag
 import scaps.webapi.IndexStatus
 import scaps.webapi.IndexBusy
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 import scaps.webapi.TypeEntity
 import scaps.webapi.TypeEntity.MemberAccess
 import scaps.webapi.TypeParameterEntity
@@ -35,8 +35,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     def boot(searchFormId: String, resultContainerId: String) =
       s"$main.main(document.getElementById('$searchFormId'), document.getElementById('$resultContainerId'))"
 
-    def assessPositively(feedbackElementId: String, resultNo: Int, term: TermEntity) =
-      s"$main.assessPositively(document.getElementById('$feedbackElementId'), $resultNo, '${term.signature}')"
+    def assessPositively(feedbackElementId: String, resultNo: Int, value: ValueDef) =
+      s"$main.assessPositively(document.getElementById('$feedbackElementId'), $resultNo, '${value.signature}')"
   }
 
   def searchUri(query: String, enabledModuleIds: Set[String] = Set(), page: Int = 0) = {
@@ -145,7 +145,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-danger")(msg)
 
-  def results(currentPage: Int, query: String, enabledModuleIds: Set[String], results: Seq[TermEntity]) = {
+  def results(currentPage: Int, query: String, enabledModuleIds: Set[String], results: Seq[ValueDef]) = {
     val pager =
       nav(
         ul(cls := "pager")(
@@ -158,16 +158,16 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     val renderedResults = results
       .zipWithIndex
-      .map { case (term, idx) => result((currentPage * ScapsApi.defaultPageSize) + idx, term) }
+      .map { case (value, idx) => result((currentPage * ScapsApi.defaultPageSize) + idx, value) }
 
     div(
       dl(renderedResults),
       pager)
   }
 
-  def result(resultNo: Int, term: TermEntity) = {
+  def result(resultNo: Int, value: ValueDef) = {
     def typeName(t: TypeEntity) =
-      if (term.typeParameters.exists(_.name == t.name))
+      if (value.typeParameters.exists(_.name == t.name))
         em(ScapsStyle.typeParameter)(t.name)
       else
         em(a(attrs.title := t.name)(t.shortName))
@@ -206,26 +206,26 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       else span("[", intersperse[Modifier](ps.map(p => em(ScapsStyle.typeParameter)(p.toString)), ", "), "]")
 
     val feedback = {
-      val feedbackElemId = s"feedback_${term.signature}"
+      val feedbackElemId = s"feedback_${value.signature}"
 
       div(id := feedbackElemId)(
         a(href := "javascript:void(0);",
-          onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, term))(
+          onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, value))(
             span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
 
     Seq(
-      dt(code(term.tpe match {
+      dt(code(value.tpe match {
         case TypeEntity.MemberAccess(owner, member) =>
-          val memberTypeParams = term.typeParameters
+          val memberTypeParams = value.typeParameters
             .filterNot(p => owner.toList.exists(_.name == p.name))
 
-          span(tpe(owner), ".", strong(term.shortName), typeParams(memberTypeParams), signature(member))
+          span(tpe(owner), ".", strong(value.shortName), typeParams(memberTypeParams), signature(member))
         case t =>
-          span(strong(term.name), typeParams(term.typeParameters), signature(t))
+          span(strong(value.name), typeParams(value.typeParameters), signature(t))
       })),
-      dd(div(term.comment),
-        div(span(cls := "label label-default")(term.module.name), " ", term.name),
+      dd(div(value.comment),
+        div(span(cls := "label label-default")(value.module.name), " ", value.name),
         feedback))
   }
 

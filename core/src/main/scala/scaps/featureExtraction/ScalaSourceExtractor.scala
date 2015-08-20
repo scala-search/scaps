@@ -57,7 +57,7 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logg
       case impl: ImplDef =>
         val sym = impl.symbol
         if (sym.isPublic)
-          (sym :: sym.tpe.decls.filter(isTermOfInterest).toList, true)
+          (sym :: sym.tpe.decls.filter(isValueOfInterest).toList, true)
         else
           (Nil, false)
       case v: ValOrDefDef =>

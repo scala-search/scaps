@@ -13,35 +13,35 @@ trait EntityFactory extends Logging {
   import compiler.{ TypeDef => _, _ }
 
   def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Definition] =
-    if (isClassOfInterest(classSym)) {
+    if (isTypeOfInterest(classSym)) {
       logger.trace(s"Extract entities in ${qualifiedName(classSym, true)}")
 
       val cls = createTypeDef(classSym)
 
-      val objTerm =
-        if (isTermOfInterest(classSym)) Some(createTermEntity(classSym, false, getDocComment(classSym, classSym)))
+      val objValue =
+        if (isValueOfInterest(classSym)) Some(createValueDef(classSym, false, getDocComment(classSym, classSym)))
         else None
 
       val memberSymsWithComments = classSym.tpe.members
-        .filter(isTermOfInterest)
+        .filter(isValueOfInterest)
         .map { m =>
           val copy = m.cloneSymbol(classSym)
           copy.info = classSym.tpe.memberInfo(m)
           (copy, m.isPrimaryConstructor, getDocComment(m, classSym))
         }
 
-      val referencedClasses = memberSymsWithComments.flatMap {
+      val referencedTypeDefs = memberSymsWithComments.flatMap {
         case (sym, _, _) =>
           sym.tpe.collect { case t => t.typeSymbol }
-            .filter(isClassOfInterest _)
+            .filter(isTypeOfInterest _)
             .map(createTypeDef _)
       }.toList
 
       val members = memberSymsWithComments
-        .map((createTermEntity _).tupled)
+        .map((createValueDef _).tupled)
         .toList
 
-      cls :: objTerm.toList ::: members ::: referencedClasses
+      cls :: objValue.toList ::: members ::: referencedTypeDefs
     } else {
       Nil
     }
@@ -49,22 +49,22 @@ trait EntityFactory extends Logging {
   def createTypeDef(sym: Symbol): ExtractionError \/ TypeDef =
     \/.fromTryCatchNonFatal {
       val baseTypes = sym.tpe.baseTypeSeq.toList.tail
-        .filter(tpe => isClassOfInterest(tpe.typeSymbol))
+        .filter(tpe => isTypeOfInterest(tpe.typeSymbol))
         .map(tpe => createTypeEntity(tpe, Covariant))
       TypeDef(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
     }.leftMap(ExtractionError(qualifiedName(sym, true), _))
 
-  def isClassOfInterest(sym: Symbol): Boolean =
+  def isTypeOfInterest(sym: Symbol): Boolean =
     (sym.isClass || sym.isModuleOrModuleClass) &&
       !sym.isAnonOrRefinementClass &&
       !sym.isLocalClass &&
       sym.isPublic
 
-  def createTermEntity(sym: Symbol, isPrimaryCtor: Boolean, rawComment: String): ExtractionError \/ TermEntity =
+  def createValueDef(sym: Symbol, isPrimaryCtor: Boolean, rawComment: String): ExtractionError \/ ValueDef =
     \/.fromTryCatchNonFatal {
       val (typeParams, tpe) = createTypeEntity(sym)
 
-      val flags = Set.newBuilder[TermEntity.Flag]
+      val flags = Set.newBuilder[ValueDef.Flag]
 
       val isOverride =
         !sym.allOverriddenSymbols.isEmpty ||
@@ -78,15 +78,15 @@ trait EntityFactory extends Logging {
         s.owner.hasPackageFlag ||
           ((s.owner.hasModuleFlag || s.isConstructor) && isStatic(s.owner))
 
-      if (isOverride) flags += TermEntity.Overrides
-      if (isImplicit) flags += TermEntity.Implicit
-      if (isStatic(sym)) flags += TermEntity.Static
+      if (isOverride) flags += ValueDef.Overrides
+      if (isImplicit) flags += ValueDef.Implicit
+      if (isStatic(sym)) flags += ValueDef.Static
 
-      TermEntity(qualifiedName(sym, false), typeParams, tpe, rawComment, flags.result)
+      ValueDef(qualifiedName(sym, false), typeParams, tpe, rawComment, flags.result)
     }.leftMap(ExtractionError(qualifiedName(sym, false), _))
 
-  def isTermOfInterest(sym: Symbol): Boolean =
-    (sym.isTerm || (sym.isConstructor && !sym.owner.isAbstractClass)) &&
+  def isValueOfInterest(sym: Symbol): Boolean =
+    (sym.isValue || (sym.isConstructor && !sym.owner.isAbstractClass)) &&
       sym.isPublic &&
       !sym.isSynthetic
 

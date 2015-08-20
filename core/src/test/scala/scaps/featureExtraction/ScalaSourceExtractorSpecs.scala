@@ -7,8 +7,8 @@ import scaps.webapi._
 import scala.util.Random
 
 class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUtils {
-  "the scala source feature extractor" should "extract an entity in an object" in {
-    shouldExtractTerms("""
+  "the scala source feature extractor" should "extract a value in an object" in {
+    shouldExtractValues("""
       package p
 
       object O {
@@ -17,8 +17,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)("p.O.a")
   }
 
-  it should "extract an entity in a class" in {
-    shouldExtractTerms("""
+  it should "extract a value in a class" in {
+    shouldExtractValues("""
       package p
 
       class C {
@@ -28,7 +28,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract inherited members" in {
-    shouldExtractTerms("""
+    shouldExtractValues("""
       package p
 
       class C
@@ -36,7 +36,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "decode operator names" in {
-    shouldExtractTerms("""
+    shouldExtractValues("""
       package p
 
       class C {
@@ -46,7 +46,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract doc comments" in {
-    val entities = extractAllTerms("""
+    val entities = extractAllValues("""
       package p
 
       object O {
@@ -76,7 +76,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "expand variables in doc comments (only locally)" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       /** An object
@@ -92,7 +92,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract simple types from values" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -106,7 +106,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract method types" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -123,7 +123,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "treat member access like function application" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {
@@ -136,7 +136,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "treat nested member access like function application" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait Outer {
@@ -149,7 +149,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "include type args in owner type of member access" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T[A] {
@@ -165,7 +165,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "add correct variance annotations" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       class Co[+T]
@@ -190,7 +190,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract type parameters" in {
-    extractTerms("""
+    extractValues("""
       package q
 
       object O {
@@ -205,7 +205,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract type parameters with bounds" in {
-    extractTerms("""
+    extractValues("""
       package q
 
       trait Up
@@ -222,7 +222,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract type parameters from owners" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       class C[T] {
@@ -242,8 +242,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }))
   }
 
-  it should "extract type parameters from nested classes" in {
-    extractTerms("""
+  it should "extract type parameters from nested typeDefs" in {
+    extractValues("""
       package p
 
       class Outer[A] {
@@ -259,7 +259,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract constructors as 'static' method named '<init>'" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       class A(x: Int)
@@ -271,7 +271,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract auxiliary constructors" in {
-    val terms = extractAllTerms("""
+    val values = extractAllValues("""
       package p
 
       class A(x: Int) {
@@ -279,24 +279,24 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)
 
-    val ctorTypes = terms.filter(_.name == "p.A.<init>").map(_.tpe.toString)
+    val ctorTypes = values.filter(_.name == "p.A.<init>").map(_.tpe.toString)
 
     ctorTypes should have length (2)
     ctorTypes should contain("+<methodInvocation0>[+p.A]")
   }
 
-  it should "not extract constructors of abstract classes" in {
-    val terms = extractAllTerms("""
+  it should "not extract constructors of abstract classes and traits" in {
+    val values = extractAllValues("""
       package p
 
       trait T
       """)
 
-    terms.find(_.name == "p.T.<init>") should not be ('defined)
+    values.find(_.name == "p.T.<init>") should not be ('defined)
   }
 
   it should "extract inherited members from super traits" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {
@@ -312,7 +312,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract types of inherited members with substituted type args" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T[A] {
@@ -324,8 +324,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.m", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +scala.Unit]")))
   }
 
-  it should "extract terms in package objects" in {
-    extractTerms("""
+  it should "extract values in package objects" in {
+    extractValues("""
       package object p{
         def m = 1
       }
@@ -333,20 +333,20 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.m", _ => ()))
   }
 
-  it should "extract objects as terms and classes" in {
+  it should "extract objects as values and typeDefs" in {
     val src = """
       package p
 
       object O
       """
-    extractClasses(src)(
+    extractTypeDefs(src)(
       ("p.O$", _ => ()))
-    extractTerms(src)(
+    extractValues(src)(
       ("p.O", _ => ()))
   }
 
   it should "extract objects as values with a refinement type" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait R
@@ -361,7 +361,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract refinement types of values and methods" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {}
@@ -379,7 +379,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract by name parameters" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -390,7 +390,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract by repeated parameters" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -401,7 +401,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract implicit parameters" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -417,7 +417,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
             TypeEntity("T", Contravariant, Nil, isTypeParam = true), Contravariant), Contravariant))))
   }
 
-  it should "not extract private terms and classes" in {
+  it should "not extract private values and typeDefs" in {
     val entities = extractAll("""
       package p
 
@@ -437,7 +437,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract class entities" in {
-    extractClasses("""
+    extractTypeDefs("""
       package p
 
       class C
@@ -446,7 +446,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "decode class names" in {
-    extractClasses("""
+    extractTypeDefs("""
       package p
 
       class ::
@@ -455,7 +455,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract traits into class entities" in {
-    extractClasses("""
+    extractTypeDefs("""
       package p
 
       trait T
@@ -463,8 +463,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.T", _ => ()))
   }
 
-  it should "extract base types of classes" in {
-    extractClasses("""
+  it should "extract base types" in {
+    extractTypeDefs("""
       package p
 
       trait T
@@ -487,7 +487,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "extract class entities with type parameters" in {
-    extractClasses("""
+    extractTypeDefs("""
       package p
 
       class C[T]
@@ -496,7 +496,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "use the concrete type arguments in base types" in {
-    extractClasses("""
+    extractTypeDefs("""
       package p
 
       trait T[A]
@@ -513,7 +513,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "yield referenced types as class entities" in {
-    extractClasses("""
+    extractTypeDefs("""
       package p
 
       object O{
@@ -523,8 +523,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("java.lang.String", _ => ()))
   }
 
-  it should "set the 'overrides' flag on terms that override an inherited member" in {
-    extractTerms("""
+  it should "set the 'overrides' flag on values that override an inherited member" in {
+    extractValues("""
       package p
 
       trait T {
@@ -560,7 +560,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "set the 'implicit' flag on implicit defs" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O{
@@ -571,7 +571,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
   }
 
   it should "set the 'implicit' flag on primary constructors of implicit classes" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -581,8 +581,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.C.<init>", _.isImplicit should be(true)))
   }
 
-  it should "set the 'static' flag on terms that have no classes in their owner chain" in {
-    extractTerms("""
+  it should "set the 'static' flag on values that have no classes in their owner chain" in {
+    extractValues("""
       package p
 
       object O {

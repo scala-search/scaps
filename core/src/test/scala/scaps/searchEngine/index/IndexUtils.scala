@@ -2,7 +2,7 @@ package scaps.searchEngine.index
 
 import scaps.featureExtraction.ExtractionUtils
 import scaps.webapi.TypeDef
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 import scaps.settings.Settings
 import scaps.utils.using
 
@@ -16,27 +16,27 @@ trait IndexUtils extends ExtractionUtils {
   def withDir[T](f: Directory => T): T =
     using(new RAMDirectory)(f).get
 
-  def withTermIndex[T](f: TermsIndex => T): T =
+  def withValueIndex[T](f: ValuesIndex => T): T =
     withDir { dir =>
-      val index = new TermsIndex(dir, settings)
+      val index = new ValuesIndex(dir, settings)
       f(index)
     }
 
-  def withTermIndex[T](sources: String*)(f: TermsIndex => T): T =
-    withTermIndex { index =>
-      val entities = sources.toStream.flatMap(extractAll).collect { case t: TermEntity => t }
+  def withValueIndex[T](sources: String*)(f: ValuesIndex => T): T =
+    withValueIndex { index =>
+      val entities = sources.toStream.flatMap(extractAll).collect { case t: ValueDef => t }
       index.addEntities(entities).get
       f(index)
     }
 
-  def withClassIndex[T](f: ClassIndex => T): T =
+  def withTypeIndex[T](f: TypeIndex => T): T =
     withDir { dir =>
-      val index = new ClassIndex(dir, settings)
+      val index = new TypeIndex(dir, settings)
       f(index)
     }
 
-  def withClassIndex[T](sources: String*)(f: ClassIndex => T): T =
-    withClassIndex { index =>
+  def withTypeIndex[T](sources: String*)(f: TypeIndex => T): T =
+    withTypeIndex { index =>
       val entities = sources.flatMap(extractAll).collect { case t: TypeDef => t }
       index.addEntities(entities).get
       f(index)

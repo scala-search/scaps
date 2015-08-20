@@ -7,7 +7,7 @@ import scaps.utils._
 
 object TypeFrequencies {
   def apply(findAlternatives: TypeEntity => Seq[TypeEntity],
-            terms: Seq[TermEntity],
+            values: Seq[ValueDef],
             maxSampleSize: Int): Map[(Variance, String), Float] = {
     // use weak hash map to avoid out of memory exceptions
     val findAlternativesCached = Memo.weakHashMapMemo { findAlternatives }
@@ -25,19 +25,19 @@ object TypeFrequencies {
       rec(tpe)
     }
 
-    def typesReferencedFromTerm(term: TermEntity): Seq[(Variance, String)] =
+    def typesReferencedFromValue(value: ValueDef): Seq[(Variance, String)] =
       for {
-        tpe <- types(term.tpe.normalize(term.typeParameters)).distinct
+        tpe <- types(value.tpe.normalize(value.typeParameters)).distinct
       } yield (tpe.variance, tpe.name)
 
-    val sampledTerms = terms
+    val sampledValues = values
       .filter(!_.isOverride)
       .sample(maxSampleSize)
 
-    val maxFrequency = sampledTerms.length
+    val maxFrequency = sampledValues.length
 
-    sampledTerms
-      .flatMap(typesReferencedFromTerm)
+    sampledValues
+      .flatMap(typesReferencedFromValue)
       .groupBy(identity)
       .mapValues(_.length.toFloat / maxFrequency)
       .withDefaultValue(0)

@@ -5,9 +5,9 @@ import scaps.webapi._
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
-class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
+class TypeIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the class index" should "persist class entities only once" in {
-    withClassIndex("""
+    withTypeIndex("""
       package p
 
       class C
@@ -16,26 +16,26 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
 
       index.addEntities(C :: Nil)
 
-      index.findClassBySuffix("C").get.size should be(1)
+      index.findTypeDefsBySuffix("C").get.size should be(1)
     }
   }
 
   it should "retrieve class entities by suffix" in {
-    withClassIndex("""
+    withTypeIndex("""
       package p.q
 
       class C
       """) { index =>
       val C = cls("p.q.C")()()
 
-      index.findClassBySuffix("C").get should contain(C)
-      index.findClassBySuffix("q.C").get should contain(C)
-      index.findClassBySuffix("p.q.C").get should contain(C)
+      index.findTypeDefsBySuffix("C").get should contain(C)
+      index.findTypeDefsBySuffix("q.C").get should contain(C)
+      index.findTypeDefsBySuffix("p.q.C").get should contain(C)
     }
   }
 
   it should "retrieve nested class entities by suffix" in {
-    withClassIndex("""
+    withTypeIndex("""
       package p.q
 
       class C{
@@ -44,15 +44,15 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       """) { index =>
       val T = cls("p.q.C.T")()()
 
-      index.findClassBySuffix("T").get should contain(T)
-      index.findClassBySuffix("C.T").get should contain(T)
-      index.findClassBySuffix("q.C.T").get should contain(T)
-      index.findClassBySuffix("p.q.C.T").get should contain(T)
+      index.findTypeDefsBySuffix("T").get should contain(T)
+      index.findTypeDefsBySuffix("C.T").get should contain(T)
+      index.findTypeDefsBySuffix("q.C.T").get should contain(T)
+      index.findTypeDefsBySuffix("p.q.C.T").get should contain(T)
     }
   }
 
-  it should "retrieve multiple classes with same suffix" in {
-    withClassIndex("""
+  it should "retrieve multiple typeDefs with same suffix" in {
+    withTypeIndex("""
       package p
 
       class C{
@@ -66,7 +66,7 @@ class ClassIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       val CT = cls("p.C.T")()()
       val DT = cls("p.D.T")()()
 
-      val result = index.findClassBySuffix("T").get
+      val result = index.findTypeDefsBySuffix("T").get
 
       result should contain allOf (CT, DT)
     }

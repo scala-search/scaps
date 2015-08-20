@@ -19,7 +19,7 @@ import scaps.webapi.View
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
   // the namespace used for all analyzer tests
-  // in order to make sure all required classes from scala stdlib are loaded
+  // in order to make sure all required typeDefs from scala stdlib are loaded
   // they are referenced in `loadTypes.TypeToBeLoaded`
   val env = """
     package p {
@@ -111,7 +111,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("+p.Dd"))
   }
 
-  it should "include sub classes of types at covariant positions" in {
+  it should "include sub types of types at covariant positions" in {
     val res = expectSuccess("_ => Aa")
 
     res.allTypes.mkString(" ") should (
@@ -127,7 +127,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       include("+scala.Nothing"))
   }
 
-  it should "include base classes of types at contravariant positions" in {
+  it should "include base types of types at contravariant positions" in {
     val res = expectSuccess("Cc => _")
 
     res.allTypes.mkString(" ") should (
@@ -153,7 +153,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     Aa.boost should be(1d +- 0.01f)
   }
 
-  it should "omit the outermost function application" in {
+  it should "omit the ouvalueost function application" in {
     val res = expectSuccess("Aa => Bb")
 
     res.allTypes.mkString(" ") should not include ("Function1")
@@ -205,7 +205,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
       }
       .withDefaultValue(Nil)
 
-    val findClassesBySuffix = toMultiMap(for {
+    val findTypeDefsBySuffix = toMultiMap(for {
       cls <- classEntities
       suffix <- cls.name.split("\\.").toList.tails.filterNot(_ == Nil).map(_.mkString("."))
     } yield (suffix, cls)) andThen (SearchEngine.favorScalaStdLib _)
@@ -213,6 +213,6 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
     val viewsIndex = new ViewIndex(new RAMDirectory)
     viewsIndex.addEntities(views)
 
-    new QueryAnalyzer(settings, findClassesBySuffix, viewsIndex.findAlternativesWithDistance(_).get)
+    new QueryAnalyzer(settings, findTypeDefsBySuffix, viewsIndex.findAlternativesWithDistance(_).get)
   }
 }

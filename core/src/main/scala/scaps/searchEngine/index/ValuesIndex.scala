@@ -43,10 +43,10 @@ import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.webapi.Module
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 
-class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntity] {
-  import TermsIndex._
+class ValuesIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
+  import ValuesIndex._
 
   private val nameAnalyzer = new Analyzer {
     override def createComponents(fieldName: String, reader: Reader) = {
@@ -85,16 +85,16 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  def addEntities(entities: Seq[TermEntity]): Try[Unit] =
+  def addEntities(entities: Seq[ValueDef]): Try[Unit] =
     withWriter { writer =>
       val docs = entities.map(toDocument)
       writer.addDocuments(docs.asJava)
     }
 
-  def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[TermEntity]] =
+  def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[ValueDef]] =
     Try {
       //      toLuceneQuery(query, moduleIds).map(
-      //        lq => search(lq, 6, Some((term, expl) => println(s"${term.withoutComment}\n${term.typeFingerprint}\n$expl"))).get)
+      //        lq => search(lq, 6, Some((value, expl) => println(s"${value.withoutComment}\n${value.typeFingerprint}\n$expl"))).get)
       toLuceneQuery(query, moduleIds).map(
         lq => search(lq, settings.query.maxResults).get)
     }
@@ -160,10 +160,10 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     }
   }
 
-  private[index] def findTermsByName(name: String): Try[Seq[TermEntity]] =
+  private[index] def findValuesByName(name: String): Try[Seq[ValueDef]] =
     search(queryBuilder.createBooleanQuery(fields.name, name))
 
-  override def toDocument(entity: TermEntity): Document = {
+  override def toDocument(entity: ValueDef): Document = {
     val doc = new Document
 
     doc.add(new TextField(fields.name, entity.name, Store.NO))
@@ -181,14 +181,14 @@ class TermsIndex(val dir: Directory, settings: Settings) extends Index[TermEntit
     doc
   }
 
-  override def toEntity(doc: Document): TermEntity = {
+  override def toEntity(doc: Document): ValueDef = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[TermEntity](json)
+    upickle.read[ValueDef](json)
   }
 }
 
-object TermsIndex {
+object ValuesIndex {
   object fields {
     val name = "name"
     val fingerprint = "fingerprint"

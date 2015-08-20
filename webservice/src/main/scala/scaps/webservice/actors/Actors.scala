@@ -158,7 +158,7 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
   def receive = {
     case Search(q, moduleIds, noResults, offset) =>
       val res = searchEngine.search(q, moduleIds).get.map {
-        case terms => terms.drop(offset).take(noResults)
+        case values => values.drop(offset).take(noResults)
       }.leftMap {
         case SyntaxError(msg) =>
           msg

@@ -5,7 +5,7 @@ import org.scalatest.FlatSpec
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Invariant
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 import scaps.webapi.TypeEntity
 import scaps.webapi.View
 
@@ -125,18 +125,18 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
 
   def typeFrequenciesWithMaxAbsoluteFrequency(source: String) = {
     val entities = extractAll(source)
-    val terms = entities.collect { case t: TermEntity => t }
+    val values = entities.collect { case t: ValueDef => t }
     val views = entities.flatMap(View.fromEntity(_)).sortBy(_.from.name)
 
-    withTermIndex { termIndex =>
-      termIndex.addEntities(terms)
+    withValueIndex { valueIndex =>
+      valueIndex.addEntities(values)
       withViewIndex { viewIndex =>
         viewIndex.addEntities(views)
 
-        val terms = termIndex.allEntities().get
+        val values = valueIndex.allEntities().get
 
-        (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), terms, Int.MaxValue),
-          terms.filter(!_.isOverride).length)
+        (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), values, Int.MaxValue),
+          values.filter(!_.isOverride).length)
       }
     }
   }

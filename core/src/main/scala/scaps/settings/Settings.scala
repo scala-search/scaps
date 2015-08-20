@@ -40,9 +40,9 @@ case class IndexSettings(
   timeout: Duration,
   typeFrequenciesSampleSize: Int) {
 
-  val classesDir = new File(indexDir + "/classes")
+  val typeDefsDir = new File(indexDir + "/typeDefs")
   val modulesDir = new File(indexDir + "/modules")
-  val termsDir = new File(indexDir + "/terms")
+  val valuesDir = new File(indexDir + "/values")
   val viewsDir = new File(indexDir + "/views")
 
   import Settings._

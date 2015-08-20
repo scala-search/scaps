@@ -22,7 +22,7 @@ object ApiSearchPlugin extends AutoPlugin {
     lazy val scapsHost = SettingKey[String]("scapsHost", "Hostname of the Scala API Search service.")
     lazy val scapsControlHost = SettingKey[String]("scapsControlHost", "Hostname of the Scala API Search control service.")
 
-    lazy val scaps = InputKey[Unit]("scaps", "Use Scaps to search for terms and functions in the indexed libraries.")
+    lazy val scaps = InputKey[Unit]("scaps", "Use Scaps to search for values and functions in the indexed libraries.")
 
     lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
     lazy val scapsModules = TaskKey[Seq[IndexJob]]("scapsModules", "Modules that will be indexed.")

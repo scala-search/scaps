@@ -8,8 +8,8 @@ import scaps.webapi.TypeEntity
 import scaps.webapi.Variance
 
 class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
-  "a type fingerprint" should "contain a term's type, variance and occurrence number" in {
-    extractTerms("""
+  "a type fingerprint" should "contain a value's type, variance and occurrence number" in {
+    extractValues("""
       package p
 
       object O {
@@ -20,7 +20,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "support repeated types" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -34,7 +34,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "normalize member access" in {
-    val ts = extractAllTerms("""
+    val ts = extractAllValues("""
       package p
 
       class C {
@@ -56,7 +56,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "normalize method invocations" in {
-    val ts = extractAllTerms("""
+    val ts = extractAllValues("""
       package p
 
       class C {
@@ -78,7 +78,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "handle variance correctly" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T[-A, +B]
@@ -111,7 +111,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "include type arguments" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -124,7 +124,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "use upper type parameter bounds at contravariant positions" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {
@@ -137,7 +137,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "use lower type parameter bounds at covariant positions" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {
@@ -150,7 +150,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "use top type for unbound type parameters at contravariant positions" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {
@@ -162,7 +162,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "use bottom type for unbound type parameters at covariant positions" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T {
@@ -174,7 +174,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "support higher kinded type parameters" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait Tr[A]
@@ -190,7 +190,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "use variance of bounds of higher kinded type parameters" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait Tr[+A]
@@ -205,7 +205,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "substitute all type parameters" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait Tr[X] {}
@@ -219,7 +219,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "handle variance correctly when using type params" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       class Cl[+A] {
@@ -233,7 +233,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "treat objects implementing a single trait as an instance of this trait" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       trait T
@@ -244,7 +244,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "ignore byName types" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -257,7 +257,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "not ignore repeated types" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {
@@ -270,7 +270,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   }
 
   it should "preserve function arguments in higher kinded functions" in {
-    extractTerms("""
+    extractValues("""
       package p
 
       object O {

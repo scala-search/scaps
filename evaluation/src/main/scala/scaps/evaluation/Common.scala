@@ -76,7 +76,7 @@ object Common extends Logging {
     if (engine.settings.index != newSettings.index) {
       println("Index time settings have changed!")
 
-      val entities = engine.termsIndex.allEntities().get ++ engine.classesIndex.allEntities().get
+      val entities = engine.valuesIndex.allEntities().get ++ engine.typeDefsIndex.allEntities().get
       val newEngine = {
         val e = SearchEngine(newSettings).get
         e.resetIndexes().get

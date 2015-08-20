@@ -1,68 +1,68 @@
 package scaps.searchEngine.index
 
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 import scaps.webapi.TypeEntity
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
-class TermsIndexSpecs extends FlatSpec with Matchers with IndexUtils {
+class ValuesIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {
-    withTermIndex("""
+    withValueIndex("""
       package p
 
       object O{
         val v = 1
       }
       """) { index =>
-      val v = TermEntity("p.O.v", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
-      index.findTermsByName("v").get should (have size 1)
+      val v = ValueDef("p.O.v", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      index.findValuesByName("v").get should (have size 1)
     }
   }
 
   it should "tokenize full qualified names" in {
-    withTermIndex("""
+    withValueIndex("""
       package pkg
 
       object Obj{
         val value = 1
       }
       """) { index =>
-      val value = TermEntity("pkg.Obj.value", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
-      index.findTermsByName("value").get should contain(value)
-      index.findTermsByName("obj").get should contain(value)
-      index.findTermsByName("pkg").get should contain(value)
-      index.findTermsByName("Pkg Obj").get should contain(value)
+      val value = ValueDef("pkg.Obj.value", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      index.findValuesByName("value").get should contain(value)
+      index.findValuesByName("obj").get should contain(value)
+      index.findValuesByName("pkg").get should contain(value)
+      index.findValuesByName("Pkg Obj").get should contain(value)
     }
   }
 
   it should "tokenize names on case changes" in {
-    withTermIndex("""
+    withValueIndex("""
       package somePkg
 
       object AnotherObj{
         val myValue = 1
       }
       """) { index =>
-      val value = TermEntity("somePkg.AnotherObj.myValue", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
-      index.findTermsByName("value").get should contain(value)
-      index.findTermsByName("another").get should contain(value)
-      index.findTermsByName("pkg").get should contain(value)
-      index.findTermsByName("another Value").get should contain(value)
+      val value = ValueDef("somePkg.AnotherObj.myValue", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      index.findValuesByName("value").get should contain(value)
+      index.findValuesByName("another").get should contain(value)
+      index.findValuesByName("pkg").get should contain(value)
+      index.findValuesByName("another Value").get should contain(value)
     }
   }
 
   it should "tokenize operators" in {
-    withTermIndex("""
+    withValueIndex("""
       package p
 
       object ::{
         val ++ = 1
       }
       """) { index =>
-      val value = TermEntity("p.::.++", Nil, TypeEntity.Int(), "", Set(TermEntity.Static))
-      index.findTermsByName("::").get should contain(value)
-      index.findTermsByName("++").get should contain(value)
+      val value = ValueDef("p.::.++", Nil, TypeEntity.Int(), "", Set(ValueDef.Static))
+      index.findValuesByName("::").get should contain(value)
+      index.findValuesByName("++").get should contain(value)
     }
   }
 }

@@ -12,9 +12,9 @@ import org.apache.lucene.store.RAMDirectory
 
 import scalaz._
 import scalaz.{ \/ => \/ }
-import scaps.searchEngine.index.ClassIndex
+import scaps.searchEngine.index.TypeIndex
 import scaps.searchEngine.index.ModuleIndex
-import scaps.searchEngine.index.TermsIndex
+import scaps.searchEngine.index.ValuesIndex
 import scaps.searchEngine.index.TypeFrequencies
 import scaps.searchEngine.index.ViewIndex
 import scaps.searchEngine.queries.QueryAnalyzer
@@ -28,7 +28,7 @@ import scaps.webapi.Covariant
 import scaps.webapi.Definition
 import scaps.webapi.Invariant
 import scaps.webapi.Module
-import scaps.webapi.TermEntity
+import scaps.webapi.ValueDef
 import scaps.webapi.TypeEntity
 import scaps.webapi.TypeParameterEntity
 import scaps.webapi.Variance
@@ -41,21 +41,21 @@ object SearchEngine {
       new NIOFSDirectory(path)
     }
 
-    val terms = new TermsIndex(createDir(settings.index.termsDir), settings)
-    val classes = new ClassIndex(createDir(settings.index.classesDir), settings)
+    val values = new ValuesIndex(createDir(settings.index.valuesDir), settings)
+    val typeDefs = new TypeIndex(createDir(settings.index.typeDefsDir), settings)
     val modules = new ModuleIndex(createDir(settings.index.modulesDir))
     val views = new ViewIndex(createDir(settings.index.viewsDir))
 
-    new SearchEngine(settings, terms, classes, modules, views)
+    new SearchEngine(settings, values, typeDefs, modules, views)
   }
 
   def inMemory(settings: Settings): SearchEngine = {
-    val terms = new TermsIndex(new RAMDirectory, settings)
-    val classes = new ClassIndex(new RAMDirectory, settings)
+    val values = new ValuesIndex(new RAMDirectory, settings)
+    val typeDefs = new TypeIndex(new RAMDirectory, settings)
     val modules = new ModuleIndex(new RAMDirectory)
     val views = new ViewIndex(new RAMDirectory)
 
-    new SearchEngine(settings, terms, classes, modules, views)
+    new SearchEngine(settings, values, typeDefs, modules, views)
   }
 
   /**
@@ -63,7 +63,7 @@ object SearchEngine {
    * the `scala` namespace have a higher priority. This allows queries like `List => Future`.
    */
   private[searchEngine] def favorScalaStdLib(candidates: Seq[TypeDef]) = {
-    // classes in root `scala` namespace and java.lang.String are always favored
+    // typeDefs in root `scala` namespace and java.lang.String are always favored
     val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
     // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
     val secondPrioPattern = """scala\..*"""
@@ -80,12 +80,12 @@ object SearchEngine {
 
 class SearchEngine private[searchEngine] (
   val settings: Settings,
-  private[scaps] val termsIndex: TermsIndex,
-  private[scaps] val classesIndex: ClassIndex,
+  private[scaps] val valuesIndex: ValuesIndex,
+  private[scaps] val typeDefsIndex: TypeIndex,
   private[scaps] val moduleIndex: ModuleIndex,
   private[scaps] val viewIndex: ViewIndex) extends Logging {
 
-  private val indexes = List(termsIndex, classesIndex, moduleIndex, viewIndex)
+  private val indexes = List(valuesIndex, typeDefsIndex, moduleIndex, viewIndex)
 
   def indexEntities(modulesWithEntities: Seq[(Module, () => Seq[Definition])]): Try[Unit] =
     Try {
@@ -111,7 +111,7 @@ class SearchEngine private[searchEngine] (
 
       deleteModule(module).get
 
-      def setModule(t: TermEntity) =
+      def setModule(t: ValueDef) =
         if (module == Module.Unknown)
           t
         else
@@ -121,16 +121,16 @@ class SearchEngine private[searchEngine] (
         TypeDef(TypeEntity.Unknown.name, Nil, Nil),
         TypeDef(TypeEntity.Implicit.name, TypeParameterEntity("T", Invariant) :: Nil, Nil))
 
-      val termsWithModule = entitiesWithSyntheticTypes
-        .collect { case t: TermEntity => setModule(t) }
-      val classesWithModule = entitiesWithSyntheticTypes
+      val valuesWithModule = entitiesWithSyntheticTypes
+        .collect { case t: ValueDef => setModule(t) }
+      val typeDefsWithModule = entitiesWithSyntheticTypes
         .collect { case c: TypeDef => c.copy(referencedFrom = Set(module)) }
 
       val views = entitiesWithSyntheticTypes.flatMap(View.fromEntity)
 
       val f = Future.sequence(List(
-        Future { termsIndex.addEntities(termsWithModule).get },
-        Future { classesIndex.addEntities(classesWithModule).get },
+        Future { valuesIndex.addEntities(valuesWithModule).get },
+        Future { typeDefsIndex.addEntities(typeDefsWithModule).get },
         Future { viewIndex.addEntities(views).get }))
 
       Await.result(f, settings.index.timeout)
@@ -144,12 +144,12 @@ class SearchEngine private[searchEngine] (
 
       val tfs = TypeFrequencies(
         viewIndex.findAlternativesWithDistance(_).get.map(_._1),
-        termsIndex.allEntities().get,
+        valuesIndex.allEntities().get,
         settings.index.typeFrequenciesSampleSize)
 
       val adjustedTfs = TypeFrequencies.adjustInvariantTopType(tfs)
 
-      val classesWithFrequencies = classesIndex.allClasses().get.map { cls =>
+      val typeDefsWithFrequencies = typeDefsIndex.allTypeDefs().get.map { cls =>
         def freq(v: Variance) = adjustedTfs((v, cls.name))
 
         cls.copy(typeFrequency = Map(
@@ -158,14 +158,14 @@ class SearchEngine private[searchEngine] (
           Invariant -> freq(Invariant)))
       }
 
-      classesIndex.replaceAllEntities(classesWithFrequencies)
+      typeDefsIndex.replaceAllEntities(typeDefsWithFrequencies)
 
       logger.info(s"Type frequencies have been updated")
     }
 
   def deleteModule(module: Module): Try[Unit] = Try {
-    termsIndex.deleteEntitiesIn(module).get
-    classesIndex.deleteEntitiesIn(module).get
+    valuesIndex.deleteEntitiesIn(module).get
+    typeDefsIndex.deleteEntitiesIn(module).get
     moduleIndex.deleteModule(module).get
   }
 
@@ -176,11 +176,11 @@ class SearchEngine private[searchEngine] (
    * Concurrent calls to this methods are save. But calling `search` while another operation is running
    * (particularly `indexEntities`) may result in an exception.
    */
-  def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[TermEntity]] = Try {
+  def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[ValueDef]] = Try {
     for {
       parsed <- QueryParser(query)
       analyzed <- analyzeQuery(moduleIds, parsed).get
-      results <- termsIndex.find(analyzed, moduleIds).get
+      results <- valuesIndex.find(analyzed, moduleIds).get
     } yield {
       logger.debug(s"""query "${query}" expanded to:\n"${analyzed.prettyPrint}" """)
       results
@@ -200,7 +200,7 @@ class SearchEngine private[searchEngine] (
 
   private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
     def findClassBySuffix(suffix: String) =
-      classesIndex.findClassBySuffix(suffix, moduleIds).get
+      typeDefsIndex.findTypeDefsBySuffix(suffix, moduleIds).get
 
     val analyzer = analyzers.get(moduleIds).fold {
       val analyzer = new QueryAnalyzer(
