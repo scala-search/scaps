@@ -16,13 +16,13 @@ trait IndexUtils extends ExtractionUtils {
   def withDir[T](f: Directory => T): T =
     using(new RAMDirectory)(f).get
 
-  def withValueIndex[T](f: ValuesIndex => T): T =
+  def withValueIndex[T](f: ValueIndex => T): T =
     withDir { dir =>
-      val index = new ValuesIndex(dir, settings)
+      val index = new ValueIndex(dir, settings)
       f(index)
     }
 
-  def withValueIndex[T](sources: String*)(f: ValuesIndex => T): T =
+  def withValueIndex[T](sources: String*)(f: ValueIndex => T): T =
     withValueIndex { index =>
       val entities = sources.toStream.flatMap(extractAll).collect { case t: ValueDef => t }
       index.addEntities(entities).get

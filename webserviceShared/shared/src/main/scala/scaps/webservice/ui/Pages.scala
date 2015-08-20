@@ -8,7 +8,7 @@ import scaps.webapi.IndexBusy
 import scaps.webapi.ValueDef
 import scaps.webapi.TypeRef
 import scaps.webapi.TypeRef.MemberAccess
-import scaps.webapi.TypeParameterEntity
+import scaps.webapi.TypeParameter
 import scaps.webapi.ScapsApi
 import scaps.webapi.BuildInfo
 
@@ -201,7 +201,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         span(": ", tpe(t))
     }
 
-    def typeParams(ps: List[TypeParameterEntity]) =
+    def typeParams(ps: List[TypeParameter]) =
       if (ps.isEmpty) span()
       else span("[", intersperse[Modifier](ps.map(p => em(ScapsStyle.typeParameter)(p.toString)), ", "), "]")
 

@@ -45,8 +45,8 @@ import scaps.settings.Settings
 import scaps.webapi.Module
 import scaps.webapi.ValueDef
 
-class ValuesIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
-  import ValuesIndex._
+class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
+  import ValueIndex._
 
   private val nameAnalyzer = new Analyzer {
     override def createComponents(fieldName: String, reader: Reader) = {
@@ -188,7 +188,7 @@ class ValuesIndex(val dir: Directory, settings: Settings) extends Index[ValueDef
   }
 }
 
-object ValuesIndex {
+object ValueIndex {
   object fields {
     val name = "name"
     val fingerprint = "fingerprint"

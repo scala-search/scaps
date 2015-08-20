@@ -39,7 +39,7 @@ sealed trait Definition extends EntityLike
 
 case class TypeDef(
   name: String,
-  typeParameters: List[TypeParameterEntity],
+  typeParameters: List[TypeParameter],
   baseTypes: List[TypeRef],
   referencedFrom: Set[Module] = Set(),
   comment: String = "",
@@ -67,7 +67,7 @@ case class TypeDef(
 
 case class ValueDef(
   name: String,
-  typeParameters: List[TypeParameterEntity],
+  typeParameters: List[TypeParameter],
   tpe: TypeRef,
   comment: String,
   flags: Set[ValueDef.Flag] = Set(),
@@ -179,7 +179,7 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
         TypeRef(s"$$$idx", arg.variance, Nil, isTypeParam = true)
     })
 
-  def normalize(typeParams: List[TypeParameterEntity] = Nil): TypeRef = {
+  def normalize(typeParams: List[TypeParameter] = Nil): TypeRef = {
     def loop(tpe: TypeRef): TypeRef =
       tpe match {
         case MemberAccess(owner, member) =>
@@ -367,7 +367,7 @@ object TypeRef {
   }
 }
 
-case class TypeParameterEntity(
+case class TypeParameter(
   name: String,
   variance: Variance,
   lowerBound: String = TypeRef.Nothing.name,

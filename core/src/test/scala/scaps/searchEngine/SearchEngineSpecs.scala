@@ -66,7 +66,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "accumulate referencedFrom fields from class entities" in
     withSearchEngine { searchEngine =>
-      val intTypeDefs = searchEngine.typeDefsIndex.findTypeDefsBySuffix("Int").get
+      val intTypeDefs = searchEngine.typeIndex.findTypeDefsBySuffix("Int").get
 
       intTypeDefs.size should be(1)
       intTypeDefs.head.referencedFrom should be(
@@ -81,7 +81,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         // empty, float is no longer referenced from module1
         """)).get
 
-      val floatTypeDefs = searchEngine.typeDefsIndex.findTypeDefsBySuffix("Float").get
+      val floatTypeDefs = searchEngine.typeIndex.findTypeDefsBySuffix("Float").get
 
       floatTypeDefs.size should be(1)
       floatTypeDefs.head.referencedFrom should be(
@@ -132,7 +132,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         // empty, p.C does no longer exist in module1
         """)).get
 
-      val c = searchEngine.typeDefsIndex.findTypeDefsBySuffix("p.C").get
+      val c = searchEngine.typeIndex.findTypeDefsBySuffix("p.C").get
 
       c should be(Seq())
     }

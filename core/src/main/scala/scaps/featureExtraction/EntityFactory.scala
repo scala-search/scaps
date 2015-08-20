@@ -90,7 +90,7 @@ trait EntityFactory extends Logging {
       sym.isPublic &&
       !sym.isSynthetic
 
-  def createTypeRef(sym: Symbol): (List[TypeParameterEntity], TypeRef) = {
+  def createTypeRef(sym: Symbol): (List[TypeParameter], TypeRef) = {
     val (params, memberType) =
       if (sym.isMethod)
         methodType(sym)
@@ -109,7 +109,7 @@ trait EntityFactory extends Logging {
     }
   }
 
-  private def typeParamsFromOwningTemplates(sym: Symbol): List[TypeParameterEntity] = {
+  private def typeParamsFromOwningTemplates(sym: Symbol): List[TypeParameter] = {
     sym.ownerChain.reverse.flatMap { owner =>
       owner.tpe.typeArgs.map(arg => createTypeParamEntity(arg.typeSymbol))
     }
@@ -172,7 +172,7 @@ trait EntityFactory extends Logging {
     }
   }
 
-  private def methodType(sym: Symbol): (List[TypeParameterEntity], TypeRef) = {
+  private def methodType(sym: Symbol): (List[TypeParameter], TypeRef) = {
     val typeParams = sym.tpe.typeParams.map(createTypeParamEntity)
 
     def rec(paramss: List[List[Symbol]], resultTpe: Type): TypeRef = paramss match {
@@ -192,7 +192,7 @@ trait EntityFactory extends Logging {
     (typeParams, rec(sym.paramss, sym.tpe.resultType))
   }
 
-  private def moduleType(sym: Symbol): (List[TypeParameterEntity], TypeRef) = {
+  private def moduleType(sym: Symbol): (List[TypeParameter], TypeRef) = {
     val args = sym.tpe.parents.map { parent =>
       createTypeRef(parent, Covariant)
     }
@@ -201,7 +201,7 @@ trait EntityFactory extends Logging {
   }
 
   private def createTypeParamEntity(typeSym: Symbol) =
-    TypeParameterEntity(
+    TypeParameter(
       qualifiedName(typeSym, true),
       if (typeSym.variance.isCovariant)
         Covariant

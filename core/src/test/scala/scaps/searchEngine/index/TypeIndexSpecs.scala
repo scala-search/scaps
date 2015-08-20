@@ -6,7 +6,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
 class TypeIndexSpecs extends FlatSpec with Matchers with IndexUtils {
-  "the class index" should "persist class entities only once" in {
+  "the type index" should "persist class entities only once" in {
     withTypeIndex("""
       package p
 
@@ -78,6 +78,6 @@ class TypeIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   def cls(name: String)(args: String*)(baseTypes: TypeRef*) =
     TypeDef(
       name,
-      args.map(TypeParameterEntity(_, Invariant)).toList,
+      args.map(TypeParameter(_, Invariant)).toList,
       baseTypes.toList ++ List(TypeRef.AnyRef(), TypeRef.Any()))
 }

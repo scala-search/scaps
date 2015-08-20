@@ -6,7 +6,7 @@ import scaps.webapi.TypeRef
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
-class ValuesIndexSpecs extends FlatSpec with Matchers with IndexUtils {
+class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {
     withValueIndex("""
       package p
