@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
 import scaps.featureExtraction.ExtractionUtils
-import scaps.webapi.ClassEntity
+import scaps.webapi.TypeDef
 import scaps.webapi.TermEntity
 import scaps.settings.Settings
 import scaps.utils.using
@@ -37,7 +37,7 @@ trait IndexUtils extends ExtractionUtils {
 
   def withClassIndex[T](sources: String*)(f: ClassIndex => T): T =
     withClassIndex { index =>
-      val entities = sources.flatMap(extractAll).collect { case t: ClassEntity => t }
+      val entities = sources.flatMap(extractAll).collect { case t: TypeDef => t }
       index.addEntities(entities).get
       f(index)
     }

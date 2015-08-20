@@ -10,13 +10,13 @@ import scala.annotation.tailrec
 trait EntityFactory extends Logging {
   val compiler: Global
 
-  import compiler._
+  import compiler.{ TypeDef => _, _ }
 
   def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Definition] =
     if (isClassOfInterest(classSym)) {
       logger.trace(s"Extract entities in ${qualifiedName(classSym, true)}")
 
-      val cls = createClassEntity(classSym)
+      val cls = createTypeDef(classSym)
 
       val objTerm =
         if (isTermOfInterest(classSym)) Some(createTermEntity(classSym, false, getDocComment(classSym, classSym)))
@@ -34,7 +34,7 @@ trait EntityFactory extends Logging {
         case (sym, _, _) =>
           sym.tpe.collect { case t => t.typeSymbol }
             .filter(isClassOfInterest _)
-            .map(createClassEntity _)
+            .map(createTypeDef _)
       }.toList
 
       val members = memberSymsWithComments
@@ -46,12 +46,12 @@ trait EntityFactory extends Logging {
       Nil
     }
 
-  def createClassEntity(sym: Symbol): ExtractionError \/ ClassEntity =
+  def createTypeDef(sym: Symbol): ExtractionError \/ TypeDef =
     \/.fromTryCatchNonFatal {
       val baseTypes = sym.tpe.baseTypeSeq.toList.tail
         .filter(tpe => isClassOfInterest(tpe.typeSymbol))
         .map(tpe => createTypeEntity(tpe, Covariant))
-      ClassEntity(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
+      TypeDef(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
     }.leftMap(ExtractionError(qualifiedName(sym, true), _))
 
   def isClassOfInterest(sym: Symbol): Boolean =

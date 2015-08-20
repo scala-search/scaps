@@ -14,7 +14,7 @@ import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
 import scaps.settings.Settings
-import scaps.webapi.ClassEntity
+import scaps.webapi.TypeDef
 import scaps.webapi.Covariant
 import scaps.webapi.Module
 import scaps.webapi.TypeEntity
@@ -25,12 +25,12 @@ import scala.annotation.tailrec
  *
  * This index is mainly used for fast access to class hierarchies for query building.
  */
-class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEntity] {
+class ClassIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
   import ClassIndex._
 
   val analyzer = new KeywordAnalyzer
 
-  def addEntities(entities: Seq[ClassEntity]): Try[Unit] = Try {
+  def addEntities(entities: Seq[TypeDef]): Try[Unit] = Try {
     val distinctEntities = entities.distinct
     val indexedClasses = allClasses().get
 
@@ -49,7 +49,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     }.get
   }
 
-  def replaceAllEntities(entities: Seq[ClassEntity]): Try[Unit] =
+  def replaceAllEntities(entities: Seq[TypeDef]): Try[Unit] =
     withWriter { writer =>
       val docs = entities.map(toDocument)
       writer.deleteAll()
@@ -79,7 +79,7 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
    * Searches for class entities whose last parts of the full qualified name are `suffix`
    * and accept `noArgs` type parameters.
    */
-  def findClassBySuffix(suffix: String, moduleIds: Set[String] = Set()): Try[Seq[ClassEntity]] = {
+  def findClassBySuffix(suffix: String, moduleIds: Set[String] = Set()): Try[Seq[TypeDef]] = {
     val query = new BooleanQuery()
     query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
 
@@ -96,14 +96,14 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
     search(query)
   }
 
-  def findClass(name: String): Try[Option[ClassEntity]] = Try {
+  def findClass(name: String): Try[Option[TypeDef]] = Try {
     search(new TermQuery(new Term(fields.name, name))).get.headOption
   }
 
-  def allClasses(): Try[Seq[ClassEntity]] =
+  def allClasses(): Try[Seq[TypeDef]] =
     search(new MatchAllDocsQuery)
 
-  override def toDocument(entity: ClassEntity): Document = {
+  override def toDocument(entity: TypeDef): Document = {
     val doc = new Document
 
     doc.add(new TextField(fields.name, entity.name, Field.Store.YES))
@@ -130,10 +130,10 @@ class ClassIndex(val dir: Directory, settings: Settings) extends Index[ClassEnti
       }
   }
 
-  override def toEntity(doc: Document): ClassEntity = {
+  override def toEntity(doc: Document): TypeDef = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[ClassEntity](json)
+    upickle.read[TypeDef](json)
   }
 }
 

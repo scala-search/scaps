@@ -12,7 +12,7 @@ import scaps.searchEngine.SearchEngine
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.searchEngine.index.ViewIndex
 import scaps.settings.Settings
-import scaps.webapi.ClassEntity
+import scaps.webapi.TypeDef
 import scaps.webapi.TypeEntity
 import scaps.webapi.View
 
@@ -194,7 +194,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
   val analyzer = {
     val entities = extractAll(env)
-    val classEntities = entities.collect { case c: ClassEntity => c }
+    val classEntities = entities.collect { case c: TypeDef => c }
     val views = entities.flatMap(View.fromEntity(_))
 
     def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, List[V]] = ps

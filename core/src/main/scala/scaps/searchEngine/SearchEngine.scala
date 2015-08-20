@@ -22,7 +22,7 @@ import scaps.searchEngine.queries.QueryParser
 import scaps.searchEngine.queries.RawQuery
 import scaps.settings.Settings
 import scaps.utils.Logging
-import scaps.webapi.ClassEntity
+import scaps.webapi.TypeDef
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Definition
@@ -62,7 +62,7 @@ object SearchEngine {
    * Names from the `scala` root package are favored over other names and all names in
    * the `scala` namespace have a higher priority. This allows queries like `List => Future`.
    */
-  private[searchEngine] def favorScalaStdLib(candidates: Seq[ClassEntity]) = {
+  private[searchEngine] def favorScalaStdLib(candidates: Seq[TypeDef]) = {
     // classes in root `scala` namespace and java.lang.String are always favored
     val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
     // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
@@ -118,13 +118,13 @@ class SearchEngine private[searchEngine] (
           t.copy(module = module)
 
       val entitiesWithSyntheticTypes = entities ++ List(
-        ClassEntity(TypeEntity.Unknown.name, Nil, Nil),
-        ClassEntity(TypeEntity.Implicit.name, TypeParameterEntity("T", Invariant) :: Nil, Nil))
+        TypeDef(TypeEntity.Unknown.name, Nil, Nil),
+        TypeDef(TypeEntity.Implicit.name, TypeParameterEntity("T", Invariant) :: Nil, Nil))
 
       val termsWithModule = entitiesWithSyntheticTypes
         .collect { case t: TermEntity => setModule(t) }
       val classesWithModule = entitiesWithSyntheticTypes
-        .collect { case c: ClassEntity => c.copy(referencedFrom = Set(module)) }
+        .collect { case c: TypeDef => c.copy(referencedFrom = Set(module)) }
 
       val views = entitiesWithSyntheticTypes.flatMap(View.fromEntity)
 

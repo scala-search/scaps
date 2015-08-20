@@ -39,11 +39,11 @@ trait ExtractionUtils extends Matchers {
   def shouldExtractTerms(source: String)(entityNames: String*): Unit =
     extractTerms(source)(entityNames.map(n => (n, (_: TermEntity) => ())): _*)
 
-  def extractAllClasses(source: String): Seq[ClassEntity] = {
-    extractAll(source).collect { case c: ClassEntity => c }
+  def extractAllClasses(source: String): Seq[TypeDef] = {
+    extractAll(source).collect { case c: TypeDef => c }
   }
 
-  def extractClasses(source: String)(entityHandlers: (String, ClassEntity => Unit)*): Unit = {
+  def extractClasses(source: String)(entityHandlers: (String, TypeDef => Unit)*): Unit = {
     val entities = extractAllClasses(source)
     val names = entities.map(_.name)
 

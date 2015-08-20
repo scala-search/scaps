@@ -16,7 +16,7 @@ sealed trait View {
 }
 
 object View {
-  private def fromClass(cls: ClassEntity): Seq[View] = {
+  private def fromClass(cls: TypeDef): Seq[View] = {
     val toRepeated = {
       if (cls.name == TypeEntity.Seq.name) {
         val p = cls.typeParameters(0)
@@ -49,7 +49,7 @@ object View {
   }
 
   def fromEntity(e: Definition): Seq[View] = e match {
-    case c: ClassEntity => fromClass(c)
+    case c: TypeDef => fromClass(c)
     case t: TermEntity  => fromTerm(t)
   }
 

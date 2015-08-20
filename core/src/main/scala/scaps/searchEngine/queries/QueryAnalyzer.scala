@@ -10,7 +10,7 @@ import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SemanticError
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.QuerySettings
-import scaps.webapi.ClassEntity
+import scaps.webapi.TypeDef
 import scaps.webapi.Contravariant
 import scaps.webapi.Covariant
 import scaps.webapi.Invariant
@@ -22,7 +22,7 @@ import scaps.utils._
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
   case object Wildcard extends ResolvedQuery
-  case class Type(cls: ClassEntity, args: List[ResolvedQuery]) extends ResolvedQuery
+  case class Type(cls: TypeDef, args: List[ResolvedQuery]) extends ResolvedQuery
 }
 
 private[queries] sealed trait ExpandedQuery {
@@ -118,7 +118,7 @@ private[queries] object ExpandedQuery {
  */
 class QueryAnalyzer private[searchEngine] (
   settings: QuerySettings,
-  findClassesBySuffix: (String) => Seq[ClassEntity],
+  findClassesBySuffix: (String) => Seq[TypeDef],
   findAlternativesWithDistance: (TypeEntity) => Seq[(TypeEntity, Float)]) {
 
   /**
