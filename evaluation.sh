@@ -1,0 +1,1 @@
+sbt 'evaluation/run-main scaps.evaluation.Evaluation'

@@ -3,6 +3,9 @@ package scaps.webapi
 import utest._
 import utest.framework.TestSuite
 
+/**
+ * Test name encoding on all platforms (JVM & JS).
+ */
 object ValueDefSpecs extends TestSuite {
   val tests = TestSuite {
     'valueDef{

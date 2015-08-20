@@ -1,132 +1,10 @@
 package scaps.webapi
 
-import scala.collection.mutable.ListBuffer
-
-trait EntityLike {
-  def name: String
+case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isTypeParam: Boolean = false) {
+  import TypeRef._
 
   def shortName: String =
     EntityName.splitName(name).last
-}
-
-/**
- * Helper methods for de-/encoding entity names.
- *
- * We use a plain string representation for entity names because a more
- * sophisticated representation is too expensive to create during extraction.
- */
-object EntityName {
-  /**
-   * Creates a new name referring to a static member (package/module member)
-   * and takes care of the encoding.
-   */
-  def appendMember(ownerName: String, memberId: String): String =
-    if (ownerName == "")
-      memberId
-    else
-      ownerName + '.' + memberId
-
-  /**
-   * Splits an encoded name into the decoded identifiers it is composed of.
-   * E.g. "pkg.Cls.member" becomes List("pkg", "Cls", "member").
-   */
-  def splitName(name: String): List[String] = {
-    name.split('.').toList
-  }
-}
-
-sealed trait Definition extends EntityLike
-
-case class TypeDef(
-  name: String,
-  typeParameters: List[TypeParameter],
-  baseTypes: List[TypeRef],
-  referencedFrom: Set[Module] = Set(),
-  comment: String = "",
-  typeFrequency: Map[Variance, Float] = Map())
-  extends Definition {
-
-  override def toString() = {
-    val params = typeParameters match {
-      case Nil => ""
-      case ps  => ps.mkString("[", ", ", "]")
-    }
-    val bases = baseTypes.mkString("extends ", " with ", "")
-
-    s"$name$params $bases"
-  }
-
-  def isFunction = typeParameters.length > 0 && name == TypeRef.Function.name(typeParameters.length - 1)
-
-  def frequency(v: Variance) =
-    typeFrequency.get(v).getOrElse(0f)
-
-  def toType: TypeRef =
-    TypeRef(name, Covariant, typeParameters.map(p => TypeRef(p.name, p.variance, Nil, true)))
-}
-
-case class ValueDef(
-  name: String,
-  typeParameters: List[TypeParameter],
-  tpe: TypeRef,
-  comment: String,
-  flags: Set[ValueDef.Flag] = Set(),
-  module: Module = Module.Unknown)
-  extends Definition {
-
-  override def toString() = {
-    val c = comment match {
-      case "" => ""
-      case _  => s"$comment\n"
-    }
-    val mods = flags.map(_.name).mkString(" ")
-    val params = typeParameters match {
-      case Nil => ""
-      case ps  => ps.mkString("[", ", ", "]")
-    }
-    s"$c$mods $name$params: $tpe"
-  }
-
-  /**
-   * A unique description of the value including its name and type.
-   */
-  def signature: String = {
-    val params = typeParameters match {
-      case Nil => ""
-      case ps  => ps.mkString("[", ", ", "]")
-    }
-    s"$name$params: ${tpe.signature}"
-  }
-
-  def typeFingerprint: List[String] =
-    tpe.normalize(typeParameters).typeFingerprint
-
-  def withoutComment = copy(comment = "")
-
-  def isOverride = flags(ValueDef.Overrides)
-
-  def isImplicit = flags(ValueDef.Implicit)
-
-  def isStatic = flags(ValueDef.Static)
-}
-
-object ValueDef {
-  sealed trait Flag {
-    def name: String
-  }
-  case object Overrides extends Flag {
-    val name = "overrides"
-  }
-  case object Implicit extends Flag {
-    val name = "implicit"
-  }
-  case object Static extends Flag {
-    val name = "static"
-  }
-}
-
-case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isTypeParam: Boolean = false) extends EntityLike {
-  import TypeRef._
 
   override def toString() = {
     val argStr = args match {
@@ -153,7 +31,7 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
   def typeFingerprint: List[String] = this.toList
     .filter {
       case TypeRef.Ignored(_, _) => false
-      case _                        => true
+      case _                     => true
     }
     .map(_.fingerprint)
     .sorted
@@ -365,54 +243,4 @@ object TypeRef {
       else
         None
   }
-}
-
-case class TypeParameter(
-  name: String,
-  variance: Variance,
-  lowerBound: String = TypeRef.Nothing.name,
-  upperBound: String = TypeRef.Any.name) {
-  import TypeRef._
-
-  override def toString() = {
-    val lbound =
-      if (lowerBound == Nothing.name) ""
-      else s" >: $lowerBound"
-
-    val ubound =
-      if (upperBound == Any.name) ""
-      else s" <: $upperBound"
-
-    s"$name$lbound$ubound"
-  }
-}
-
-sealed trait Variance {
-  def prefix: String
-  def flip: Variance
-  def *(other: Variance): Variance
-}
-case object Invariant extends Variance {
-  val prefix = ""
-  val flip = Invariant
-  def *(other: Variance) = Invariant
-}
-case object Covariant extends Variance {
-  val prefix = "+"
-  val flip = Contravariant
-  def *(other: Variance) = other
-}
-case object Contravariant extends Variance {
-  val prefix = "-"
-  val flip = Covariant
-  def *(other: Variance) = other.flip
-}
-
-case class Module(organization: String, name: String, revision: String) {
-  def moduleId = s"$organization:$name:$revision"
-  def isSnapshot = revision.endsWith("SNAPSHOT")
-}
-
-object Module {
-  val Unknown = Module("unknown", "unknown", "0.1.0-SNAPSHOT")
 }
