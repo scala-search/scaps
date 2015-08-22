@@ -69,12 +69,13 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         form(id := searchFormId, method := "get", role := "search")(
           nav(cls := "navbar navbar-inverse navbar-fixed-top")(
             div(cls := "container")(
-              div(cls := "navbar-header")(
+              div(cls := "navbar-header", style := "width: 100%")(
                 a(cls := "navbar-brand", href := "/")("Scaps"),
-                div(cls := "input-group", style := "margin-top: 8px; margin-right: 8px;")(
-                  span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
-                  input(tpe := "search", name := "q", value := query, autocomplete := "off",
-                    autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values..."))))),
+                div(cls := "form-group", style := "display: inline;")(
+                  div(cls := "input-group", style := "display: table; margin-top: 8px; margin-right: 8px;")(
+                    span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
+                    input(tpe := "search", name := "q", value := query, autocomplete := "off",
+                      autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values...")))))),
           nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
             div(cls := "container")(
               ul {
