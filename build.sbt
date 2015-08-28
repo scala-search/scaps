@@ -5,7 +5,6 @@ lazy val utestFramework = new TestFramework("utest.runner.Framework")
 lazy val commonSettings = Seq(
     organization := "org.scala-search",
     scalaVersion := Commons.targetedScalaVersion,
-    version := Commons.appVersion,
     resolvers += Opts.resolver.mavenLocalFile,
     testFrameworks += utestFramework,
     scalacOptions ++= Seq(
@@ -17,6 +16,22 @@ lazy val commonSettings = Seq(
       "-Xfatal-warnings"),
     testModules := Seq(),
     resourceGenerators in Test <+= createTestModules)
+
+// Release
+
+import ReleaseTransformations._
+
+releaseProcess := Seq[ReleaseStep](
+    checkSnapshotDependencies,
+    inquireVersions,
+    runClean,
+    runTest,
+    setReleaseVersion,
+    commitReleaseVersion,
+    tagRelease,
+    setNextVersion,
+    commitNextVersion,
+    pushChanges)
 
 // Root Project
 
@@ -42,7 +57,7 @@ lazy val webapi_2_10_cross = (crossProject in file("webapi"))
   .settings(
     scalaVersion := Commons.sbtPluginScalaVersion,
     // do not run tests for 2.10 because some test dependencies wont resolve
-    test := {})
+    test in Test := {})
 
 lazy val webapi_2_11_cross = (crossProject in file("webapi"))
   .enablePlugins(BuildInfoPlugin)
