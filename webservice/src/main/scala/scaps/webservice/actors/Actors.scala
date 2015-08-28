@@ -79,7 +79,9 @@ class Director(baseSettings: Settings, indexWorkerProps: SearchEngine => Props, 
         sender ! status
     }
 
-    val (indexPath, indexNo) = findCurrentIndexWithNo(new File(baseSettings.index.indexDir))
+    val baseDir = new File(baseSettings.index.indexDir)
+    baseDir.mkdirs()
+    val (indexPath, indexNo) = findCurrentIndexWithNo(baseDir)
     val currentSettings = baseSettings.copy(index = baseSettings.index.copy(indexDir = indexPath))
     val searchEngine = SearchEngine(currentSettings).get
 
