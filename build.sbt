@@ -92,7 +92,7 @@ lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-webservice-shared",
-    publishArtifact := false,
+    publishArtifact := true,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion))
 
@@ -101,17 +101,27 @@ lazy val webserviceShared_JS = webserviceShared_cross.js
 
 lazy val webservice = (project in file("webservice"))
   .dependsOn(webserviceShared_JVM, core)
+  .enablePlugins(JavaServerAppPackaging, DebianPlugin)
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-webservice",
-    publishArtifact := false,
     libraryDependencies ++= Dependencies.webserviceDependencies,
     // parallel execution does not play well with the actor tests
     parallelExecution in Test := false,
     (resources in Compile) ++= Seq(
       (fastOptJS in (webserviceUI, Compile)).value.data,
       (fullOptJS in (webserviceUI, Compile)).value.data),
-    testModules := Seq("testModule1", "testModule2"))
+    testModules := Seq("testModule1", "testModule2"),
+
+    // packager
+    packageDescription in Debian := "Scaps Webservice",
+    maintainer in Debian := "Lukas Wegmann",
+
+    mappings in Universal += {
+      val conf = (resourceDirectory in Compile).value / "application-prod.conf"
+      conf -> "conf/application.conf"
+    },
+    bashScriptExtraDefines += """addJava "-Dconfig.file=${app_home}/../conf/application.conf"""")
 
 lazy val webserviceUI = (project in file("webserviceUI"))
   .dependsOn(webserviceShared_JS)
