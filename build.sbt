@@ -117,11 +117,15 @@ lazy val webservice = (project in file("webservice"))
     packageDescription in Debian := "Scaps Webservice",
     maintainer in Debian := "Lukas Wegmann",
 
-    mappings in Universal += {
+    mappings in Universal ++= {
       val conf = (resourceDirectory in Compile).value / "application-prod.conf"
-      conf -> "conf/application.conf"
+      val log = (resourceDirectory in Compile).value / "logback.xml"
+      Seq(
+        conf -> "conf/application.conf",
+        log -> "conf/logback.xml")
     },
-    bashScriptExtraDefines += """addJava "-Dconfig.file=${app_home}/../conf/application.conf"""")
+    bashScriptExtraDefines += """addJava "-Dconfig.file=${app_home}/../conf/application.conf"""",
+    bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/logback.xml"""")
 
 lazy val webserviceUI = (project in file("webserviceUI"))
   .dependsOn(webserviceShared_JS)
