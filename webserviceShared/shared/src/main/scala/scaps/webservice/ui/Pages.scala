@@ -61,9 +61,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
         stylesheet("scaps.css"),
         if (prodMode)
-          javascript("api-search-webservice-ui-opt.js")
+          javascript("scaps-webservice-ui-opt.js")
         else
-          javascript("api-search-webservice-ui-fastopt.js")),
+          javascript("scaps-webservice-ui-fastopt.js")),
 
       body(ScapsStyle.world, onload := jsCallbacks.boot(searchFormId, resultContainerId))(
         form(id := searchFormId, method := "get", role := "search")(
