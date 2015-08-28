@@ -102,7 +102,9 @@ trait ScapsService extends HttpService {
               }
             }
           } ~
-          get { getFromResourceDirectory("") }
+          pathSuffixTest("""(?i)^.*\.(css|js|png|gif|svg|pdf|jpg|jpeg|woff2|js\.map)$""".r) { _ =>
+            get { getFromResourceDirectory("") }
+          }
       }
 }
 
