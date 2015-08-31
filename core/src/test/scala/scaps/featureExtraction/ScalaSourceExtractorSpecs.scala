@@ -629,7 +629,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("p.O.m", _.docLink should be(Some("p.O$@m:Int"))),
-      ("p.O.P.n", _.docLink should be(Some("p.O$.P$@n(a:String):Double"))),
+      ("p.O.P.n", _.docLink should be(Some("p.O$$P$@n(a:String):Double"))),
       ("p.O", _.docLink should be(Some("p.O$"))),
       ("p.C.++", _.docLink should be(Some("p.C@++(a:String):String"))),
       ("p.C.toString", _.docLink should be(Some("p.C@toString():String"))))

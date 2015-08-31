@@ -96,7 +96,8 @@ trait EntityFactory extends Logging {
       def nameString(s: Symbol) = s.nameString + (if ((s.isModule || s.isModuleClass) && !s.hasPackageFlag) "$" else "")
       val packageSuffix = if (sym.hasPackageFlag) ".package" else ""
 
-      sym.ownerChain.reverse.filterNot(isRoot(_)).map(nameString(_)).mkString(".") + packageSuffix
+      (sym.ownerChain.reverse.filterNot(isRoot(_)).map(nameString(_)).mkString(".") + packageSuffix)
+        .replace("$.", "$$")
     }
 
     def externalSignature(sym: Symbol) = {
