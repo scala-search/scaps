@@ -130,9 +130,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       p("""This is an early release reduced to the max. For the future, we plan to include additional features to
               improve user experience and the quality of the search results:"""),
       ul(
-        li("Links to Scala Doc"),
         li("Additional indexed libraries"),
         li("Improved support for the type class pattern"),
+        li("Inherited doc comments"),
         li("Type alias")),
       p("Of course, feedback would be highly appreciated (", a(href := "https://twitter.com/Luegg1")("Twitter"),
         " or l1wegman(at)hsr.ch)."),
@@ -206,14 +206,23 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       if (ps.isEmpty) span()
       else span("[", intersperse[Modifier](ps.map(p => em(ScapsStyle.typeParameter)(p.toString)), ", "), "]")
 
+    val docLink = {
+      value.docLink.map { lnk =>
+        a(href := lnk)(
+          span(cls := "glyphicon glyphicon-info-sign"), " ScalaDoc")
+      }
+    }
+
     val feedback = {
       val feedbackElemId = s"feedback_${value.signature}"
 
-      div(id := feedbackElemId)(
+      div(id := feedbackElemId, style := "display: inline;")(
         a(href := "javascript:void(0);",
           onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, value))(
             span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
+
+    val info = intersperse[Modifier](docLink.toSeq ++ Seq(feedback), raw(" &middot; "))
 
     Seq(
       dt(code(value.tpe match {
@@ -227,7 +236,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
       })),
       dd(div(value.comment),
         div(span(cls := "label label-default")(value.module.name), " ", value.name),
-        feedback))
+        info))
   }
 
   def feedbackReceived =

@@ -18,7 +18,7 @@ case class IndexBusy(workQueue: Seq[Module], indexedModules: Seq[Module], indexE
   val isReady = false
 }
 
-case class IndexJob(module: Module, artifactPath: String)
+case class IndexJob(module: Module, artifactPath: String, docUrlPrefix: Option[String])
 
 /**
  * The main API exposed to search engine users.

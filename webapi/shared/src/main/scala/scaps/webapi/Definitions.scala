@@ -41,6 +41,7 @@ case class ValueDef(
   tpe: TypeRef,
   comment: String,
   flags: Set[ValueDef.Flag] = Set(),
+  docLink: Option[String] = None,
   module: Module = Module.Unknown)
   extends Definition {
 

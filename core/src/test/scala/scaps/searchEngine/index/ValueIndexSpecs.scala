@@ -16,7 +16,7 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       }
       """) { index =>
       val v = ValueDef("p.O.v", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
-      index.findValuesByName("v").get should (have size 1)
+      findByName(index)("v") should ((have size 1) and contain(v))
     }
   }
 
@@ -29,10 +29,11 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       }
       """) { index =>
       val value = ValueDef("pkg.Obj.value", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
-      index.findValuesByName("value").get should contain(value)
-      index.findValuesByName("obj").get should contain(value)
-      index.findValuesByName("pkg").get should contain(value)
-      index.findValuesByName("Pkg Obj").get should contain(value)
+
+      findByName(index)("value") should contain(value)
+      findByName(index)("obj") should contain(value)
+      findByName(index)("pkg") should contain(value)
+      findByName(index)("Pkg Obj") should contain(value)
     }
   }
 
@@ -45,10 +46,10 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       }
       """) { index =>
       val value = ValueDef("somePkg.AnotherObj.myValue", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
-      index.findValuesByName("value").get should contain(value)
-      index.findValuesByName("another").get should contain(value)
-      index.findValuesByName("pkg").get should contain(value)
-      index.findValuesByName("another Value").get should contain(value)
+      findByName(index)("value") should contain(value)
+      findByName(index)("another") should contain(value)
+      findByName(index)("pkg") should contain(value)
+      findByName(index)("another Value") should contain(value)
     }
   }
 
@@ -61,8 +62,11 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
       }
       """) { index =>
       val value = ValueDef("p.::.++", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
-      index.findValuesByName("::").get should contain(value)
-      index.findValuesByName("++").get should contain(value)
+      findByName(index)("::") should contain(value)
+      findByName(index)("++") should contain(value)
     }
   }
+
+  def findByName(index: ValueIndex)(name: String) =
+    index.findValuesByName(name).get.map(_.copy(docLink = None))
 }

@@ -82,8 +82,37 @@ trait EntityFactory extends Logging {
       if (isImplicit) flags += ValueDef.Implicit
       if (isStatic(sym)) flags += ValueDef.Static
 
-      ValueDef(qualifiedName(sym, false), typeParams, tpe, rawComment, flags.result)
+      ValueDef(qualifiedName(sym, false), typeParams, tpe, rawComment,
+        flags = flags.result,
+        docLink = link(sym))
     }.leftMap(ExtractionError(qualifiedName(sym, false), _))
+
+  def link(sym: Symbol): Option[String] = {
+    // Generates a ScalaDoc Link
+    // Reuses the logic provided in https://github.com/scala/scala/blob/2.11.x/src/scaladoc/scala/tools/nsc/doc/base/MemberLookupBase.scala
+
+    def linkName(sym: Symbol) = {
+      def isRoot(s: Symbol) = (s eq NoSymbol) || s.isRootSymbol || s.isEmptyPackage || s.isEmptyPackageClass
+      def nameString(s: Symbol) = s.nameString + (if ((s.isModule || s.isModuleClass) && !s.hasPackageFlag) "$" else "")
+      val packageSuffix = if (sym.hasPackageFlag) ".package" else ""
+
+      sym.ownerChain.reverse.filterNot(isRoot(_)).map(nameString(_)).mkString(".") + packageSuffix
+    }
+
+    def externalSignature(sym: Symbol) = {
+      sym.info // force it, otherwise we see lazy types
+      (sym.nameString + sym.signatureString).replaceAll("\\s", "")
+    }
+
+    val owner = sym.owner
+
+    if (sym.isClass || sym.isModule || sym.isTrait || sym.hasPackageFlag)
+      Some(linkName(sym))
+    else if (owner.isClass || owner.isModule || owner.isTrait || owner.hasPackageFlag)
+      Some(linkName(owner) + "@" + externalSignature(sym))
+    else
+      None
+  }
 
   def isValueOfInterest(sym: Symbol): Boolean =
     (sym.isValue || (sym.isConstructor && !sym.owner.isAbstractClass)) &&

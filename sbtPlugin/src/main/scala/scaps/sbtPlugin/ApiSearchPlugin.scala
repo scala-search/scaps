@@ -8,6 +8,7 @@ import autowire._
 import sbt.{ url => sbtUrl, _ }
 import sbt.Keys._
 import sbt.complete.DefaultParsers.spaceDelimited
+import sbt.APIMappings
 import scaps.webapi.Module
 import scaps.webapi.ScapsApi
 import scaps.webapi.ScapsControlApi
@@ -70,13 +71,21 @@ object ApiSearchPlugin extends AutoPlugin {
       }
 
       val modules = updateClassifiers.value.configuration(Compile.name).get.modules
+      val mappings = apiMappings.in(Compile, doc).value
 
-      modules.flatMap(m => m.artifacts.map(a => (m.module, a._1, a._2))).filter {
-        case (_, Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.exists(name.startsWith(_)) =>
-          true
-        case _ =>
-          false
-      }.map { case (m, a, f) => IndexJob(Module(m.organization, m.name, m.revision), f.getAbsolutePath()) }.distinct
+      modules.flatMap { m =>
+        val module = m.module
+        val as = m.artifacts
+        val mapping = as.flatMap { case (_, f) => mappings.get(f) }.headOption
+        val sourceFile = as.collectFirst {
+          case (Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.exists(name.startsWith(_)) => file
+        }
+
+        sourceFile.map(f => IndexJob(
+          Module(module.organization, module.name, module.revision),
+          f.getAbsolutePath(),
+          mapping.map(_.toString + "#")))
+      }.distinct
     },
     scapsIndex := {
       val log = streams.value.log

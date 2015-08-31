@@ -1,9 +1,7 @@
 package scaps.webservice.actors
 
 import java.io.File
-
 import scala.util.control.NonFatal
-
 import ActorProtocol._
 import akka.actor.Actor
 import akka.actor.Props
@@ -24,6 +22,7 @@ import scaps.utils.TraversableOps
 import scaps.webapi.IndexBusy
 import scaps.webapi.IndexReady
 import scaps.webapi.IndexStatus
+import scaps.webapi.ValueDef
 
 object Director {
   def props(settings: Settings)(
@@ -131,7 +130,17 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
               logger.info(s"start indexing ${job.module.moduleId} (${job.artifactPath})")
 
               val entitiesWithErrors = extractor(new File(job.artifactPath))
-              ExtractionError.logErrors(entitiesWithErrors, logger.info(_))
+              val entities = ExtractionError.logErrors(entitiesWithErrors, logger.info(_))
+
+              entities.map {
+                case v: ValueDef =>
+                  val docUrl = for {
+                    prefix <- job.docUrlPrefix
+                    lnk <- v.docLink
+                  } yield prefix + lnk
+                  v.copy(docLink = docUrl)
+                case e => e
+              }
             })
           }
 
