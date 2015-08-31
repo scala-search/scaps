@@ -208,8 +208,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     val docLink = {
       value.docLink.map { lnk =>
-        a(href := lnk)(
-          span(cls := "glyphicon glyphicon-info-sign"), " ScalaDoc")
+        a(href := lnk)("Doc")
       }
     }
 

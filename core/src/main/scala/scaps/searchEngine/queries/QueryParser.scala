@@ -7,9 +7,12 @@ import scala.util.parsing.combinator.RegexParsers
 import scalaz.\/
 import scalaz.syntax.either.ToEitherOps
 
-case class RawQuery(keywords: String, tpe: RawQuery.Type)
+sealed trait RawQuery
 
 object RawQuery {
+  case class Keywords(keywords: String) extends RawQuery
+  case class Full(keywords: String, tpe: RawQuery.Type) extends RawQuery
+
   case class Type(name: String, args: List[Type] = Nil)
 
   def function(args: List[Type], res: Type) =
@@ -27,14 +30,14 @@ object QueryParser extends RegexParsers {
 
   def query: Parser[RawQuery] = phrase(fullQuery) | phrase(tpeQuery) | keywordQuery
 
-  def tpeQuery: Parser[RawQuery] = tpe ^^ { RawQuery("", _) }
+  def tpeQuery: Parser[RawQuery] = tpe ^^ { RawQuery.Full("", _) }
 
   def fullQuery: Parser[RawQuery] = (keywords <~ """\:\s""".r) ~ tpe ^^ {
-    case keywords ~ tpe => RawQuery(keywords, tpe)
+    case keywords ~ tpe => RawQuery.Full(keywords, tpe)
   }
 
   def keywordQuery: Parser[RawQuery] = keywords ^^ {
-    case keys => RawQuery(keys, Type("_"))
+    case keys => RawQuery.Keywords(keys)
   }
 
   def keywords: Parser[String] = quotedKeywords | unquotedKeywords

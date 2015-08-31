@@ -120,7 +120,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
           keys.add(docQuery, Occur.SHOULD)
         }
 
-      val docLenBoost = new FunctionQuery(
+      def docLenBoost = new FunctionQuery(
         new SimpleFloatFunction(new IntFieldSource(fields.fingerprintLength)) {
           val lengthWeight = settings.query.lengthNormWeight / math.sqrt(query.queryFingerprintLength)
 
@@ -135,8 +135,12 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
           def name(): String = "docLenNormalization"
         })
 
-      val keysAndTypes = new TypeFingerprintQuery(
-        fields.fingerprint, query.tpe, keys, settings.query.fingerprintFrequencyCutoff, docLenBoost)
+      val keysAndTypes = query.tpe.fold[Query] {
+        keys
+      } { tpe =>
+        new TypeFingerprintQuery(
+          fields.fingerprint, tpe, keys, settings.query.fingerprintFrequencyCutoff, docLenBoost)
+      }
 
       val modules = new BooleanQuery
 

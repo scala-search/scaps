@@ -125,13 +125,18 @@ class QueryAnalyzer private[searchEngine] (
    * Transforms a parsed query into a query that can be passed to the values index.
    */
   def apply(raw: RawQuery): SemanticError \/ ApiQuery =
-    for {
-      resolved <- resolveNames(raw.tpe)
-      normalizedType = toType(resolved).normalize(Nil)
-      expanded = ExpandedQuery.minimize(expandQuery(normalizedType))
-      typeQuery = toApiTypeQuery(expanded)
-    } yield {
-      ApiQuery(raw.keywords, typeQuery, normalizedType.typeFingerprint.length)
+    raw match {
+      case RawQuery.Keywords(keys) =>
+        \/.right(ApiQuery(keys, None, 0))
+      case RawQuery.Full(keys, tpe) =>
+        for {
+          resolved <- resolveNames(tpe)
+          normalizedType = toType(resolved).normalize(Nil)
+          expanded = ExpandedQuery.minimize(expandQuery(normalizedType))
+          typeQuery = toApiTypeQuery(expanded)
+        } yield {
+          ApiQuery(keys, Some(typeQuery), normalizedType.typeFingerprint.length)
+        }
     }
 
   /**

@@ -9,13 +9,13 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   import RawQuery._
 
   "the query parser" should "parse simple types" in {
-    parse("Int").tpe should equal(Type("Int"))
+    parseFullQuery("Int").tpe should equal(Type("Int"))
   }
 
   it should "parse types with arguments" in {
-    parse("List[Int]").tpe should equal(Type("List", List(Type("Int"))))
-    parse("Map[Int, String]").tpe should equal(Type("Map", List(Type("Int"), Type("String"))))
-    parse("List[Option[String]]").tpe should equal(Type("List", List(Type("Option", List(Type("String"))))))
+    parseFullQuery("List[Int]").tpe should equal(Type("List", List(Type("Int"))))
+    parseFullQuery("Map[Int, String]").tpe should equal(Type("Map", List(Type("Int"), Type("String"))))
+    parseFullQuery("List[Option[String]]").tpe should equal(Type("List", List(Type("Option", List(Type("String"))))))
   }
 
   it should "fail on empty argument lists" in {
@@ -24,8 +24,8 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   }
 
   it should "parse namespaces" in {
-    parse("p.q.C").tpe should equal(Type("p.q.C"))
-    parse("p.q.C[argument.Name]").tpe should equal(Type("p.q.C", List(Type("argument.Name"))))
+    parseFullQuery("p.q.C").tpe should equal(Type("p.q.C"))
+    parseFullQuery("p.q.C[argument.Name]").tpe should equal(Type("p.q.C", List(Type("argument.Name"))))
   }
 
   val A = Type("A")
@@ -33,31 +33,31 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   val C = Type("C")
 
   it should "parse function types" in {
-    parse("A => B").tpe should equal(function(A :: Nil, B))
+    parseFullQuery("A => B").tpe should equal(function(A :: Nil, B))
   }
 
   it should "parse function types with multiple args" in {
-    parse("(A, B) => C").tpe should equal(function(A :: B :: Nil, C))
+    parseFullQuery("(A, B) => C").tpe should equal(function(A :: B :: Nil, C))
   }
 
   it should "follow precedence rules in nested function types" in {
-    parse("A => B => C").tpe should equal(function(A :: Nil, function(B :: Nil, C)))
+    parseFullQuery("A => B => C").tpe should equal(function(A :: Nil, function(B :: Nil, C)))
   }
 
   it should "parse tuple types" in {
-    parse("(A, B)").tpe should equal(tuple(A, B))
+    parseFullQuery("(A, B)").tpe should equal(tuple(A, B))
   }
 
   it should "allow tuples in function args" in {
-    parse("((A, B)) => C").tpe should equal(function(tuple(A, B) :: Nil, C))
+    parseFullQuery("((A, B)) => C").tpe should equal(function(tuple(A, B) :: Nil, C))
   }
 
   it should "allow tuples in return types" in {
-    parse("A => (B, C)").tpe should equal(function(A :: Nil, tuple(B, C)))
+    parseFullQuery("A => (B, C)").tpe should equal(function(A :: Nil, tuple(B, C)))
   }
 
   it should "not parse Tuple1 literals" in {
-    parse("(A)").tpe should equal(A)
+    parseFullQuery("(A)").tpe should equal(A)
   }
 
   it should "fail on empty tuples" in {
@@ -91,28 +91,40 @@ class QueryParserSpecs extends FlatSpec with Matchers {
   }
 
   it should "allow empty argument lists" in {
-    parse("() => A").tpe should equal(function(Nil, A))
+    parseFullQuery("() => A").tpe should equal(function(Nil, A))
   }
 
   it should "parse single keywords preceding the type" in {
-    parse("keyword: Int").keywords should be("keyword")
+    parseFullQuery("keyword: Int").keywords should be("keyword")
   }
 
   it should "parse multiple keywords" in {
-    parse("k1 k2 k3: Int").keywords should be("k1 k2 k3")
+    parseFullQuery("k1 k2 k3: Int").keywords should be("k1 k2 k3")
   }
 
   it should "parse multiple keywords in quotes" in {
-    parse("\"k1 k2 k3\": Int").keywords should be("k1 k2 k3")
+    parseFullQuery("\"k1 k2 k3\": Int").keywords should be("k1 k2 k3")
   }
 
   it should "allow colons in types" in {
-    parse("::[A, B]").tpe should equal(Type("::", A :: B :: Nil))
+    parseFullQuery("::[A, B]").tpe should equal(Type("::", A :: B :: Nil))
   }
 
   it should "parse multiple keywords without type" in {
-    parse("k1 k2 k3").keywords should be("k1 k2 k3")
+    parseKeys("k1 k2 k3").keywords should be("k1 k2 k3")
   }
+
+  def parseFullQuery(query: String) =
+    parse(query) match {
+      case f: RawQuery.Full => f
+      case _                => ???
+    }
+
+  def parseKeys(query: String) =
+    parse(query) match {
+      case k: RawQuery.Keywords => k
+      case _                    => ???
+    }
 
   def parse(query: String) = {
     val res = QueryParser(query)
