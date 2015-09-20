@@ -95,13 +95,6 @@ trait ScapsService extends HttpService {
             }
           }
         } ~
-          path("scaps.css") {
-            get {
-              complete {
-                HttpEntity(MediaTypes.`text/css`, HtmlPages.ScapsStyle.styleSheetText)
-              }
-            }
-          } ~
           pathSuffixTest("""(?i)^.*\.(css|js|png|gif|svg|pdf|jpg|jpeg|woff2|js\.map)$""".r) { _ =>
             get { getFromResourceDirectory("") }
           }

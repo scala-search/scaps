@@ -13,8 +13,7 @@ import scaps.webapi.ScapsApi
 import scaps.webapi.BuildInfo
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])
-  extends Helpers[Builder, Output, FragT]
-  with ScapsStyles[Builder, Output, FragT] {
+  extends Helpers[Builder, Output, FragT] {
 
   import bundle._
   import bundle.all._
@@ -59,26 +58,25 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         meta(name := "viewport", content := "width=device-width, initial-scale=1"),
         title(pageTitle),
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
-        stylesheet("scaps.css"),
         if (prodMode)
           javascript("scaps-webservice-ui-opt.js")
         else
           javascript("scaps-webservice-ui-fastopt.js")),
 
-      body(ScapsStyle.world, onload := jsCallbacks.boot(searchFormId, resultContainerId))(
+      body(paddingTop := 90.px, paddingBottom := 41.px, onload := jsCallbacks.boot(searchFormId, resultContainerId))(
         form(id := searchFormId, method := "get", role := "search")(
           nav(cls := "navbar navbar-inverse navbar-fixed-top")(
             div(cls := "container")(
-              div(cls := "navbar-header", style := "width: 100%")(
+              div(cls := "navbar-header", width := 100.pct)(
                 a(cls := "navbar-brand", href := "/")("Scaps"),
-                div(cls := "form-group", style := "display: inline;")(
-                  div(cls := "input-group", style := "display: table; margin-top: 8px; margin-right: 8px;")(
-                    span(cls := "input-group-addon", style := "width: 1%;")(span(cls := "glyphicon glyphicon-search")),
+                div(cls := "form-group", display.inline)(
+                  div(cls := "input-group", display.table, marginTop := 8.px, marginRight := 8.px)(
+                    span(cls := "input-group-addon", width := 1.pct)(span(cls := "glyphicon glyphicon-search")),
                     input(tpe := "search", name := "q", value := query, autocomplete := "off",
                       autofocus, cls := "form-control", placeholder := "Search for Functions, Methods and Values...")))))),
-          nav(cls := s"${ScapsStyle.modulesBar.name} navbar navbar-default navbar-fixed-top")(
+          nav(marginTop := 50.px, minHeight := 0.px, cls := s"navbar navbar-default navbar-fixed-top")(
             div(cls := "container")(
-              ul {
+              ul(marginTop := 3.px, marginBottom := 5.px) {
                 val disabledAttr = when(status.indexedModules.length <= 1) { disabled }
 
                 status.indexedModules.sortBy(_.name).map { m =>
@@ -96,8 +94,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           div(cls := "row")(
             div(cls := "col-md-10 col-md-offset-1", id := resultContainerId)(mods))),
 
-        nav(cls := "navbar navbar-default navbar-fixed-bottom", style := "min-height: 0px;")(
-          div(cls := "navbar-text", style := "width: 100%; text-align: center; margin-top: 4px; margin-bottom: 4px;") {
+        nav(cls := "navbar navbar-default navbar-fixed-bottom", minHeight := 0.px)(
+          div(cls := "navbar-text", width := 100.pct, textAlign.center, marginTop := 4.px, marginBottom := 4.px) {
             val statusInfo = status match {
               case IndexBusy(queue, _, _) => s", Index is Updating (${queue.size} Modules)"
               case _                      => ""
@@ -167,9 +165,11 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   }
 
   def result(resultNo: Int, value: ValueDef) = {
+    val typeParamStyle = color := "#999999"
+
     def typeName(t: TypeRef) =
       if (value.typeParameters.exists(_.name == t.name))
-        em(ScapsStyle.typeParameter)(t.name)
+        em(typeParamStyle)(t.name)
       else
         em(a(attrs.title := t.name)(t.shortName))
 
@@ -204,7 +204,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     def typeParams(ps: List[TypeParameter]) =
       if (ps.isEmpty) span()
-      else span("[", intersperse[Modifier](ps.map(p => em(ScapsStyle.typeParameter)(p.toString)), ", "), "]")
+      else span("[", intersperse[Modifier](ps.map(p => em(typeParamStyle)(p.toString)), ", "), "]")
 
     val docLink = {
       value.docLink.map { lnk =>
@@ -215,7 +215,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     val feedback = {
       val feedbackElemId = s"feedback_${value.signature}"
 
-      div(id := feedbackElemId, style := "display: inline;")(
+      div(id := feedbackElemId, display.inline)(
         a(href := "javascript:void(0);",
           onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, value))(
             span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
@@ -224,25 +224,28 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     val info = intersperse[Modifier](docLink.toSeq ++ Seq(feedback), raw(" &middot; "))
 
     Seq(
-      dt(code(value.tpe match {
-        case TypeRef.MemberAccess(owner, member) =>
-          val memberTypeParams = value.typeParameters
-            .filterNot(p => owner.toList.exists(_.name == p.name))
+      dt(paddingTop := 20.px)(
+        code(value.tpe match {
+          case TypeRef.MemberAccess(owner, member) =>
+            val memberTypeParams = value.typeParameters
+              .filterNot(p => owner.toList.exists(_.name == p.name))
 
-          span(tpe(owner), ".", strong(value.shortName), typeParams(memberTypeParams), signature(member))
-        case t =>
-          span(strong(value.name), typeParams(value.typeParameters), signature(t))
-      })),
+            span(tpe(owner), ".", strong(value.shortName), typeParams(memberTypeParams), signature(member))
+          case t =>
+            span(strong(value.name), typeParams(value.typeParameters), signature(t))
+        })),
       dd(div(value.comment),
         div(span(cls := "label label-default")(value.module.name), " ", value.name),
         info))
   }
 
+  val feedbackFeedbackStyle = color := "#999999"
+
   def feedbackReceived =
-    span(ScapsStyle.feedbackFeedback)(raw("Thank you for your feedback &#9786;"))
+    span(feedbackFeedbackStyle)(raw("Thank you for your feedback &#9786;"))
 
   def feedbackError =
-    span(ScapsStyle.feedbackFeedback)("Sorry, there was an error transferring your feedback.")
+    span(feedbackFeedbackStyle)("Sorry, there was an error transferring your feedback.")
 }
 
 trait Helpers[Builder, Output <: FragT, FragT] {
