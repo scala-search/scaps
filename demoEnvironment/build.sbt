@@ -14,7 +14,7 @@ autoAPIMappings := true
 
 //libraryDependencies += "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2"
 
-//libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
+libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
 
 //libraryDependencies += "org.spire-math" %% "spire" % "0.10.1"
 

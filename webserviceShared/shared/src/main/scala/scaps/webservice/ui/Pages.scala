@@ -28,6 +28,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   val pageTitle = "Scaps: Scala API Search"
 
+  val aboutUrl = "http://about.scala-search.org/"
+
   object jsCallbacks {
     val main = "scaps.webservice.ui.Main()"
 
@@ -100,7 +102,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
               case IndexBusy(queue, _, _) => s", Index is Updating (${queue.size} Modules)"
               case _                      => ""
             }
-            s"by Lukas Wegmann, version ${BuildInfo.version}$statusInfo"
+            span(
+              s"by Lukas Wegmann | version ${BuildInfo.version}$statusInfo | ",
+              a(href := aboutUrl)("About"))
           }),
 
         raw(analyticsScript.getOrElse(""))))
@@ -108,34 +112,32 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
   def main(status: IndexStatus, enabledModuleIds: Set[String]) = {
     def example(query: String, desc: String) = {
-      li(a(href := searchUri(query, enabledModuleIds))(code(query)), " - ", desc)
+      p(a(href := searchUri(query, enabledModuleIds))(code(query)), " - ", desc)
     }
 
     div(
       h1(pageTitle),
-      p("""Scaps is a search engine for discovering functionality in Scala libraries (or in other words,
-              a """, a(href := "https://www.haskell.org/hoogle/")("Hoogle"), """ for Scala). You can use both
-              type signatures and keywords in your search queries."""),
-      p("""Some examples you might want to try:"""),
-      ul(
-        example("max: Int", "An integer value with `max` in it's name or doc comment."),
-        example("max: (Int, Int) => Int", "A function taking two ints and returning Int."),
-        example("max: Int => Int => Int", "Same query as above but in curried form."),
-        example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings."),
-        example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consiting of a single character are treated as type parameters."),
-        example("List => Int => Option", "The identical query as above but with omitted type parameters."),
-        example("&~", "Searches for symbolic operators are also possible.")),
-      p("""This is an early release reduced to the max. For the future, we plan to include additional features to
-              improve user experience and the quality of the search results:"""),
-      ul(
-        li("Additional indexed libraries"),
-        li("Improved support for the type class pattern"),
-        li("Inherited doc comments"),
-        li("Type alias")),
-      p("Of course, feedback would be highly appreciated (", a(href := "https://twitter.com/Luegg1")("Twitter"),
-        " or l1wegman(at)hsr.ch)."),
-      p("Scaps is an offspring of a master's thesis by Lukas Wegmann at the ",
-        a(href := "http://www.hsr.ch/")("University of Applied Science Rapperswil (HSR)"), "."))
+      p("""Scaps is a search engine for discovering functionality in Scala libraries (or in other words, a """,
+        a(href := "https://www.haskell.org/hoogle/")("Hoogle"), """ for Scala). You can use both
+        type signatures and keywords in your search queries."""),
+      div(cls := "panel panel-default")(
+        div(cls := "panel-heading")(
+          h2(cls := "panel-title")("Example Queries")),
+        div(cls := "panel-body")(
+          example("max: Int", "An integer value with `max` in it's name or doc comment."),
+          example("max: (Int, Int) => Int", "A function taking two ints and returning Int."),
+          example("max: Int => Int => Int", "Same query as above but in curried form."),
+          example("Ordering[String]", "Implementations of the `Ordering` typeclass for strings."),
+          example("List[A] => Int => Option[A]", "A generic query which uses a type parameter `A`. All type identifiers consisting of a single character are treated as type parameters."),
+          example("List => Int => Option", "The identical query as above but with omitted type parameters."),
+          example("&~", "Searches for symbolic operators are also possible."))),
+      div(cls := "panel panel-default")(
+        div(cls := "panel-heading")(
+          h2(cls := "panel-title")(
+            a(href := aboutUrl)(span(cls := "glyphicon glyphicon-link"), " About Scaps"))),
+        div(cls := "panel-body")(
+          "Scaps is an offspring of a master's thesis by Lukas Wegmann at the ",
+          a(href := "http://www.hsr.ch/")("University of Applied Science Rapperswil (HSR)."))))
   }
 
   def queryError(msg: String) =
