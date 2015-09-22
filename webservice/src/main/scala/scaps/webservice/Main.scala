@@ -3,7 +3,7 @@ package scaps.webservice
 import scala.concurrent.duration.DurationInt
 import akka.actor.ActorSystem
 import akka.util.Timeout
-import scaps.webapi.ScapsApi
+import scaps.api.ScapsApi
 import spray.httpx.marshalling.ToResponseMarshallable.isMarshallable
 import spray.routing.Directive.pimpApply
 import spray.routing.SimpleRoutingApp

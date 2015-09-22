@@ -9,12 +9,12 @@ import sbt.{ url => sbtUrl, _ }
 import sbt.Keys._
 import sbt.complete.DefaultParsers.spaceDelimited
 import sbt.APIMappings
-import scaps.webapi.Module
-import scaps.webapi.ScapsApi
-import scaps.webapi.ScapsControlApi
+import scaps.api.Module
+import scaps.api.ScapsApi
+import scaps.api.ScapsControlApi
 import org.slf4j.impl.StaticLoggerBinder
 import sbt.complete.Parser
-import scaps.webapi.IndexJob
+import scaps.api.IndexJob
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements

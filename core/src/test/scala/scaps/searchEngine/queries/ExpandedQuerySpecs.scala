@@ -2,7 +2,7 @@ package scaps.searchEngine.queries
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scaps.webapi._
+import scaps.api._
 
 class ExpandedQuerySpecs extends FlatSpec with Matchers {
   import ExpandedQuery._

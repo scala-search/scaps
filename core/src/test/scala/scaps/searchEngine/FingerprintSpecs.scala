@@ -3,9 +3,9 @@ package scaps.searchEngine
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
 import scaps.featureExtraction.ExtractionUtils
-import scaps.webapi.Covariant
-import scaps.webapi.TypeRef
-import scaps.webapi.Variance
+import scaps.api.Covariant
+import scaps.api.TypeRef
+import scaps.api.Variance
 
 class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "a type fingerprint" should "contain a value's type, variance and occurrence number" in {

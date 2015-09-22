@@ -1,6 +1,6 @@
 package scaps.searchEngine
 
-import scaps.webapi.Variance
+import scaps.api.Variance
 
 case class ApiQuery(keywords: String, tpe: Option[ApiTypeQuery], queryFingerprintLength: Int) {
   override def toString =

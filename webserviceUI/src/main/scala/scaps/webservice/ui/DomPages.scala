@@ -1,7 +1,7 @@
 package scaps.webservice.ui
 
 import scalatags.JsDom.all._
-import scaps.webapi.IndexStatus
+import scaps.api.IndexStatus
 import scala.scalajs.js
 import org.scalajs.dom
 

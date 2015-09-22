@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 import scala.concurrent.Future
 

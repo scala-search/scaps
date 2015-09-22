@@ -1,7 +1,7 @@
 package scaps.webservice
 
 import spray.routing.HttpService
-import scaps.webapi.ScapsControlApi
+import scaps.api.ScapsControlApi
 import akka.actor.Actor
 
 class ScapsControlServiceActor(val apiImpl: Scaps) extends Actor with ScapsControlService {

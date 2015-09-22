@@ -2,7 +2,7 @@ package scaps.featureExtraction
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile
-import scaps.webapi.Definition
+import scaps.api.Definition
 import scala.tools.nsc.interactive.Global
 import scala.util.Failure
 import scala.util.Success

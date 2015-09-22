@@ -1,6 +1,6 @@
 package scaps.searchEngine.queries
 
-import scaps.webapi.TypeRef
+import scaps.api.TypeRef
 import scaps.searchEngine.SyntaxError
 import scala.util.parsing.combinator.RegexParsers
 

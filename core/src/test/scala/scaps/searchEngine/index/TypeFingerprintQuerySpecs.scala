@@ -3,7 +3,7 @@ package scaps.searchEngine.index
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import scaps.searchEngine.ApiTypeQuery._
-import scaps.webapi.Covariant
+import scaps.api.Covariant
 
 class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   import scaps.searchEngine.index.TypeFingerprintQuery.FingerprintScorer

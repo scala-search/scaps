@@ -13,12 +13,12 @@ import ExpandedQuery.Part
 import ExpandedQuery.Sum
 import scaps.searchEngine.index.ViewIndex
 import scaps.settings.Settings
-import scaps.webapi.Contravariant
-import scaps.webapi.Covariant
-import scaps.webapi.SubType
-import scaps.webapi.TypeRef
-import scaps.webapi.Variance
-import scaps.webapi.View
+import scaps.api.Contravariant
+import scaps.api.Covariant
+import scaps.api.SubType
+import scaps.api.TypeRef
+import scaps.api.Variance
+import scaps.api.View
 
 class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._

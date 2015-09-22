@@ -42,8 +42,8 @@ import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
-import scaps.webapi.Module
-import scaps.webapi.ValueDef
+import scaps.api.Module
+import scaps.api.ValueDef
 
 class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
   import ValueIndex._

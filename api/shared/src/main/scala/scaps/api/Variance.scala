@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 sealed trait Variance {
   def prefix: String

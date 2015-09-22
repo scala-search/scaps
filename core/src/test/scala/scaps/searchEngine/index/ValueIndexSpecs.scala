@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
-import scaps.webapi.ValueDef
-import scaps.webapi.TypeRef
+import scaps.api.ValueDef
+import scaps.api.TypeRef
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers

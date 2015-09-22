@@ -11,11 +11,11 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
 
-import scaps.webapi.Contravariant
-import scaps.webapi.Covariant
-import scaps.webapi.Invariant
-import scaps.webapi.TypeRef
-import scaps.webapi.View
+import scaps.api.Contravariant
+import scaps.api.Covariant
+import scaps.api.Invariant
+import scaps.api.TypeRef
+import scaps.api.View
 
 class ViewIndex(val dir: Directory) extends Index[View] {
   import ViewIndex._

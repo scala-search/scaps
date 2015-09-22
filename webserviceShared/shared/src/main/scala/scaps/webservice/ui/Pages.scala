@@ -3,14 +3,14 @@ package scaps.webservice.ui
 
 import scalatags.generic.Bundle
 import scalatags.generic.TypedTag
-import scaps.webapi.IndexStatus
-import scaps.webapi.IndexBusy
-import scaps.webapi.ValueDef
-import scaps.webapi.TypeRef
-import scaps.webapi.TypeRef.MemberAccess
-import scaps.webapi.TypeParameter
-import scaps.webapi.ScapsApi
-import scaps.webapi.BuildInfo
+import scaps.api.IndexStatus
+import scaps.api.IndexBusy
+import scaps.api.ValueDef
+import scaps.api.TypeRef
+import scaps.api.TypeRef.MemberAccess
+import scaps.api.TypeParameter
+import scaps.api.ScapsApi
+import scaps.api.BuildInfo
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])
   extends Helpers[Builder, Output, FragT] {

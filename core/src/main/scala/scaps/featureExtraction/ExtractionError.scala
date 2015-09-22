@@ -3,7 +3,7 @@ package scaps.featureExtraction
 import scala.language.higherKinds
 import scalaz._
 import scalaz.syntax.monad._
-import scaps.webapi.Definition
+import scaps.api.Definition
 import scala.collection.generic.CanBuildFrom
 
 case class ExtractionError(entityName: String, error: Throwable)

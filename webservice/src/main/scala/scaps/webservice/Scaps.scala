@@ -11,14 +11,14 @@ import akka.util.Timeout
 import scalaz.{ \/ => \/ }
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
-import scaps.webapi.IndexStatus
-import scaps.webapi.Module
-import scaps.webapi.ScapsApi
-import scaps.webapi.ScapsControlApi
-import scaps.webapi.ValueDef
+import scaps.api.IndexStatus
+import scaps.api.Module
+import scaps.api.ScapsApi
+import scaps.api.ScapsControlApi
+import scaps.api.ValueDef
 import scaps.webservice.actors.Director
 import scaps.webservice.actors.UserInteractionLogger
-import scaps.webapi.IndexJob
+import scaps.api.IndexJob
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.ActorProtocol._

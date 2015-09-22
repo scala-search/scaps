@@ -1,6 +1,6 @@
 package scaps.searchEngine
 
-import scaps.webapi.Module
+import scaps.api.Module
 import scaps.settings.Settings
 import scaps.searchEngine.index.IndexUtils
 import org.scalatest.FlatSpec
@@ -9,7 +9,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scaps.webapi._
+import scaps.api._
 import scalaz.{ Contravariant => _, _ }
 
 class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {

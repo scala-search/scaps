@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 case class Module(organization: String, name: String, revision: String) {
   def moduleId = s"$organization:$name:$revision"

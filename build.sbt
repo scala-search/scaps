@@ -36,43 +36,43 @@ releaseProcess := Seq[ReleaseStep](
 // Root Project
 
 lazy val root = (project in file("."))
-  .aggregate(webapi_2_10, webapi_2_11, webapiJS, core, evaluation, webservice, webserviceUI, sbtPlug)
+  .aggregate(api_2_10, api_2_11, apiJS, core, evaluation, webservice, webserviceUI, sbtPlug)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)
 
 // Sub Projects
 
-def webapiSettings = 
+def apiSettings = 
   commonSettings ++ Seq(
-    name := "scaps-webapi",
-    libraryDependencies ++= Dependencies.webapiDependencies,
+    name := "scaps-api",
+    libraryDependencies ++= Dependencies.apiDependencies,
     target := baseDirectory.value / s"target-${scalaVersion.value}",
     buildInfoKeys := Seq[BuildInfoKey](version),
-    buildInfoPackage := "scaps.webapi")
+    buildInfoPackage := "scaps.api")
 
-lazy val webapi_2_10_cross = (crossProject in file("webapi"))
+lazy val api_2_10_cross = (crossProject in file("api"))
   .enablePlugins(BuildInfoPlugin)
-  .settings(webapiSettings: _*)
+  .settings(apiSettings: _*)
   .settings(
     scalaVersion := Commons.sbtPluginScalaVersion,
     // do not run tests for 2.10 because some test dependencies wont resolve
     test in Test := {})
 
-lazy val webapi_2_11_cross = (crossProject in file("webapi"))
+lazy val api_2_11_cross = (crossProject in file("api"))
   .enablePlugins(BuildInfoPlugin)
-  .settings(webapiSettings: _*)
+  .settings(apiSettings: _*)
   .settings(
     scalaVersion := Commons.targetedScalaVersion,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"))
 
-lazy val webapi_2_10 = webapi_2_10_cross.jvm
-lazy val webapi_2_11 = webapi_2_11_cross.jvm
-lazy val webapiJS = webapi_2_11_cross.js
+lazy val api_2_10 = api_2_10_cross.jvm
+lazy val api_2_11 = api_2_11_cross.jvm
+lazy val apiJS = api_2_11_cross.js
 
 lazy val core = (project in file("core"))
-  .dependsOn(webapi_2_11)
+  .dependsOn(api_2_11)
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-core",
@@ -88,7 +88,7 @@ lazy val evaluation = (project in file("evaluation"))
     libraryDependencies ++= Dependencies.evaluationDependencies)
 
 lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
-  .dependsOn(webapi_2_11_cross)
+  .dependsOn(api_2_11_cross)
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-webservice-shared",
@@ -145,7 +145,7 @@ lazy val webserviceUI = (project in file("webserviceUI"))
       "org.monifu" %%% "monifu" % "1.0-M1"))
 
 lazy val sbtPlug = (project in file("sbtPlugin"))
-  .dependsOn(webapi_2_10)
+  .dependsOn(api_2_10)
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-sbt",

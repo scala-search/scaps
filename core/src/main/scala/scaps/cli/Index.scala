@@ -9,7 +9,7 @@ import scaps.featureExtraction.CompilerUtils
 import scaps.featureExtraction.ExtractionError
 import scaps.featureExtraction.JarExtractor
 import scaps.settings.Settings
-import scaps.webapi.Module
+import scaps.api.Module
 import scaps.utils.Logging
 import scalaz.std.stream._
 

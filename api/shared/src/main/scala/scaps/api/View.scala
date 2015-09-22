@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 sealed trait View {
   import View._

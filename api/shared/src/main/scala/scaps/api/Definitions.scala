@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 sealed trait Definition {
   def name: String
@@ -101,6 +101,7 @@ case class TypeParameter(
   variance: Variance,
   lowerBound: String = TypeRef.Nothing.name,
   upperBound: String = TypeRef.Any.name) {
+
   import TypeRef._
 
   override def toString() = {

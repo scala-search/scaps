@@ -1,9 +1,9 @@
 package scaps.webservice.actors
 
 import scalaz.\/
-import scaps.webapi.ValueDef
-import scaps.webapi.Module
-import scaps.webapi.IndexJob
+import scaps.api.ValueDef
+import scaps.api.Module
+import scaps.api.IndexJob
 import scaps.searchEngine.SearchEngine
 
 object ActorProtocol {

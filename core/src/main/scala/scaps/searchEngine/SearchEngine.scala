@@ -22,17 +22,17 @@ import scaps.searchEngine.queries.QueryParser
 import scaps.searchEngine.queries.RawQuery
 import scaps.settings.Settings
 import scaps.utils.Logging
-import scaps.webapi.TypeDef
-import scaps.webapi.Contravariant
-import scaps.webapi.Covariant
-import scaps.webapi.Definition
-import scaps.webapi.Invariant
-import scaps.webapi.Module
-import scaps.webapi.ValueDef
-import scaps.webapi.TypeRef
-import scaps.webapi.TypeParameter
-import scaps.webapi.Variance
-import scaps.webapi.View
+import scaps.api.TypeDef
+import scaps.api.Contravariant
+import scaps.api.Covariant
+import scaps.api.Definition
+import scaps.api.Invariant
+import scaps.api.Module
+import scaps.api.ValueDef
+import scaps.api.TypeRef
+import scaps.api.TypeParameter
+import scaps.api.Variance
+import scaps.api.View
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {

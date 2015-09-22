@@ -4,9 +4,9 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 
 import scaps.featureExtraction.ExtractionUtils
-import scaps.webapi.ImplicitConversion
-import scaps.webapi.TypeRef
-import scaps.webapi.View
+import scaps.api.ImplicitConversion
+import scaps.api.TypeRef
+import scaps.api.View
 
 class ViewSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "the views creator" should "create views from implicit defs" in {

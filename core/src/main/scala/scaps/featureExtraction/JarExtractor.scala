@@ -4,7 +4,7 @@ import java.io.File
 import java.util.jar.JarFile
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.reflect.internal.util.BatchSourceFile
-import scaps.webapi.Definition
+import scaps.api.Definition
 import scala.tools.nsc.interactive.Global
 import scala.io.Codec
 import scalaz._

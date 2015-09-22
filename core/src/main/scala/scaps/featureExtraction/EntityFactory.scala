@@ -1,6 +1,6 @@
 package scaps.featureExtraction
 
-import scaps.webapi._
+import scaps.api._
 import scala.tools.nsc.interactive.Global
 import scala.util.Try
 import scalaz.{ Contravariant => _, _ }

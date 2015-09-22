@@ -61,7 +61,7 @@ object Dependencies {
     scalatest,
     rng)
 
-  val webapiDependencies = Seq()
+  val apiDependencies = Seq()
 
   val webserviceDependencies = Seq(
     scalaz,

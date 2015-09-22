@@ -2,7 +2,7 @@ package scaps.searchEngine.index
 
 import upickle._
 import org.apache.lucene.store.Directory
-import scaps.webapi.Module
+import scaps.api.Module
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.TextField
 import org.apache.lucene.document.Field.Store

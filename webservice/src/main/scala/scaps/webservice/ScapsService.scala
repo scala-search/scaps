@@ -7,7 +7,7 @@ import spray.http.HttpEntity
 import scalatags.Text
 import spray.http.MediaTypes
 import spray.http.HttpEntity
-import scaps.webapi.ScapsApi
+import scaps.api.ScapsApi
 import akka.io.Tcp.Bound
 import scaps.webservice.ui.Pages
 import spray.http.Uri

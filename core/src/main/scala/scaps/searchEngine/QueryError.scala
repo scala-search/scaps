@@ -1,6 +1,6 @@
 package scaps.searchEngine
 
-import scaps.webapi.TypeDef
+import scaps.api.TypeDef
 
 sealed trait QueryError
 

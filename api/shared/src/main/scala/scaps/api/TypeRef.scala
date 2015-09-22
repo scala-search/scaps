@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isTypeParam: Boolean = false) {
   import TypeRef._

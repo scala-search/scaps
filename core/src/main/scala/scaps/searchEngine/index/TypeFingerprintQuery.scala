@@ -16,8 +16,8 @@ import org.apache.lucene.search.TermQuery
 
 import scaps.searchEngine.ApiTypeQuery
 import scaps.utils.Logging
-import scaps.webapi.Contravariant
-import scaps.webapi.Covariant
+import scaps.api.Contravariant
+import scaps.api.Covariant
 
 /**
  * A Lucene query that scores type fingerprints in a field against a type query.

@@ -1,7 +1,7 @@
 package scaps.searchEngine.index
 
 import scalaz.{ Contravariant => _, _ }
-import scaps.webapi._
+import scaps.api._
 import scala.util.Random
 import scaps.utils._
 

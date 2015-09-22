@@ -9,7 +9,7 @@ import org.scalajs.dom.ext._
 import org.scalajs.dom.html
 import org.scalajs.dom.raw.FocusEvent
 import autowire._
-import scaps.webapi.ScapsApi
+import scaps.api.ScapsApi
 import org.scalajs.dom.raw.Event
 import monifu.reactive._
 import monifu.reactive.subjects.PublishSubject

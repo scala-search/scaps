@@ -1,8 +1,8 @@
 package scaps.searchEngine.index
 
 import scaps.featureExtraction.ExtractionUtils
-import scaps.webapi.TypeDef
-import scaps.webapi.ValueDef
+import scaps.api.TypeDef
+import scaps.api.ValueDef
 import scaps.settings.Settings
 import scaps.utils.using
 

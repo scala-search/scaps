@@ -14,10 +14,10 @@ import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
 import scaps.settings.Settings
-import scaps.webapi.TypeDef
-import scaps.webapi.Covariant
-import scaps.webapi.Module
-import scaps.webapi.TypeRef
+import scaps.api.TypeDef
+import scaps.api.Covariant
+import scaps.api.Module
+import scaps.api.TypeRef
 import scala.annotation.tailrec
 
 /**

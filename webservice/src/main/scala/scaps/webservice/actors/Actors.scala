@@ -19,10 +19,10 @@ import scaps.searchEngine.TooUnspecific
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
 import scaps.utils.TraversableOps
-import scaps.webapi.IndexBusy
-import scaps.webapi.IndexReady
-import scaps.webapi.IndexStatus
-import scaps.webapi.ValueDef
+import scaps.api.IndexBusy
+import scaps.api.IndexReady
+import scaps.api.IndexStatus
+import scaps.api.ValueDef
 
 object Director {
   def props(settings: Settings)(

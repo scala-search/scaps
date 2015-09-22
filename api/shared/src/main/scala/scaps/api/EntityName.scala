@@ -1,4 +1,4 @@
-package scaps.webapi
+package scaps.api
 
 /**
  * Helper methods for de-/encoding entity names.

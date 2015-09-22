@@ -19,7 +19,7 @@ import scaps.searchEngine.QueryError
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings
 import scaps.utils.Logging
-import scaps.webapi.Module
+import scaps.api.Module
 import scaps.utils.timers
 
 object Common extends Logging {

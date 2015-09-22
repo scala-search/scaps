@@ -10,13 +10,13 @@ import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SemanticError
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.QuerySettings
-import scaps.webapi.TypeDef
-import scaps.webapi.Contravariant
-import scaps.webapi.Covariant
-import scaps.webapi.Invariant
-import scaps.webapi.TypeRef
-import scaps.webapi.Variance
-import scaps.webapi.View
+import scaps.api.TypeDef
+import scaps.api.Contravariant
+import scaps.api.Covariant
+import scaps.api.Invariant
+import scaps.api.TypeRef
+import scaps.api.Variance
+import scaps.api.View
 import scaps.utils._
 
 private[queries] sealed trait ResolvedQuery

@@ -3,7 +3,7 @@ package scaps.featureExtraction
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
 import scala.reflect.internal.util.BatchSourceFile
-import scaps.webapi._
+import scaps.api._
 import scala.util.Random
 
 class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUtils {

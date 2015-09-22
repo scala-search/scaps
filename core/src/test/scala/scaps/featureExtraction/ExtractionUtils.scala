@@ -1,6 +1,6 @@
 package scaps.featureExtraction
 
-import scaps.webapi._
+import scaps.api._
 import scala.util.Random
 import scala.reflect.internal.util.BatchSourceFile
 import scalaz.std.list._

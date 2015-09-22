@@ -12,9 +12,9 @@ import scaps.searchEngine.SearchEngine
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.searchEngine.index.ViewIndex
 import scaps.settings.Settings
-import scaps.webapi.TypeDef
-import scaps.webapi.TypeRef
-import scaps.webapi.View
+import scaps.api.TypeDef
+import scaps.api.TypeRef
+import scaps.api.View
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
