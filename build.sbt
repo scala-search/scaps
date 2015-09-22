@@ -48,7 +48,8 @@ lazy val root = (project in file("."))
 def apiSettings = 
   commonSettings ++ Seq(
     name := "scaps-api",
-    libraryDependencies ++= Dependencies.apiDependencies,
+    libraryDependencies ++= Dependencies.apiDependencies ++ 
+      Seq("com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"),
     target := baseDirectory.value / s"target-${scalaVersion.value}",
     buildInfoKeys := Seq[BuildInfoKey](version),
     buildInfoPackage := "scaps.api")
@@ -57,6 +58,7 @@ lazy val api_2_10_cross = (crossProject in file("api"))
   .enablePlugins(BuildInfoPlugin)
   .settings(apiSettings: _*)
   .settings(
+    EclipseKeys.skipProject := true,
     scalaVersion := Commons.sbtPluginScalaVersion,
     // do not run tests for 2.10 because some test dependencies wont resolve
     test in Test := {})
@@ -65,9 +67,9 @@ lazy val api_2_11_cross = (crossProject in file("api"))
   .enablePlugins(BuildInfoPlugin)
   .settings(apiSettings: _*)
   .settings(
-    scalaVersion := Commons.targetedScalaVersion,
-    libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"))
+    scalaVersion := Commons.targetedScalaVersion)
+  .jsSettings(
+    name := "scaps-api-js")
 
 lazy val api_2_10 = api_2_10_cross.jvm
 lazy val api_2_11 = api_2_11_cross.jvm
@@ -103,6 +105,8 @@ lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
     publishArtifact := true,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion))
+  .jsSettings(
+    name := "scaps-webservice-shared-js")
 
 lazy val webserviceShared_JVM = webserviceShared_cross.jvm
 lazy val webserviceShared_JS = webserviceShared_cross.js
