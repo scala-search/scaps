@@ -43,6 +43,8 @@ lazy val root = (project in file("."))
 
 // Sub Projects
 
+// API
+
 def apiSettings = 
   commonSettings ++ Seq(
     name := "scaps-api",
@@ -71,6 +73,8 @@ lazy val api_2_10 = api_2_10_cross.jvm
 lazy val api_2_11 = api_2_11_cross.jvm
 lazy val apiJS = api_2_11_cross.js
 
+// Core
+
 lazy val core = (project in file("core"))
   .dependsOn(api_2_11)
   .settings(commonSettings: _*)
@@ -79,6 +83,8 @@ lazy val core = (project in file("core"))
     libraryDependencies ++= Dependencies.coreDependencies,
     testModules += "jarExtractorTests")
 
+// Evaluation
+
 lazy val evaluation = (project in file("evaluation"))
   .dependsOn(core)
   .settings(commonSettings: _*)
@@ -86,6 +92,8 @@ lazy val evaluation = (project in file("evaluation"))
     name := "scaps-evaluation",
     publishArtifact := false,
     libraryDependencies ++= Dependencies.evaluationDependencies)
+
+// Webservice
 
 lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
   .dependsOn(api_2_11_cross)
@@ -124,8 +132,8 @@ lazy val webservice = (project in file("webservice"))
         conf -> "conf/application.conf",
         log -> "conf/logback.xml")
     },
-    bashScriptExtraDefines += """addJava "-Dconfig.file=${app_home}/../conf/application.conf"""",
-    bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/logback.xml"""")
+    bashScriptExtraDefines += """addJava "-Dconfig.file=${app_home}/../conf/application.conf" """,
+    bashScriptExtraDefines += """addJava "-Dlogback.configurationFile=${app_home}/../conf/logback.xml" """)
 
 lazy val webserviceUI = (project in file("webserviceUI"))
   .dependsOn(webserviceShared_JS)
@@ -143,6 +151,8 @@ lazy val webserviceUI = (project in file("webserviceUI"))
       "org.scala-js" %%% "scalajs-dom" % "0.8.0",
       "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test",
       "org.monifu" %%% "monifu" % "1.0-M1"))
+
+// SBT Plugin
 
 lazy val sbtPlug = (project in file("sbtPlugin"))
   .dependsOn(api_2_10)
