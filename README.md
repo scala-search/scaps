@@ -57,7 +57,7 @@ Finally, an index job can be started by running
 
 An example project, that demonstrates the required project structure is also given in the `demoEnvironment` directory.
 
-## Run the Web Service
+### Run the Web Service
 
 The simplest way to start an instance of the Scaps web service is by using SBT:
 
