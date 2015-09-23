@@ -1,0 +1,6 @@
+language: scala
+jdk:
+  - openjdk7
+script:
+  - sbt test
+  - sbt 'evaluation/run-main scaps.evaluation.Evaluation'
