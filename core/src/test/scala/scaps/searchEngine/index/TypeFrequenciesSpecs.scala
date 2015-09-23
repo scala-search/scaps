@@ -1,13 +1,12 @@
 package scaps.searchEngine.index
 
 import org.scalatest.FlatSpec
-
 import scaps.api.Contravariant
 import scaps.api.Covariant
 import scaps.api.Invariant
 import scaps.api.ValueDef
 import scaps.api.TypeRef
-import scaps.api.View
+import scaps.api.ViewDef
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {
@@ -126,7 +125,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   def typeFrequenciesWithMaxAbsoluteFrequency(source: String) = {
     val entities = extractAll(source)
     val values = entities.collect { case t: ValueDef => t }
-    val views = entities.flatMap(View.fromEntity(_)).sortBy(_.from.name)
+    val views = entities.flatMap(ViewDef.fromEntity(_)).sortBy(_.from.name)
 
     withValueIndex { valueIndex =>
       valueIndex.addEntities(values)

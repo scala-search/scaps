@@ -55,4 +55,8 @@ trait ExtractionUtils extends Matchers {
       entities.find(_.name == handler._1).fold(throw new Exception)(handler._2)
     }
   }
+
+  def extractAllViews(source: String): Seq[ViewDef] = {
+    extractAll(source).collect { case v: ViewDef => v }
+  }
 }

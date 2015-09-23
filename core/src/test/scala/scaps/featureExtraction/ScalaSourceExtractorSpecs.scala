@@ -634,4 +634,95 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.C.++", _.docLink should be(Some("p.C@++(a:String):String"))),
       ("p.C.toString", _.docLink should be(Some("p.C@toString():String"))))
   }
+
+  it should "extract views from class definitions" in {
+    val views = extractAllViews("""
+      package p
+      
+      class A
+      class B extends A
+      """)
+
+    views.map(_.name) should (
+      contain("p.A:p.A:java.lang.Object") and
+      contain("p.A:p.A:scala.Any") and
+      contain("p.B:p.B:p.A") and
+      contain("p.B:p.B:java.lang.Object") and
+      contain("p.B:p.B:scala.Any"))
+  }
+
+  it should "extract views from implicit conversion methods" in {
+    val views = extractAllViews("""    
+      package p
+
+      object O {
+        implicit def int2long(i: Int): Long = ???
+
+        // this really declares a implicit conversion from `Int` to `Long => String`:
+        implicit def int2fn(i: Int)(l: Long): String = ???
+      }
+      """)
+
+    views.map(_.name) should (
+      contain("p.O.int2long:scala.Int:scala.Long") and
+      contain("p.O.int2fn:scala.Int:scala.Function1[scala.Long, java.lang.String]"))
+  }
+
+  it should "extract views from implicit conversion functions" in {
+    val views = extractAllViews("""
+      package p
+
+      object O {
+        implicit val int2long: Int => Long = ???
+        implicit val int2fn: Int => Long => String = ???
+      }
+      """)
+
+    views.map(_.name) should (
+      contain("p.O.int2long:scala.Int:scala.Long") and
+      contain("p.O.int2fn:scala.Int:scala.Function1[scala.Long, java.lang.String]"))
+  }
+  
+  it should "extract views from implicit conversion classes" in {    
+    val views = extractAllViews("""
+      package p
+
+      object O {
+        implicit class IntExt(i: Int)
+      }
+      """)
+
+    views.map(_.name) should (
+      contain("p.O.IntExt.<init>:scala.Int:p.O.IntExt"))
+  }
+  
+  it should "ignore implicit parameters when extracting views from methods" in {    
+    val views = extractAllViews("""
+      package p
+
+      object O {
+        implicit def int2long(i: Int)(implicit ev: String): Long = ???
+        implicit def int2float[T: Ordering](i: Int): Float = ???
+      }
+      """)
+
+    views.map(_.name) should (
+      contain("p.O.int2long:scala.Int:scala.Long") and
+      contain("p.O.int2float:scala.Int:scala.Float"))
+  }
+  
+  it should "create views for all subtypes of scala.Seq to <repeated>" in {    
+    val views = extractAllViews("""
+      package p
+
+      object O {
+        val l = List(1)
+        val s = Seq(1)
+      }
+      """)
+
+    views.map(_.name) should (
+      contain(":scala.collection.immutable.List[_]:<repeated>[_]") and
+      contain(":scala.collection.Seq[_]:<repeated>[_]"))
+  }
 }

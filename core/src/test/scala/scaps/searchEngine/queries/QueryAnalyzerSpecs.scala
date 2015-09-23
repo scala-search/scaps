@@ -1,10 +1,8 @@
 package scaps.searchEngine.queries
 
 import scala.collection.immutable.Map
-
 import org.apache.lucene.store.RAMDirectory
 import org.scalatest.FlatSpec
-
 import scaps.featureExtraction.ExtractionUtils
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
@@ -14,7 +12,7 @@ import scaps.searchEngine.index.ViewIndex
 import scaps.settings.Settings
 import scaps.api.TypeDef
 import scaps.api.TypeRef
-import scaps.api.View
+import scaps.api.ViewDef
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 
@@ -195,7 +193,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   val analyzer = {
     val entities = extractAll(env)
     val classEntities = entities.collect { case c: TypeDef => c }
-    val views = entities.flatMap(View.fromEntity(_))
+    val views = entities.flatMap(ViewDef.fromEntity(_))
 
     def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, List[V]] = ps
       .distinct

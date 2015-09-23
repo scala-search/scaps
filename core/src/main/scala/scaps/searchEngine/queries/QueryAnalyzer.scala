@@ -16,7 +16,6 @@ import scaps.api.Covariant
 import scaps.api.Invariant
 import scaps.api.TypeRef
 import scaps.api.Variance
-import scaps.api.View
 import scaps.utils._
 
 private[queries] sealed trait ResolvedQuery

@@ -41,7 +41,10 @@ trait EntityFactory extends Logging {
         .map((createValueDef _).tupled)
         .toList
 
-      cls :: objValue.toList ::: members ::: referencedTypeDefs
+      (cls :: objValue.toList ::: members ::: referencedTypeDefs).flatMap {
+        case \/-(entity) => (entity :: ViewDef.fromEntity(entity)).map(\/-(_))
+        case left        => List(left)
+      }
     } else {
       Nil
     }

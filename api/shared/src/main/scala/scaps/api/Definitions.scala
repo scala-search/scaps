@@ -14,7 +14,7 @@ case class TypeDef(
   referencedFrom: Set[Module] = Set(),
   comment: String = "",
   typeFrequency: Map[Variance, Float] = Map())
-  extends Definition {
+    extends Definition {
 
   override def toString() = {
     val params = typeParameters match {
@@ -43,7 +43,7 @@ case class ValueDef(
   flags: Set[ValueDef.Flag] = Set(),
   docLink: Option[String] = None,
   module: Module = Module.Unknown)
-  extends Definition {
+    extends Definition {
 
   override def toString() = {
     val c = comment match {
@@ -97,10 +97,10 @@ object ValueDef {
 }
 
 case class TypeParameter(
-  name: String,
-  variance: Variance,
-  lowerBound: String = TypeRef.Nothing.name,
-  upperBound: String = TypeRef.Any.name) {
+    name: String,
+    variance: Variance,
+    lowerBound: String = TypeRef.Nothing.name,
+    upperBound: String = TypeRef.Any.name) {
 
   import TypeRef._
 
@@ -114,5 +114,62 @@ case class TypeParameter(
       else s" <: $upperBound"
 
     s"$name$lbound$ubound"
+  }
+}
+
+case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, modules: Set[Module] = Set())
+    extends Definition {
+  assert(from.variance == Covariant, s"$from is not covariant")
+  assert(to.variance == Covariant, s"$to is not covariant")
+  
+  def name = s"$definingEntityName:$fromKey:$toKey"
+
+  def fromKey = ViewDef.key(from)
+  def toKey = ViewDef.key(to)
+}
+
+object ViewDef {
+  def key(tpe: TypeRef) =
+    tpe.renameTypeParams(_ => "_").signature
+
+  private def fromTypeDef(cls: TypeDef): List[ViewDef] = {
+    val toRepeated = {
+      // create implicit conversions from Seq and subtypes thereof to repeated args
+      if (cls.name == TypeRef.Seq.name) {
+        val p = cls.typeParameters(0)
+        Seq(ViewDef(cls.toType, TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), implicitConversionDistance, ""))
+      } else {
+        cls.baseTypes.collect {
+          case TypeRef.Seq(t, _) =>
+            ViewDef(cls.toType, TypeRef.Repeated(t), implicitConversionDistance, "")
+        }
+      }
+    }
+
+    cls.baseTypes.zipWithIndex.flatMap {
+      case (base, idx) =>
+        Seq(
+          ViewDef(cls.toType, base, idx + 1, cls.name))
+    } ++ toRepeated
+  }
+
+  private def fromValue(t: ValueDef): List[ViewDef] = {
+    if (t.isImplicit && t.isStatic) {
+      t.tpe.withoutImplicitParams.etaExpanded match {
+        case TypeRef.Function(from :: Nil, to, _) =>
+          List(ViewDef(from.withVariance(Covariant), to, implicitConversionDistance, t.name))
+        case _ =>
+          Nil
+      }
+    } else
+      Nil
+  }
+
+  val implicitConversionDistance = 0.5f
+
+  def fromEntity(e: Definition): List[ViewDef] = e match {
+    case c: TypeDef  => fromTypeDef(c)
+    case t: ValueDef => fromValue(t)
+    case _           => List()
   }
 }

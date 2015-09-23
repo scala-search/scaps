@@ -1,7 +1,6 @@
 package scaps.searchEngine.index
 
 import scala.util.Try
-
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
@@ -10,23 +9,22 @@ import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
-
 import scaps.api.Contravariant
 import scaps.api.Covariant
 import scaps.api.Invariant
 import scaps.api.TypeRef
-import scaps.api.View
+import scaps.api.ViewDef
 
-class ViewIndex(val dir: Directory) extends Index[View] {
+class ViewIndex(val dir: Directory) extends Index[ViewDef] {
   import ViewIndex._
 
   val analyzer = new KeywordAnalyzer
 
-  def addEntities(entities: Seq[View]): Try[Unit] =
+  def addEntities(entities: Seq[ViewDef]): Try[Unit] =
     withWriter { writer =>
       entities.foreach { entity =>
         val doc = toDocument(entity)
-        writer.updateDocument(new Term(fields.id, viewId(entity)), doc)
+        writer.updateDocument(new Term(fields.name, entity.name), doc)
       }
     }
 
@@ -65,13 +63,13 @@ class ViewIndex(val dir: Directory) extends Index[View] {
       .zip(distances)
   }
 
-  private def findViewsFrom(tpe: TypeRef): Try[Seq[View]] =
+  private def findViewsFrom(tpe: TypeRef): Try[Seq[ViewDef]] =
     findViews(tpe, fields.from)
 
-  private def findViewsTo(tpe: TypeRef): Try[Seq[View]] =
+  private def findViewsTo(tpe: TypeRef): Try[Seq[ViewDef]] =
     findViews(tpe, fields.to)
 
-  private def findViews(tpe: TypeRef, field: String): Try[Seq[View]] =
+  private def findViews(tpe: TypeRef, field: String): Try[Seq[ViewDef]] =
     Try {
       val altsOfGenericTpe =
         if (tpe.args.exists(!_.isTypeParam))
@@ -79,16 +77,13 @@ class ViewIndex(val dir: Directory) extends Index[View] {
         else
           Seq()
 
-      altsOfGenericTpe ++ search(new TermQuery(new Term(field, View.key(tpe)))).get
+      altsOfGenericTpe ++ search(new TermQuery(new Term(field, ViewDef.key(tpe)))).get
     }
 
-  private def viewId(v: View) =
-    s"{${v.fromKey}}->{${v.toKey}}"
-
-  override def toDocument(v: View) = {
+  override def toDocument(v: ViewDef) = {
     val doc = new Document
 
-    doc.add(new TextField(fields.id, viewId(v), Store.YES))
+    doc.add(new TextField(fields.name, v.name, Store.YES))
     doc.add(new TextField(fields.from, v.fromKey, Store.YES))
     doc.add(new TextField(fields.to, v.toKey, Store.YES))
 
@@ -97,16 +92,16 @@ class ViewIndex(val dir: Directory) extends Index[View] {
     doc
   }
 
-  override def toEntity(doc: Document): View = {
+  override def toEntity(doc: Document): ViewDef = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[View](json)
+    upickle.read[ViewDef](json)
   }
 }
 
 object ViewIndex {
   object fields {
-    val id = "id"
+    val name = "name"
     val from = "from"
     val to = "to"
     val entity = "entity"

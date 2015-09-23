@@ -1,11 +1,9 @@
 package scaps.searchEngine.queries
 
 import scala.Ordering
-
 import org.apache.lucene.store.RAMDirectory
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-
 import ExpandedQuery.Alternative
 import ExpandedQuery.Leaf
 import ExpandedQuery.Max
@@ -15,10 +13,9 @@ import scaps.searchEngine.index.ViewIndex
 import scaps.settings.Settings
 import scaps.api.Contravariant
 import scaps.api.Covariant
-import scaps.api.SubType
 import scaps.api.TypeRef
 import scaps.api.Variance
-import scaps.api.View
+import scaps.api.ViewDef
 
 class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
@@ -55,8 +52,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val Tup = new TypeRef.VariantType("Tup")
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int): View =
-      SubType(cls(Covariant), base(Covariant), dist)
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int): ViewDef =
+      ViewDef(cls(Covariant), base(Covariant), dist, "")
 
     List(
       isSubTypeOf(B(_), A(_), 1),

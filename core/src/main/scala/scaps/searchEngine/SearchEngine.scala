@@ -1,15 +1,12 @@
 package scaps.searchEngine
 
 import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
-
 import org.apache.lucene.store.NIOFSDirectory
 import org.apache.lucene.store.RAMDirectory
-
 import scalaz._
 import scalaz.{ \/ => \/ }
 import scaps.searchEngine.index.TypeIndex
@@ -32,7 +29,7 @@ import scaps.api.ValueDef
 import scaps.api.TypeRef
 import scaps.api.TypeParameter
 import scaps.api.Variance
-import scaps.api.View
+import scaps.api.ViewDef
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -125,13 +122,13 @@ class SearchEngine private[searchEngine] (
         .collect { case t: ValueDef => setModule(t) }
       val typeDefsWithModule = entitiesWithSyntheticTypes
         .collect { case c: TypeDef => c.copy(referencedFrom = Set(module)) }
-
-      val views = entitiesWithSyntheticTypes.flatMap(View.fromEntity)
+      val viewDefWithModule = entitiesWithSyntheticTypes
+        .collect{case v: ViewDef => v.copy(modules = Set(module))}
 
       val f = Future.sequence(List(
         Future { valueIndex.addEntities(valuesWithModule).get },
         Future { typeIndex.addEntities(typeDefsWithModule).get },
-        Future { viewIndex.addEntities(views).get }))
+        Future { viewIndex.addEntities(viewDefWithModule).get }))
 
       Await.result(f, settings.index.timeout)
 
