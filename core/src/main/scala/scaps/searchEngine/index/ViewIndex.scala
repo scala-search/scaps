@@ -1,7 +1,6 @@
 package scaps.searchEngine.index
 
 import scala.util.Try
-
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
@@ -12,28 +11,39 @@ import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
-
 import ViewIndex.fields
 import scaps.api.Contravariant
 import scaps.api.Covariant
 import scaps.api.Invariant
 import scaps.api.TypeRef
 import scaps.api.ViewDef
+import scaps.api.Module
 
 class ViewIndex(val dir: Directory) extends Index[ViewDef] {
   import ViewIndex._
 
   val analyzer = new KeywordAnalyzer
 
-  def addEntities(entities: Seq[ViewDef]): Try[Unit] =
+  def addEntities(entities: Seq[ViewDef]): Try[Unit] =Try {
+    val distinctEntities = entities.distinct
+    val indexedViews = allEntities().get
+
+    val entitiesWithModules = distinctEntities.map { view =>
+      indexedViews.find(_.name == view.name)
+        .fold(view) { indexedView =>
+          view.copy(modules = view.modules ++ indexedView.modules)
+        }
+    }
+
     withWriter { writer =>
-      entities.foreach { entity =>
+      entitiesWithModules.foreach { entity =>
         val doc = toDocument(entity)
         writer.updateDocument(new Term(fields.name, entity.name), doc)
       }
-    }
+    }.get
+  }
 
-  def findAlternativesWithDistance(tpe: TypeRef): Try[Seq[(TypeRef, Float)]] = Try {
+  def findAlternativesWithDistance(tpe: TypeRef, moduleIds: Set[String] = Set()): Try[Seq[(TypeRef, Float)]] = Try {
     def alignVariance(alt: TypeRef) =
       alt.withVariance(tpe.variance)
 
@@ -53,9 +63,9 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
         Nil
       case Covariant =>
         (tpe, TypeRef.Nothing(Covariant), 1f) +:
-          findViewsTo(tpe).get.map(view => (view.to, view.from, view.distance))
+          findViewsTo(tpe, moduleIds).get.map(view => (view.to, view.from, view.distance))
       case Contravariant =>
-        findViewsFrom(tpe).get.map(view => (view.from, view.to, view.distance))
+        findViewsFrom(tpe, moduleIds).get.map(view => (view.from, view.to, view.distance))
       case Invariant if tpe.name == TypeRef.Unknown.name =>
         Nil
       case Invariant =>
@@ -68,26 +78,45 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
       .zip(distances)
   }
 
-  private def findViewsFrom(tpe: TypeRef): Try[Seq[ViewDef]] =
-    findViews(tpe, fields.from)
+  private def findViewsFrom(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =
+    findViews(tpe, fields.from, moduleIds)
 
-  private def findViewsTo(tpe: TypeRef): Try[Seq[ViewDef]] =
-    findViews(tpe, fields.to)
+  private def findViewsTo(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =
+    findViews(tpe, fields.to, moduleIds)
 
-  private def findViews(tpe: TypeRef, field: String): Try[Seq[ViewDef]] =
+  private def findViews(tpe: TypeRef, field: String, moduleIds: Set[String]): Try[Seq[ViewDef]] =
     Try {
       val altsOfGenericTpe =
         if (tpe.args.exists(!_.isTypeParam))
-          findViews(tpe.withArgsAsParams, field).get
+          findViews(tpe.withArgsAsParams, field, moduleIds).get
         else
           Seq()
 
       val query = new BooleanQuery()
       query.add(new TermQuery(new Term(field, ViewDef.key(tpe))), Occur.MUST);
-      query.add(Index.moduleQuery(Set(), fields.modules), Occur.MUST)
+      query.add(Index.moduleQuery(moduleIds, fields.modules), Occur.MUST)
 
       altsOfGenericTpe ++ search(query).get
     }
+
+  def deleteEntitiesIn(module: Module): Try[Unit] = Try {
+    val q = new TermQuery(new Term(fields.modules, module.moduleId))
+    val viewDefsInModule = search(q).get
+
+    withWriter { writer =>
+      viewDefsInModule.foreach { v =>
+        val vTerm = new Term(fields.name, v.name)
+
+        val vWithoutModule = v.copy(modules = v.modules - module)
+
+        if (vWithoutModule.modules.isEmpty) {
+          writer.deleteDocuments(vTerm)
+        } else {
+          writer.updateDocument(vTerm, toDocument(vWithoutModule))
+        }
+      }
+    }.get
+  }
 
   override def toDocument(v: ViewDef) = {
     val doc = new Document

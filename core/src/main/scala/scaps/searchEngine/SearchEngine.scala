@@ -140,7 +140,7 @@ class SearchEngine private[searchEngine] (
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allEntities().get}")
 
       val tfs = TypeFrequencies(
-        viewIndex.findAlternativesWithDistance(_).get.map(_._1),
+        viewIndex.findAlternativesWithDistance(_, Set()).get.map(_._1),
         valueIndex.allEntities().get,
         settings.index.typeFrequenciesSampleSize)
 
@@ -164,6 +164,7 @@ class SearchEngine private[searchEngine] (
     valueIndex.deleteEntitiesIn(module).get
     typeIndex.deleteEntitiesIn(module).get
     moduleIndex.deleteModule(module).get
+    viewIndex.deleteEntitiesIn(module).get
   }
 
   /**
@@ -203,7 +204,7 @@ class SearchEngine private[searchEngine] (
       val analyzer = new QueryAnalyzer(
         settings.query,
         Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),
-        Memo.mutableHashMapMemo(viewIndex.findAlternativesWithDistance(_).get))
+        Memo.mutableHashMapMemo(viewIndex.findAlternativesWithDistance(_, moduleIds).get))
 
       analyzers += (moduleIds -> analyzer)
 
