@@ -24,7 +24,7 @@ trait IndexUtils extends ExtractionUtils {
 
   def withValueIndex[T](sources: String*)(f: ValueIndex => T): T =
     withValueIndex { index =>
-      val entities = sources.toStream.flatMap(extractAll).collect { case t: ValueDef => t }
+      val entities = sources.toStream.flatMap(extractAll(_)).collect { case t: ValueDef => t }
       index.addEntities(entities).get
       f(index)
     }
@@ -37,7 +37,7 @@ trait IndexUtils extends ExtractionUtils {
 
   def withTypeIndex[T](sources: String*)(f: TypeIndex => T): T =
     withTypeIndex { index =>
-      val entities = sources.flatMap(extractAll).collect { case t: TypeDef => t }
+      val entities = sources.flatMap(extractAll(_)).collect { case t: TypeDef => t }
       index.addEntities(entities).get
       f(index)
     }

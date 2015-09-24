@@ -4,20 +4,26 @@ import scaps.api._
 import scala.util.Random
 import scala.reflect.internal.util.BatchSourceFile
 import scalaz.std.list._
+import scalaz.std.stream._
 
 import org.scalatest.Matchers
 
 trait ExtractionUtils extends Matchers {
 
-  def extractAll(source: String): Seq[Definition] =
-    CompilerUtils.withCompiler() { compiler =>
-      val extractor = new ScalaSourceExtractor(compiler)
-      val randomFileName = s"${Random.nextInt()}.scala"
-
-      ExtractionError.handleErrors(extractor(new BatchSourceFile(randomFileName, source))) {
-        e => fail(e.entityName, e.error)
-      }
+  def extractAll(sources: String*): Seq[Definition] = {
+    val files = sources.toList.zipWithIndex.map {
+      case (src, idx) =>
+        new BatchSourceFile(s"f$idx.scala", src)
     }
+
+    val compiler = CompilerUtils.createCompiler(Nil)
+
+    val extractor = new ScalaSourceExtractor(compiler)
+
+    ExtractionError.handleErrors(extractor(files)) {
+      e => fail(e.entityName, e.error)
+    }
+  }
 
   def extractAllValues(source: String): Seq[ValueDef] = {
     extractAll(source).collect { case t: ValueDef => t }

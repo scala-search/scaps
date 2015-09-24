@@ -45,52 +45,6 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)("p.C.=:=")
   }
 
-  it should "extract doc comments" in {
-    val entities = extractAllValues("""
-      package p
-
-      object O {
-        /**
-         * A doc comment
-         */
-        def a = 1
-
-        // A single line comment
-        def b = 2
-
-        /* A multi line comment */
-        def c = 3
-
-        /** A minimal doc comment */
-        def d = 4
-      }
-      """)
-
-    val comments = entities.map(_.comment).mkString("\n")
-
-    comments should (
-      include("A doc comment") and
-      not include ("A single line comment") and
-      not include ("A multi line comment") and
-      include("A minimal doc comment"))
-  }
-
-  it should "expand variables in doc comments (only locally)" in {
-    extractValues("""
-      package p
-
-      /** An object
-       *
-       *  @define info Hello, world!
-       */
-      object O {
-        /** #info */
-        def m = 1
-      }
-      """.replace('#', '$'))( // workaround to mute "possible missing interpolator" warning
-      ("p.O.m", _.comment should include("Hello, world!")))
-  }
-
   it should "extract simple types from values" in {
     extractValues("""
       package p

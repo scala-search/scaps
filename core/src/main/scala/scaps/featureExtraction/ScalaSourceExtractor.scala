@@ -2,44 +2,34 @@ package scaps.featureExtraction
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile
-import scaps.api.Definition
-import scala.tools.nsc.interactive.Global
-import scala.util.Failure
-import scala.util.Success
-import scaps.utils.Logging
-import scalaz._
+import scala.tools.nsc.doc.ScaladocGlobal
 
-class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logging {
+import scalaz.{ \/ => \/ }
+import scaps.api.Definition
+
+class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
   import compiler._
 
-  def apply(sourceFile: SourceFile): List[ExtractionError \/ Definition] = {
-    logger.trace(s"Extracting source file ${sourceFile.path}")
+  def apply(sources: List[SourceFile]): List[ExtractionError \/ Definition] = {
+    val r = new Run()
+    r.compileSources(sources)
 
-    withTypedTree(sourceFile) { root =>
-      compiler.ask { () =>
-        logger.trace("Collect Classes and Fragments")
-        val classes = findClasses(root)
+    r.units.toList.flatMap { cu =>
+      val classes = findClasses(cu.body)
 
-        val fragments = for {
-          sym <- symsMayContributingComments(root)
-        } yield (sym, sourceFile)
-
-        def getDocComment(sym: Symbol, site: Symbol): String = {
-          val cr = new Response[(String, String, Position)]
-          compiler.askDocComment(sym, sourceFile, site, fragments.toList, cr)
-          cr.get.fold({ case (raw, _, _) => raw }, { case _ => "" })
+      classes.flatMap { cls =>
+        try {
+          extractEntities(cls, getDocComment _)
+        } catch {
+          case t: Throwable =>
+            \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
         }
+      }.distinct
+    }
+  }
 
-        classes.flatMap { cls =>
-          try {
-            extractEntities(cls, getDocComment _)
-          } catch {
-            case t: Throwable =>
-              \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
-          }
-        }
-      }
-    }.getOrElse(Nil).distinct
+  private def getDocComment(sym: Symbol, site: Symbol) = {
+    compiler.expandedDocComment(sym, site)
   }
 
   private def findClasses(tree: Tree): List[Symbol] =
@@ -47,20 +37,6 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logg
       case impl: ImplDef =>
         (impl.symbol :: Nil, true)
       case _: ValOrDefDef =>
-        (Nil, false)
-      case _ =>
-        (Nil, true)
-    }
-
-  private def symsMayContributingComments(tree: Tree): List[Symbol] =
-    traverse(tree) {
-      case impl: ImplDef =>
-        val sym = impl.symbol
-        if (sym.isPublic)
-          (sym :: sym.tpe.decls.filter(isValueOfInterest).toList, true)
-        else
-          (Nil, false)
-      case v: ValOrDefDef =>
         (Nil, false)
       case _ =>
         (Nil, true)
@@ -82,18 +58,5 @@ class ScalaSourceExtractor(val compiler: Global) extends EntityFactory with Logg
     traverser(tree)
 
     ts.toList
-  }
-
-  private def withTypedTree[T](sourceFile: SourceFile)(f: Tree => T): util.Try[T] = {
-    val r = new Response[Tree]
-    compiler.askLoadedTyped(sourceFile, r)
-
-    r.get.fold(Success(_), Failure(_)).map { root =>
-      val result = f(root)
-
-      compiler.removeUnitOf(sourceFile)
-
-      result
-    }
   }
 }

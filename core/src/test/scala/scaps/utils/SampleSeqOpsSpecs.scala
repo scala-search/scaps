@@ -18,7 +18,6 @@ class SampleSeqOpsSpecs extends FlatSpec with Matchers {
     val l = Seq(1, 2, 3, 4, 5)
 
     for { n <- 0 to l.length } {
-      println(l.sample(n))
       l.sample(n).length should be(n)
     }
   }

@@ -1,7 +1,7 @@
 package scaps.featureExtraction
 
 import scaps.api._
-import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.Global
 import scala.util.Try
 import scalaz.{ Contravariant => _, _ }
 import scaps.utils.Logging

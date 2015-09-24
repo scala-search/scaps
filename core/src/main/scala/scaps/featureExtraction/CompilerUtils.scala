@@ -1,28 +1,13 @@
 package scaps.featureExtraction
 
-import scala.tools.nsc.doc.ScaladocGlobalTrait
-import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.doc.ScaladocGlobal
 import scala.tools.nsc.reporters.ConsoleReporter
+
 import scaps.utils.Logging
 
-/**
- * Provides an instance of the Scala presentation compiler
- */
-object CompilerUtils extends Logging {
-  def withCompiler[A](classpath: Seq[String] = Nil)(fn: Global => A): A = {
-    val compiler = createCompiler(classpath)
-
-    compiler.ask(() => new compiler.Run)
-
-    val res = fn(compiler)
-
-    compiler.askShutdown()
-
-    res
-  }
-
-  def createCompiler(classpath: Seq[String]): Global = {
-    val settings = new scala.tools.nsc.Settings(msg => throw sys.error(msg))
+object CompilerUtils extends Logging{
+  def createCompiler(classpath: Seq[String]): ScaladocGlobal = {
+    val settings = new scala.tools.nsc.doc.Settings(msg => throw sys.error(msg))
 
     val scalaLibClassPath =
       if (classpath == Nil) scalaLibRef
@@ -45,7 +30,7 @@ object CompilerUtils extends Logging {
 
     val reporter = new ConsoleReporter(settings)
 
-    new scala.tools.nsc.interactive.Global(settings, reporter) with ScaladocGlobalTrait /* tells compiler to keep doc comment internally */
+    new scala.tools.nsc.doc.ScaladocGlobal(settings, reporter)
   }
 
   def scalaLibRef =

@@ -21,10 +21,10 @@ class JarExtractorSpecs extends FlatSpec with Matchers {
     entities.find(_.name == "jarExtractorTests.p.C") should be('defined)
   }
 
-  def entitiesFromTestSources() =
-    CompilerUtils.withCompiler() { compiler =>
-      val extractor = new JarExtractor(compiler)
-      val extractorTestSources = new File(getClass.getResource("/jarExtractorTests.jar").toURI().getPath)
-      extractor(extractorTestSources).flatMap(_.fold(_ => Nil, List(_))).toList
-    }
+  def entitiesFromTestSources() = {
+    val compiler = CompilerUtils.createCompiler(Nil)
+    val extractor = new JarExtractor(compiler)
+    val extractorTestSources = new File(getClass.getResource("/jarExtractorTests.jar").toURI().getPath)
+    extractor(extractorTestSources).flatMap(_.fold(_ => Nil, List(_))).toList
+  }
 }

@@ -1,24 +1,13 @@
 package scaps.evaluation
 
 import java.io.File
-import scala.collection.JavaConverters
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
-import scala.sys.process.urlToProcess
-import scaps.featureExtraction.CompilerUtils
-import scaps.featureExtraction.JarExtractor
-import scaps.searchEngine.SearchEngine
-import scaps.settings.Settings
-import scalaz.std.list.listInstance
-import scalaz.syntax.traverse.ToTraverseOps
-import java.util.Calendar
-import java.text.SimpleDateFormat
-import java.io.Writer
-import java.io.PrintWriter
 import java.io.FileWriter
+import java.io.Writer
+import java.text.SimpleDateFormat
+import java.util.Calendar
+
+import scaps.settings.Settings
 import scaps.utils.using
-import scaps.utils.timers.withTime
 
 object Benchmark extends App {
   val outPath = args.lift(0)

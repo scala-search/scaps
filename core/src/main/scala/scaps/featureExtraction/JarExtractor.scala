@@ -5,24 +5,25 @@ import java.util.jar.JarFile
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.reflect.internal.util.BatchSourceFile
 import scaps.api.Definition
-import scala.tools.nsc.interactive.Global
+import scala.tools.nsc.doc.ScaladocGlobal
 import scala.io.Codec
 import scalaz._
 
-class JarExtractor(val compiler: Global) {
+class JarExtractor(val compiler: ScaladocGlobal) {
   val scalaExtractor = new ScalaSourceExtractor(compiler)
 
   def apply(file: File): Stream[ExtractionError \/ Definition] = {
     val jar = new JarFile(file)
 
-    jar.entries().toStream.flatMap { entry =>
+    val files = jar.entries().toList.flatMap { entry =>
       if (!entry.isDirectory && entry.getName.endsWith(".scala")) {
         val source = scala.io.Source.fromInputStream(jar.getInputStream(entry))(Codec.UTF8).toSeq
-        val sourceFile = new BatchSourceFile(entry.getName, source)
-        scalaExtractor(sourceFile)
+        Some(new BatchSourceFile(entry.getName, source))
       } else {
-        Stream.empty
+        None
       }
     }
+
+    scalaExtractor(files).toStream
   }
 }

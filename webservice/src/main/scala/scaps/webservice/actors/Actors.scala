@@ -1,13 +1,19 @@
 package scaps.webservice.actors
 
 import java.io.File
+
 import scala.util.control.NonFatal
+
 import ActorProtocol._
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.actorRef2Scala
 import akka.event.Logging
 import scalaz.std.stream.streamInstance
+import scaps.api.IndexBusy
+import scaps.api.IndexReady
+import scaps.api.IndexStatus
+import scaps.api.ValueDef
 import scaps.featureExtraction.CompilerUtils
 import scaps.featureExtraction.ExtractionError
 import scaps.featureExtraction.JarExtractor
@@ -19,10 +25,6 @@ import scaps.searchEngine.TooUnspecific
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
 import scaps.utils.TraversableOps
-import scaps.api.IndexBusy
-import scaps.api.IndexReady
-import scaps.api.IndexStatus
-import scaps.api.ValueDef
 
 object Director {
   def props(settings: Settings)(
@@ -122,30 +124,29 @@ class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
       val requestor = sender
 
       val error = try {
-        CompilerUtils.withCompiler(classpath) { compiler =>
-          val modulesWithEntities = jobs.map { job =>
-            (job.module, () => {
-              val extractor = new JarExtractor(compiler)
+        val compiler = CompilerUtils.createCompiler(classpath)
+        val modulesWithEntities = jobs.map { job =>
+          (job.module, () => {
+            val extractor = new JarExtractor(compiler)
 
-              logger.info(s"start indexing ${job.module.moduleId} (${job.artifactPath})")
+            logger.info(s"start indexing ${job.module.moduleId} (${job.artifactPath})")
 
-              val entitiesWithErrors = extractor(new File(job.artifactPath))
-              val entities = ExtractionError.logErrors(entitiesWithErrors, logger.info(_))
+            val entitiesWithErrors = extractor(new File(job.artifactPath))
+            val entities = ExtractionError.logErrors(entitiesWithErrors, logger.info(_))
 
-              entities.map {
-                case v: ValueDef =>
-                  val docUrl = for {
-                    prefix <- job.docUrlPrefix
-                    lnk <- v.docLink
-                  } yield prefix + lnk
-                  v.copy(docLink = docUrl)
-                case e => e
-              }
-            })
-          }
-
-          searchEngine.indexEntities(modulesWithEntities).get
+            entities.map {
+              case v: ValueDef =>
+                val docUrl = for {
+                  prefix <- job.docUrlPrefix
+                  lnk <- v.docLink
+                } yield prefix + lnk
+                v.copy(docLink = docUrl)
+              case e => e
+            }
+          })
         }
+
+        searchEngine.indexEntities(modulesWithEntities).get
 
         None
       } catch {
