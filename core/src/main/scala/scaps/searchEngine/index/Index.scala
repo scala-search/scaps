@@ -17,6 +17,10 @@ import org.apache.lucene.util.Version
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.MatchAllDocsQuery
+import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.index.Term
+import org.apache.lucene.search.BooleanClause.Occur
 
 trait Index[E] {
   private[index] def dir: Directory
@@ -79,5 +83,23 @@ trait Index[E] {
 
   private def initWriter() = {
     withWriter(_ => ()).get
+  }
+}
+
+object Index {
+  def moduleQuery(selectedModuleIds: Set[String], moduleField: String) = {
+    val q = new BooleanQuery
+
+    if (!selectedModuleIds.isEmpty) {
+      selectedModuleIds.foreach { moduleId =>
+        val tq = new TermQuery(new Term(moduleField, moduleId))
+        q.add(tq, Occur.SHOULD)
+      }
+    } else {
+      q.add(new MatchAllDocsQuery, Occur.SHOULD)
+    }
+    q.setBoost(0)
+
+    q
   }
 }

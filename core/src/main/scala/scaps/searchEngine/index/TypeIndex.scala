@@ -81,17 +81,9 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
    */
   def findTypeDefsBySuffix(suffix: String, moduleIds: Set[String] = Set()): Try[Seq[TypeDef]] = {
     val query = new BooleanQuery()
+    
     query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
-
-    if (!moduleIds.isEmpty) {
-      val moduleQuery = new BooleanQuery()
-
-      for (moduleId <- moduleIds) {
-        moduleQuery.add(new TermQuery(new Term(fields.modules, moduleId)), Occur.SHOULD)
-      }
-
-      query.add(moduleQuery, Occur.MUST)
-    }
+    query.add(Index.moduleQuery(moduleIds, fields.modules), Occur.MUST)
 
     search(query)
   }

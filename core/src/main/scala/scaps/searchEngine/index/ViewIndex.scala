@@ -1,14 +1,19 @@
 package scaps.searchEngine.index
 
 import scala.util.Try
+
 import org.apache.lucene.analysis.core.KeywordAnalyzer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.BooleanClause.Occur
+import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.Directory
+
+import ViewIndex.fields
 import scaps.api.Contravariant
 import scaps.api.Covariant
 import scaps.api.Invariant
@@ -77,7 +82,11 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
         else
           Seq()
 
-      altsOfGenericTpe ++ search(new TermQuery(new Term(field, ViewDef.key(tpe)))).get
+      val query = new BooleanQuery()
+      query.add(new TermQuery(new Term(field, ViewDef.key(tpe))), Occur.MUST);
+      query.add(Index.moduleQuery(Set(), fields.modules), Occur.MUST)
+
+      altsOfGenericTpe ++ search(query).get
     }
 
   override def toDocument(v: ViewDef) = {
@@ -86,6 +95,10 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
     doc.add(new TextField(fields.name, v.name, Store.YES))
     doc.add(new TextField(fields.from, v.fromKey, Store.YES))
     doc.add(new TextField(fields.to, v.toKey, Store.YES))
+
+    v.modules.foreach { m =>
+      doc.add(new TextField(fields.modules, m.moduleId, Store.YES))
+    }
 
     doc.add(new StoredField(fields.entity, upickle.write(v)))
 
@@ -105,5 +118,6 @@ object ViewIndex {
     val from = "from"
     val to = "to"
     val entity = "entity"
+    val modules = "modules"
   }
 }

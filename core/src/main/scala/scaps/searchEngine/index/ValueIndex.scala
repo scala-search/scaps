@@ -142,21 +142,9 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
           fields.fingerprint, tpe, keys, settings.query.fingerprintFrequencyCutoff, docLenBoost)
       }
 
-      val modules = new BooleanQuery
-
-      if (!moduleIds.isEmpty) {
-        moduleIds.foreach { moduleId =>
-          val tq = new TermQuery(new Term(fields.moduleId, moduleId))
-          modules.add(tq, Occur.SHOULD)
-        }
-      } else {
-        modules.add(new MatchAllDocsQuery, Occur.SHOULD)
-      }
-      modules.setBoost(0)
-
       val q = new BooleanQuery
       q.add(keysAndTypes, Occur.MUST)
-      q.add(modules, Occur.MUST)
+      q.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
 
       q.right
     } catch {
