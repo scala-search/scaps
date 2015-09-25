@@ -248,9 +248,7 @@ class QueryAnalyzer private[searchEngine] (
 
     tpe match {
       case TypeRef.Ignored(args, _) =>
-        val res = parts(tpe, 1, 0, 0, Set())
-        println(clauseCount)
-        res
+        parts(tpe, 1, 0, 0, Set())
       case _ =>
         parts(TypeRef.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
     }

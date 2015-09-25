@@ -22,13 +22,22 @@ trait EntityFactory extends Logging {
         if (isValueOfInterest(classSym)) Some(createValueDef(classSym, false, getDocComment(classSym, classSym)))
         else None
 
-      val memberSymsWithComments = classSym.tpe.members
+      val memberSymsWithComments = (classSym.tpe.members
         .filter(isValueOfInterest)
-        .map { m =>
+        .flatMap { m =>
           val copy = m.cloneSymbol(classSym)
+          val comment = getDocComment(m, classSym)
+
           copy.info = classSym.tpe.memberInfo(m)
-          (copy, m.isPrimaryConstructor, getDocComment(m, classSym))
-        }
+
+          val useCases = compiler.useCases(m, classSym).map {
+            case (uc, _, _) =>
+              val copy = uc.cloneSymbol(classSym)
+              (copy, uc.isPrimaryConstructor, comment)
+          }
+
+          (copy, m.isPrimaryConstructor, comment) :: useCases
+        }).toList
 
       val referencedTypeDefs = memberSymsWithComments.flatMap {
         case (sym, _, _) =>
