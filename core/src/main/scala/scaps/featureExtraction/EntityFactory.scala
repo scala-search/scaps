@@ -12,7 +12,7 @@ trait EntityFactory extends Logging {
 
   import compiler.{ TypeDef => _, TypeRef => _, _ }
 
-  def extractEntities(classSym: Symbol, getDocComment: (Symbol, Symbol) => String): List[ExtractionError \/ Definition] =
+  def extractEntities(classSym: Symbol): List[ExtractionError \/ Definition] =
     if (isTypeOfInterest(classSym)) {
       logger.trace(s"Extract entities in ${qualifiedName(classSym, true)}")
 
@@ -57,6 +57,10 @@ trait EntityFactory extends Logging {
     } else {
       Nil
     }
+
+  def getDocComment(sym: Symbol, site: Symbol) = {
+    compiler.expandedDocComment(sym, site)
+  }
 
   def createTypeDef(sym: Symbol): ExtractionError \/ TypeDef =
     \/.fromTryCatchNonFatal {

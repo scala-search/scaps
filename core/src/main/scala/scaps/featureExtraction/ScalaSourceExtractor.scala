@@ -19,17 +19,13 @@ class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
 
       classes.flatMap { cls =>
         try {
-          extractEntities(cls, getDocComment _)
+          extractEntities(cls)
         } catch {
           case t: Throwable =>
             \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
         }
       }.distinct
     }
-  }
-
-  private def getDocComment(sym: Symbol, site: Symbol) = {
-    compiler.expandedDocComment(sym, site)
   }
 
   private def findClasses(tree: Tree): List[Symbol] =
