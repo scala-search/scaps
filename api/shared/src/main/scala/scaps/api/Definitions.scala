@@ -39,7 +39,7 @@ case class ValueDef(
   name: String,
   typeParameters: List[TypeParameter],
   tpe: TypeRef,
-  comment: String,
+  comment: DocComment,
   flags: Set[ValueDef.Flag] = Set(),
   docLink: Option[String] = None,
   module: Module = Module.Unknown)
@@ -47,8 +47,8 @@ case class ValueDef(
 
   override def toString() = {
     val c = comment match {
-      case "" => ""
-      case _  => s"$comment\n"
+      case DocComment.empty => ""
+      case _                => s"$comment\n"
     }
     val mods = flags.map(_.name).mkString(" ")
     val params = typeParameters match {
@@ -72,7 +72,7 @@ case class ValueDef(
   def typeFingerprint: List[String] =
     tpe.normalize(typeParameters).typeFingerprint
 
-  def withoutComment = copy(comment = "")
+  def withoutComment = copy(comment = DocComment.empty)
 
   def isOverride = flags(ValueDef.Overrides)
 
@@ -121,7 +121,7 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
     extends Definition {
   assert(from.variance == Covariant, s"$from is not covariant")
   assert(to.variance == Covariant, s"$to is not covariant")
-  
+
   def name = s"$definingEntityName:$fromKey:$toKey"
 
   def fromKey = ViewDef.key(from)

@@ -13,7 +13,7 @@ import scaps.api.ScapsApi
 import scaps.api.BuildInfo
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])
-  extends Helpers[Builder, Output, FragT] {
+    extends Helpers[Builder, Output, FragT] {
 
   import bundle._
   import bundle.all._
@@ -236,7 +236,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           case t =>
             span(strong(value.name), typeParams(value.typeParameters), signature(t))
         })),
-      dd(div(value.comment),
+      dd(div(value.comment.body),
         div(span(cls := "label label-default")(value.module.name), " ", value.name),
         info))
   }

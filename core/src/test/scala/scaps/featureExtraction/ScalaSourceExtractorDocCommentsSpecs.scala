@@ -28,7 +28,7 @@ class ScalaSourceExtractorDocCommentsSpecs extends FlatSpec with Matchers with E
       }
       """)
 
-    val comments = entities.map(_.comment).mkString("\n")
+    val comments = entities.map(_.comment.body).mkString("\n")
 
     comments should (
       include("A doc comment") and
@@ -50,28 +50,28 @@ class ScalaSourceExtractorDocCommentsSpecs extends FlatSpec with Matchers with E
         def m = 1
       }
       """.replace('#', '$'))( // workaround to mute "possible missing interpolator" warning
-      ("p.O.m", _.comment should include("Hello, world!")))
+      ("p.O.m", _.comment.body should include("Hello, world!")))
   }
 
   it should "inherit doc comments" in {
     extractValues("""
       package p
-      
+
       class A {
         /** Base comment */
         def m = 1
       }
-      
+
       class B extends A
       """)(
-      ("p.B.m", _.comment should include("Base comment")))
+      ("p.B.m", _.comment.body should include("Base comment")))
   }
 
   it should "inherit doc comments from base classes in other files" in {
     val entities = extractAll(
       """
         package p
-        
+
         class A {
           /** Base comment */
           def m = 1
@@ -79,28 +79,28 @@ class ScalaSourceExtractorDocCommentsSpecs extends FlatSpec with Matchers with E
         """,
       """
         package p
-        
+
         class B extends A
         """)
 
     val bm = entities.collectFirst { case v: ValueDef if v.name == "p.B.m" => v }.get
 
-    bm.comment should include("Base comment")
+    bm.comment.body should include("Base comment")
   }
 
   it should "expand variables defined in base class" in {
     val entities = extractAll(
       """
         package p
-        
-        /** 
+
+        /**
          * @define info Hello, world!
          */
         class A
         """,
       """
         package p
-        
+
         class B extends A {
           /** #info */
           def m = 1
@@ -109,7 +109,7 @@ class ScalaSourceExtractorDocCommentsSpecs extends FlatSpec with Matchers with E
 
     val bm = entities.collectFirst { case v: ValueDef if v.name == "p.B.m" => v }.get
 
-    bm.comment should include("Hello, world!")
+    bm.comment.body should include("Hello, world!")
   }
 
 }

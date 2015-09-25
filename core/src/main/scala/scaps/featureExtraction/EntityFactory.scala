@@ -6,11 +6,24 @@ import scala.util.Try
 import scalaz.{ Contravariant => _, _ }
 import scaps.utils.Logging
 import scala.annotation.tailrec
+import scala.tools.nsc.doc.model.ModelFactory
+import scala.tools.nsc.doc.Settings
+import scala.tools.nsc.doc.model.CommentFactory
+import scala.tools.nsc.doc.model.TreeFactory
+import scala.tools.nsc.doc.model.ModelFactoryImplicitSupport
+import scala.tools.nsc.doc.model.ModelFactoryTypeSupport
+import scala.tools.nsc.doc.model.MemberLookup
+import scala.tools.nsc.doc.model.diagram.DiagramFactory
 
 trait EntityFactory extends Logging {
   val compiler: Global
 
-  import compiler.{ TypeDef => _, TypeRef => _, _ }
+  import compiler.{ TypeDef => _, TypeRef => _, DocComment => _, _ }
+
+  val scaladoc = new ModelFactory(compiler, compiler.settings.asInstanceOf[Settings]) with ModelFactoryImplicitSupport with ModelFactoryTypeSupport with DiagramFactory with CommentFactory with TreeFactory with MemberLookup {
+    def parse(comment: String): String =
+      parseAtSymbol(comment, "", NoPosition).toString
+  }
 
   def extractEntities(classSym: Symbol): List[ExtractionError \/ Definition] =
     if (isTypeOfInterest(classSym)) {
@@ -59,7 +72,7 @@ trait EntityFactory extends Logging {
     }
 
   def getDocComment(sym: Symbol, site: Symbol) = {
-    compiler.expandedDocComment(sym, site)
+    DocComment(compiler.expandedDocComment(sym, site), Map())
   }
 
   def createTypeDef(sym: Symbol): ExtractionError \/ TypeDef =
@@ -76,7 +89,7 @@ trait EntityFactory extends Logging {
       !sym.isLocalClass &&
       sym.isPublic
 
-  def createValueDef(sym: Symbol, isPrimaryCtor: Boolean, rawComment: String): ExtractionError \/ ValueDef =
+  def createValueDef(sym: Symbol, isPrimaryCtor: Boolean, comment: DocComment): ExtractionError \/ ValueDef =
     \/.fromTryCatchNonFatal {
       val (typeParams, tpe) = createTypeRef(sym)
 
@@ -98,7 +111,7 @@ trait EntityFactory extends Logging {
       if (isImplicit) flags += ValueDef.Implicit
       if (isStatic(sym)) flags += ValueDef.Static
 
-      ValueDef(qualifiedName(sym, false), typeParams, tpe, rawComment,
+      ValueDef(qualifiedName(sym, false), typeParams, tpe, comment,
         flags = flags.result,
         docLink = link(sym))
     }.leftMap(ExtractionError(qualifiedName(sym, false), _))

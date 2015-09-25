@@ -160,7 +160,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 
     doc.add(new TextField(fields.name, entity.name, Store.NO))
 
-    doc.add(new TextField(fields.doc, entity.comment, Store.NO))
+    doc.add(new TextField(fields.doc, entity.comment.indexableContent, Store.NO))
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
 
     entity.typeFingerprint.foreach { fp =>

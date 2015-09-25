@@ -2,9 +2,9 @@ package scaps.searchEngine.index
 
 import scaps.api.ValueDef
 import scaps.api.TypeRef
-
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
+import scaps.api.DocComment
 
 class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {
@@ -15,7 +15,7 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val v = 1
       }
       """) { index =>
-      val v = ValueDef("p.O.v", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
+      val v = ValueDef("p.O.v", Nil, TypeRef.Int(), DocComment.empty, Set(ValueDef.Static))
       findByName(index)("v") should ((have size 1) and contain(v))
     }
   }
@@ -28,7 +28,7 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val value = 1
       }
       """) { index =>
-      val value = ValueDef("pkg.Obj.value", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
+      val value = ValueDef("pkg.Obj.value", Nil, TypeRef.Int(), DocComment.empty, Set(ValueDef.Static))
 
       findByName(index)("value") should contain(value)
       findByName(index)("obj") should contain(value)
@@ -45,7 +45,7 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val myValue = 1
       }
       """) { index =>
-      val value = ValueDef("somePkg.AnotherObj.myValue", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
+      val value = ValueDef("somePkg.AnotherObj.myValue", Nil, TypeRef.Int(), DocComment.empty, Set(ValueDef.Static))
       findByName(index)("value") should contain(value)
       findByName(index)("another") should contain(value)
       findByName(index)("pkg") should contain(value)
@@ -61,7 +61,7 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
         val ++ = 1
       }
       """) { index =>
-      val value = ValueDef("p.::.++", Nil, TypeRef.Int(), "", Set(ValueDef.Static))
+      val value = ValueDef("p.::.++", Nil, TypeRef.Int(), DocComment.empty, Set(ValueDef.Static))
       findByName(index)("::") should contain(value)
       findByName(index)("++") should contain(value)
     }
