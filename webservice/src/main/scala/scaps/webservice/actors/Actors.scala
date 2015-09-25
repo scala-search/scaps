@@ -10,6 +10,7 @@ import akka.actor.Props
 import akka.actor.actorRef2Scala
 import akka.event.Logging
 import scalaz.std.stream.streamInstance
+import scalaz.\/
 import scaps.api.IndexBusy
 import scaps.api.IndexReady
 import scaps.api.IndexStatus
@@ -169,21 +170,27 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
 
   def receive = {
     case Search(q, moduleIds, noResults, offset) =>
-      val res = searchEngine.search(q, moduleIds).get.map {
-        case values => values.drop(offset).take(noResults)
-      }.leftMap {
-        case SyntaxError(msg) =>
-          msg
-        case NameNotFound(name) =>
-          s"Type ${name} not found"
-        case NameAmbiguous(name, candidates) =>
-          s"Type ${name} is ambiguous. Possible candidates: ${candidates.map(_.name).mkString(", ")}"
-        case UnexpectedNumberOfTypeArgs(raw, n) =>
-          s"$raw has wrong number of arguments ($n expected)"
-        case TooUnspecific() =>
-          s"Query too unspecific consider using wildcards '_' instead of 'Any' types"
+      try {
+        val res = searchEngine.search(q, moduleIds).get.map {
+          case values => values.drop(offset).take(noResults)
+        }.leftMap {
+          case SyntaxError(msg) =>
+            msg
+          case NameNotFound(name) =>
+            s"Type ${name} not found"
+          case NameAmbiguous(name, candidates) =>
+            s"Type ${name} is ambiguous. Possible candidates: ${candidates.map(_.name).mkString(", ")}"
+          case UnexpectedNumberOfTypeArgs(raw, n) =>
+            s"$raw has wrong number of arguments ($n expected)"
+          case TooUnspecific() =>
+            s"Query too unspecific consider using wildcards '_' instead of 'Any' types"
+        }
+        sender ! res
+      } catch {
+        case MaximumClauseCountExceededException =>
+          sender ! \/.left("Query type too complex")
+      } finally {
+        context.stop(self)
       }
-      sender ! res
-      context.stop(self)
   }
 }

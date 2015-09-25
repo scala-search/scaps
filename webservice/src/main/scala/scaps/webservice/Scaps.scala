@@ -38,11 +38,18 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
 
   override def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[ValueDef]]] = {
     val searchMsg = Search(query, moduleIds, noResults, offset)
-    for {
+
+    val f = for {
       result <- (director ? searchMsg).mapTo[String \/ Seq[ValueDef]]
     } yield {
       userInteractionLogger ! ((searchMsg, result))
       result.toEither
+    }
+
+    f.recoverWith {
+      case e =>
+        userInteractionLogger ! ((searchMsg, \/.left(e.toString())))
+        Future.failed(e)
     }
   }
 

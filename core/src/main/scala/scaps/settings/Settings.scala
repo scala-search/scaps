@@ -12,8 +12,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 
 case class Settings(
-  index: IndexSettings,
-  query: QuerySettings) {
+    index: IndexSettings,
+    query: QuerySettings) {
 
   def modQuery(f: QuerySettings => QuerySettings) = this.copy(query = f(query))
 }
@@ -36,9 +36,9 @@ object Settings {
 }
 
 case class IndexSettings(
-  indexDir: String,
-  timeout: Duration,
-  typeFrequenciesSampleSize: Int) {
+    indexDir: String,
+    timeout: Duration,
+    typeFrequenciesSampleSize: Int) {
 
   val typeDefsDir = new File(indexDir + "/typeDefs")
   val modulesDir = new File(indexDir + "/modules")
@@ -58,19 +58,21 @@ object IndexSettings {
 }
 
 case class QuerySettings(
-  maxResults: Int,
-  views: Boolean,
-  fractions: Boolean,
-  lengthNormWeight: Double,
-  depthBoostWeight: Double,
-  distanceBoostWeight: Double,
-  typeFrequencyWeight: Double,
-  nameBoost: Double,
-  docBoost: Double,
-  fingerprintFrequencyCutoff: Double) {
+    maxClauseCount: Int,
+    maxResults: Int,
+    views: Boolean,
+    fractions: Boolean,
+    lengthNormWeight: Double,
+    depthBoostWeight: Double,
+    distanceBoostWeight: Double,
+    typeFrequencyWeight: Double,
+    nameBoost: Double,
+    docBoost: Double,
+    fingerprintFrequencyCutoff: Double) {
 
   import Settings._
 
+  assertPositive(maxClauseCount)
   assertPositive(maxResults)
   assertPositive(lengthNormWeight)
   assertPositive(depthBoostWeight)
@@ -84,6 +86,7 @@ case class QuerySettings(
 object QuerySettings {
   def apply(conf: Config): QuerySettings =
     QuerySettings(
+      conf.getInt("max-clause-count"),
       conf.getInt("max-results"),
       conf.getBoolean(views),
       conf.getBoolean(fractions),

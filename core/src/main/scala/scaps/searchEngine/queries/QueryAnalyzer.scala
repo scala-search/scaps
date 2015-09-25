@@ -17,6 +17,7 @@ import scaps.api.Invariant
 import scaps.api.TypeRef
 import scaps.api.Variance
 import scaps.utils._
+import scaps.searchEngine.MaximumClauseCountExceededException
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -116,9 +117,9 @@ private[queries] object ExpandedQuery {
  * `findTypeDefsBySuffix` and `findAlternativesWithDistance`
  */
 class QueryAnalyzer private[searchEngine] (
-  settings: QuerySettings,
-  findTypeDefsBySuffix: (String) => Seq[TypeDef],
-  findAlternativesWithDistance: (TypeRef) => Seq[(TypeRef, Float)]) {
+    settings: QuerySettings,
+    findTypeDefsBySuffix: (String) => Seq[TypeDef],
+    findAlternativesWithDistance: (TypeRef) => Seq[(TypeRef, Float)]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the values index.
@@ -196,7 +197,17 @@ class QueryAnalyzer private[searchEngine] (
   private[queries] def expandQuery(tpe: TypeRef): ExpandedQuery.Alternative = {
     import ExpandedQuery._
 
+    var clauseCount = 0
+
+    def increaseCount() = {
+      clauseCount += 1
+      if (clauseCount > settings.maxClauseCount)
+        throw MaximumClauseCountExceededException
+    }
+
     def parts(tpe: TypeRef, fraction: Double, depth: Int, dist: Float, outerTpes: Set[TypeRef]): Alternative = {
+      increaseCount()
+
       tpe match {
         case TypeRef.Ignored(args, v) =>
           val partFraction = fraction / args.length
@@ -217,6 +228,8 @@ class QueryAnalyzer private[searchEngine] (
     }
 
     def alternatives(tpe: TypeRef, fraction: Double, depth: Int, outerTpes: Set[TypeRef]): Part = {
+      increaseCount()
+
       val alternativesWithDistance =
         if (settings.views) findAlternativesWithDistance(tpe).toList
         else Nil
@@ -235,7 +248,9 @@ class QueryAnalyzer private[searchEngine] (
 
     tpe match {
       case TypeRef.Ignored(args, _) =>
-        parts(tpe, 1, 0, 0, Set())
+        val res = parts(tpe, 1, 0, 0, Set())
+        println(clauseCount)
+        res
       case _ =>
         parts(TypeRef.Ignored(tpe :: Nil, Covariant), 1, 0, 0, Set())
     }

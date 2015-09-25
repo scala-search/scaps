@@ -13,6 +13,8 @@ import scaps.webservice.ui.Pages
 import spray.http.Uri
 import spray.http.HttpHeaders._
 import spray.http.CacheDirectives._
+import spray.routing.ExceptionHandler
+import scaps.api.IndexReady
 
 class ScapsServiceActor(val apiImpl: Scaps) extends Actor with ScapsService {
   def actorRefFactory = context
@@ -48,57 +50,74 @@ trait ScapsService extends HttpService {
           }
         }
     } ~
-      cacheControl {
-        pathSingleSlash {
-          get {
-            parameterMultiMap { params =>
-              val indexStatus = apiImpl.getStatus()
+      handleExceptions(errorHandler) {
+        cacheControl {
+          pathSingleSlash {
+            get {
+              parameterMultiMap { params =>
+                val indexStatus = apiImpl.getStatus()
 
-              val moduleIds = indexStatus.map { status =>
-                val modulesFromQuery = (for {
-                  moduleIds <- params.lift("m").toList
-                  moduleId <- moduleIds
-                } yield moduleId).toSet
+                val moduleIds = indexStatus.map { status =>
+                  val modulesFromQuery = (for {
+                    moduleIds <- params.lift("m").toList
+                    moduleId <- moduleIds
+                  } yield moduleId).toSet
 
-                if (modulesFromQuery.isEmpty)
-                  status.indexedModules
-                    .filter(m => m.name.contains("scala-library") || m.name.contains("scalaz"))
-                    .map(_.moduleId)
-                    .toSet
-                else
-                  modulesFromQuery
-              }
+                  if (modulesFromQuery.isEmpty)
+                    status.indexedModules
+                      .filter(m => m.name.contains("scala-library") || m.name.contains("scalaz"))
+                      .map(_.moduleId)
+                      .toSet
+                  else
+                    modulesFromQuery
+                }
 
-              parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
-                if (query.isEmpty())
-                  reject
-                else
+                parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
+                  if (query.isEmpty())
+                    reject
+                  else
+                    complete {
+                      val resultOffset = resultPage * ScapsApi.defaultPageSize
+
+                      for {
+                        status <- indexStatus
+                        enabledModuleIds <- moduleIds
+                        result <- apiImpl.search(query, moduleIds = enabledModuleIds, offset = resultOffset)
+                        page = HtmlPages.skeleton(status, enabledModuleIds,
+                          result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleIds, _)), query)
+                      } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+                    }
+                } ~
                   complete {
-                    val resultOffset = resultPage * ScapsApi.defaultPageSize
-
                     for {
                       status <- indexStatus
                       enabledModuleIds <- moduleIds
-                      result <- apiImpl.search(query, moduleIds = enabledModuleIds, offset = resultOffset)
-                      page = HtmlPages.skeleton(status, enabledModuleIds,
-                        result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleIds, _)), query)
+                      page = HtmlPages.skeleton(status, enabledModuleIds, HtmlPages.main(status, enabledModuleIds))
                     } yield HttpEntity(MediaTypes.`text/html`, page.toString())
                   }
-              } ~
-                complete {
-                  for {
-                    status <- indexStatus
-                    enabledModuleIds <- moduleIds
-                    page = HtmlPages.skeleton(status, enabledModuleIds, HtmlPages.main(status, enabledModuleIds))
-                  } yield HttpEntity(MediaTypes.`text/html`, page.toString())
-                }
+              }
             }
-          }
-        } ~
-          pathSuffixTest("""(?i)^.*\.(css|js|png|gif|svg|pdf|jpg|jpeg|woff2|js\.map)$""".r) { _ =>
-            get { getFromResourceDirectory("") }
-          }
+          } ~
+            pathSuffixTest("""(?i)^.*\.(css|js|png|gif|svg|pdf|jpg|jpeg|woff2|js\.map)$""".r) { _ =>
+              get { getFromResourceDirectory("") }
+            }
+        }
       }
+
+  val errorHandler = ExceptionHandler {
+    case _ =>
+      complete {
+        val indexStatus = apiImpl.getStatus().recover {
+          case _ => IndexReady(Nil, Nil)
+        }
+
+        for {
+          status <- indexStatus
+          page = HtmlPages.skeleton(status, Set(),
+            HtmlPages.error("There was an internal server error, please try another query."))
+        } yield HttpEntity(MediaTypes.`text/html`, page.toString())
+      }
+  }
 }
 
 object HtmlPages extends Pages(scalatags.Text) {

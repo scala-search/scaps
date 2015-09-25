@@ -13,3 +13,5 @@ case class UnexpectedNumberOfTypeArgs(name: String, expectedArgs: Int) extends S
 
 sealed trait ProcessingError extends QueryError
 case class TooUnspecific() extends ProcessingError
+
+case object MaximumClauseCountExceededException extends Exception
