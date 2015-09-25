@@ -76,11 +76,11 @@ object SearchEngine {
 }
 
 class SearchEngine private[searchEngine] (
-  val settings: Settings,
-  private[scaps] val valueIndex: ValueIndex,
-  private[scaps] val typeIndex: TypeIndex,
-  private[scaps] val moduleIndex: ModuleIndex,
-  private[scaps] val viewIndex: ViewIndex) extends Logging {
+    val settings: Settings,
+    private[scaps] val valueIndex: ValueIndex,
+    private[scaps] val typeIndex: TypeIndex,
+    private[scaps] val moduleIndex: ModuleIndex,
+    private[scaps] val viewIndex: ViewIndex) extends Logging {
 
   private val indexes = List(valueIndex, typeIndex, moduleIndex, viewIndex)
 
@@ -123,7 +123,7 @@ class SearchEngine private[searchEngine] (
       val typeDefsWithModule = entitiesWithSyntheticTypes
         .collect { case c: TypeDef => c.copy(referencedFrom = Set(module)) }
       val viewDefWithModule = entitiesWithSyntheticTypes
-        .collect{case v: ViewDef => v.copy(modules = Set(module))}
+        .collect { case v: ViewDef => v.copy(modules = Set(module)) }
 
       val f = Future.sequence(List(
         Future { valueIndex.addEntities(valuesWithModule).get },
@@ -212,10 +212,12 @@ class SearchEngine private[searchEngine] (
     } { identity }
 
     analyzer(raw).swapped(_.flatMap {
-      case _: NameNotFound =>
+      case e: NameNotFound =>
         raw match {
           case RawQuery.Full("", tpe) if tpe.args.length == 0 =>
             analyzer(RawQuery.Keywords(tpe.name)).swap
+          case _ =>
+            \/.right(e)
         }
       case e =>
         \/.right(e)

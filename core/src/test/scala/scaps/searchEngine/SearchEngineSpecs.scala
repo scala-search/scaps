@@ -20,6 +20,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       object O {
         def m = 1
         def c = new C
+        /** Creates a float */
         def f = 1f
       }
 
@@ -136,6 +137,26 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
       c should be(Seq())
     }
+
+  it should "reinterpret queries with a single unknown type as keyword queries" in {
+    withSearchEngine { se =>
+      se.search("create").get.getOrElse(Nil).map(_.name) should (
+        contain("p.O.f"))
+    }
+  }
+
+  it should "fail on composed type queries containing an unknown type" in {
+    withSearchEngine { se =>
+      val results = List(
+        se.search("List => Xyz"),
+        se.search("List[Xyz]"),
+        se.search("(List, Xyz)"))
+
+      results.foreach { r =>
+        r.get should be('left)
+      }
+    }
+  }
 
   def withSearchEngine(block: SearchEngine => Unit): Unit =
     withSearchEngine(module1, module2)(block)
