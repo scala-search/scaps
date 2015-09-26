@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/scala-search/scaps.svg?branch=master)](https://travis-ci.org/scala-search/scaps)
+
 # Scaps: Scala API Search
 
 Scaps is a search engine for discovering functionality in Scala libraries. You can use both type signatures and keywords to search for definitions.
