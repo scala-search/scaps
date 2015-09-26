@@ -3,6 +3,7 @@ package scaps.webservice.ui
 
 import scalatags.generic.Bundle
 import scalatags.generic.TypedTag
+import scalatags.stylesheet.Sheet
 import scaps.api.IndexStatus
 import scaps.api.IndexBusy
 import scaps.api.ValueDef
@@ -60,6 +61,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         meta(name := "viewport", content := "width=device-width, initial-scale=1"),
         title(pageTitle),
         stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
+        stylesheet("docStyles.css"),
         if (prodMode)
           javascript("scaps-webservice-ui-opt.js")
         else
@@ -236,7 +238,13 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
           case t =>
             span(strong(value.name), typeParams(value.typeParameters), signature(t))
         })),
-      dd(div(value.comment.body),
+      dd(
+        div(cls := "docComment")(
+          raw(value.comment.body),
+          dl(value.comment.attributes.toList.flatMap {
+            case (key, value) =>
+              List(dt(raw(key)), dd(raw(value)))
+          })),
         div(span(cls := "label label-default")(value.module.name), " ", value.name),
         info))
   }

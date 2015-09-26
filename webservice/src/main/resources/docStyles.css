@@ -1,0 +1,23 @@
+.docComment p {margin:0}
+
+.docComment dl { margin: 0; }
+
+.docComment dd { margin-left: 10px; }
+
+.docComment pre { border: 0px; }
+
+.docComment code { color: #000; background-color: #f5f5f5; }
+
+.docComment h3, h4, h5, h6 { font-size: 1em; font-weight: bold; margin: 0; }
+
+.docComment h3:before { content: "= "}
+.docComment h3:after { content: " ="}
+
+.docComment h4:before { content: "== "}
+.docComment h4:after { content: " =="}
+
+.docComment h5:before { content: "=== "}
+.docComment h5:after { content: " ==="}
+
+.docComment h6:before { content: "==== "}
+.docComment h6:after { content: " ===="}

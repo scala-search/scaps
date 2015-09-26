@@ -1,22 +1,19 @@
 package scaps.webservice.ui
 
-import scala.concurrent.duration.DurationInt
-import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 import org.scalajs.dom
-import org.scalajs.dom.ext.AjaxException
 import org.scalajs.dom.ext._
 import org.scalajs.dom.html
-import org.scalajs.dom.raw.FocusEvent
-import autowire._
-import scaps.api.ScapsApi
-import org.scalajs.dom.raw.Event
-import monifu.reactive._
-import monifu.reactive.subjects.PublishSubject
-import monifu.reactive.Observable.FutureIsObservable
+import org.scalajs.dom.raw.Node
+import autowire.clientCallable
+import autowire.unwrapClientProxy
 import monifu.concurrent.Implicits.globalScheduler
 import monifu.concurrent.Scheduler
-import scaps.webservice.ui.ObservableExtensions._
+import monifu.reactive.Observable
+import monifu.reactive.subjects.PublishSubject
+import scaps.api.ScapsApi
+import scaps.webservice.ui.ObservableExtensions.ObservableCheckboxGroup
+import org.scalajs.dom.raw.Element
 
 @JSExport
 object Main {

@@ -126,6 +126,9 @@ lazy val webservice = (project in file("webservice"))
     testModules := Seq("testModule1", "testModule2"),
 
     // packager
+    javaOptions in Universal ++= Seq(
+      "-J-Xmx4g"),
+
     packageDescription in Debian := "Scaps Webservice",
     maintainer in Debian := "Lukas Wegmann",
 

@@ -4,6 +4,7 @@ import scaps.api._
 import scala.tools.nsc.Global
 import scala.util.Try
 import scalaz.{ Contravariant => _, _ }
+import scalaz.std.boolean._
 import scaps.utils.Logging
 import scala.annotation.tailrec
 import scala.tools.nsc.doc.model.ModelFactory
@@ -14,16 +15,14 @@ import scala.tools.nsc.doc.model.ModelFactoryImplicitSupport
 import scala.tools.nsc.doc.model.ModelFactoryTypeSupport
 import scala.tools.nsc.doc.model.MemberLookup
 import scala.tools.nsc.doc.model.diagram.DiagramFactory
+import scala.collection.immutable.SortedMap
 
 trait EntityFactory extends Logging {
   val compiler: Global
 
-  import compiler.{ TypeDef => _, TypeRef => _, DocComment => _, _ }
+  val scaladoc = new ScalaDocParser(compiler, compiler.settings.asInstanceOf[Settings])
 
-  val scaladoc = new ModelFactory(compiler, compiler.settings.asInstanceOf[Settings]) with ModelFactoryImplicitSupport with ModelFactoryTypeSupport with DiagramFactory with CommentFactory with TreeFactory with MemberLookup {
-    def parse(comment: String): String =
-      parseAtSymbol(comment, "", NoPosition).toString
-  }
+  import compiler.{ TypeDef => _, TypeRef => _, DocComment => _, _ }
 
   def extractEntities(classSym: Symbol): List[ExtractionError \/ Definition] =
     if (isTypeOfInterest(classSym)) {
@@ -72,7 +71,7 @@ trait EntityFactory extends Logging {
     }
 
   def getDocComment(sym: Symbol, site: Symbol) = {
-    DocComment(compiler.expandedDocComment(sym, site), Map())
+    scaladoc(compiler.expandedDocComment(sym, site))
   }
 
   def createTypeDef(sym: Symbol): ExtractionError \/ TypeDef =

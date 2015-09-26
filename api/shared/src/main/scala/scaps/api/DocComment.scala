@@ -1,10 +1,14 @@
 package scaps.api
 
-case class DocComment(body: String, attributes: Map[String, String]) {
+case class DocComment(body: String, attributes: List[(String, String)]) {
   lazy val indexableContent: String =
-    body.replaceAll("""<(.|\n)+?>""", "") + attributes.values.mkString("\n", "\n", "")
+    DocComment.stripHtml(body) +
+      attributes.map(_._2).map(DocComment.stripHtml).mkString("\n", "\n", "")
 }
 
 object DocComment {
-  val empty = DocComment("", Map())
+  val empty = DocComment("", List())
+
+  def stripHtml(text: String) =
+    text.replaceAll("""<(.|\n)+?>""", "")
 }
