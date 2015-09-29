@@ -125,7 +125,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   def typeFrequenciesWithMaxAbsoluteFrequency(source: String) = {
     val entities = extractAll(source)
     val values = entities.collect { case t: ValueDef => t }
-    val views = entities.flatMap(ViewDef.fromEntity(_)).sortBy(_.from.name)
+    val views = entities.collect { case v: ViewDef => v }.sortBy(_.from.name)
 
     withValueIndex { valueIndex =>
       valueIndex.addEntities(values)

@@ -131,45 +131,4 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
 object ViewDef {
   def key(tpe: TypeRef) =
     tpe.renameTypeParams(_ => "_").signature
-
-  private def fromTypeDef(cls: TypeDef): List[ViewDef] = {
-    val toRepeated = {
-      // create implicit conversions from Seq and subtypes thereof to repeated args
-      if (cls.name == TypeRef.Seq.name) {
-        val p = cls.typeParameters(0)
-        Seq(ViewDef(cls.toType, TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), implicitConversionDistance, ""))
-      } else {
-        cls.baseTypes.collect {
-          case TypeRef.Seq(t, _) =>
-            ViewDef(cls.toType, TypeRef.Repeated(t), implicitConversionDistance, "")
-        }
-      }
-    }
-
-    cls.baseTypes.zipWithIndex.flatMap {
-      case (base, idx) =>
-        Seq(
-          ViewDef(cls.toType, base, idx + 1, cls.name))
-    } ++ toRepeated
-  }
-
-  private def fromValue(t: ValueDef): List[ViewDef] = {
-    if (t.isImplicit && t.isStatic) {
-      t.tpe.withoutImplicitParams.etaExpanded match {
-        case TypeRef.Function(from :: Nil, to, _) =>
-          List(ViewDef(from.withVariance(Covariant), to, implicitConversionDistance, t.name))
-        case _ =>
-          Nil
-      }
-    } else
-      Nil
-  }
-
-  val implicitConversionDistance = 0.5f
-
-  def fromEntity(e: Definition): List[ViewDef] = e match {
-    case c: TypeDef  => fromTypeDef(c)
-    case t: ValueDef => fromValue(t)
-    case _           => List()
-  }
 }

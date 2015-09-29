@@ -63,7 +63,7 @@ trait EntityFactory extends Logging {
         .toList
 
       (cls :: objValue.toList ::: members ::: referencedTypeDefs).flatMap {
-        case \/-(entity) => (entity :: ViewDef.fromEntity(entity)).map(\/-(_))
+        case \/-(entity) => (entity :: createViewFromEntity(entity)).map(\/-(_))
         case left        => List(left)
       }
     } else {
@@ -268,4 +268,45 @@ trait EntityFactory extends Logging {
       else Invariant,
       qualifiedName(typeSym.tpe.bounds.lo.typeSymbol, true),
       qualifiedName(typeSym.tpe.bounds.hi.typeSymbol, true))
+
+  private def createViewFromTypeDef(cls: TypeDef): List[ViewDef] = {
+    val toRepeated = {
+      // create implicit conversions from Seq and subtypes thereof to repeated args
+      if (cls.name == TypeRef.Seq.name) {
+        val p = cls.typeParameters(0)
+        Seq(ViewDef(cls.toType, TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), implicitConversionDistance, ""))
+      } else {
+        cls.baseTypes.collect {
+          case TypeRef.Seq(t, _) =>
+            ViewDef(cls.toType, TypeRef.Repeated(t), implicitConversionDistance, "")
+        }
+      }
+    }
+
+    cls.baseTypes.zipWithIndex.flatMap {
+      case (base, idx) =>
+        Seq(
+          ViewDef(cls.toType, base, idx + 1, cls.name))
+    } ++ toRepeated
+  }
+
+  private def createViewFromValue(t: ValueDef): List[ViewDef] = {
+    if (t.isImplicit && t.isStatic) {
+      t.tpe.withoutImplicitParams.etaExpanded match {
+        case TypeRef.Function(from :: Nil, to, _) =>
+          List(ViewDef(from.withVariance(Covariant), to, implicitConversionDistance, t.name))
+        case _ =>
+          Nil
+      }
+    } else
+      Nil
+  }
+
+  val implicitConversionDistance = 0.5f
+
+  private def createViewFromEntity(e: Definition): List[ViewDef] = e match {
+    case c: TypeDef  => createViewFromTypeDef(c)
+    case t: ValueDef => createViewFromValue(t)
+    case _           => List()
+  }
 }

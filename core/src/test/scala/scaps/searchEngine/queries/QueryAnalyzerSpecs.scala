@@ -193,7 +193,7 @@ class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
   val analyzer = {
     val entities = extractAll(env)
     val classEntities = entities.collect { case c: TypeDef => c }
-    val views = entities.flatMap(ViewDef.fromEntity(_))
+    val views = entities.collect { case v: ViewDef => v }
 
     def toMultiMap[K, V](ps: Seq[(K, V)]): Map[K, List[V]] = ps
       .distinct
