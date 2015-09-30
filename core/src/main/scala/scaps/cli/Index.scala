@@ -10,7 +10,7 @@ import scaps.featureExtraction.JarExtractor
 import scaps.settings.Settings
 import scaps.api.Module
 import scaps.utils.Logging
-import scalaz.std.stream._
+import scalaz.std.list._
 import scaps.featureExtraction.CompilerUtils
 
 object Index extends App with Logging {

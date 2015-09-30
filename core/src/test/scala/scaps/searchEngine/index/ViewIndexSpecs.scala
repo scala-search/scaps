@@ -10,6 +10,7 @@ import scaps.api.Invariant
 import scaps.api.TypeRef
 import scaps.api.Variance
 import scaps.api.ViewDef
+import scaps.featureExtraction.Scala
 
 class ViewIndexSpecs extends FlatSpec with Matchers {
   /*
@@ -41,18 +42,19 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   val Nothing = TypeRef.Nothing
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int): ViewDef =
-      ViewDef(cls(Covariant), base(Covariant), dist, "")
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int) =
+      ViewDef.bidirectional(base(Covariant), cls(Covariant), dist, "")
 
-    List(
-      isSubTypeOf(B(_), A(_), 1),
-      isSubTypeOf(C(_), A(_), 1),
-      isSubTypeOf(D(_), C(_), 1),
-      isSubTypeOf(D(_), A(_), 2),
-      isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
-      isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
-      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 1),
-      isSubTypeOf(v => InvarBox(T(Invariant), v), v => Box(T(v), v), 1))
+    Scala.builtinViews ++
+      List(
+        isSubTypeOf(B(_), A(_), 1),
+        isSubTypeOf(C(_), A(_), 1),
+        isSubTypeOf(D(_), C(_), 1),
+        isSubTypeOf(D(_), A(_), 2),
+        isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
+        isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
+        isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 1),
+        isSubTypeOf(v => InvarBox(T(Invariant), v), v => Box(T(v), v), 1)).flatten
   }
 
   val viewIndex = {

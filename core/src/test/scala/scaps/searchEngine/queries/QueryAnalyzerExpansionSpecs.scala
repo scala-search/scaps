@@ -16,6 +16,7 @@ import scaps.api.Covariant
 import scaps.api.TypeRef
 import scaps.api.Variance
 import scaps.api.ViewDef
+import scaps.featureExtraction.Scala
 
 class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
@@ -52,10 +53,10 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val Tup = new TypeRef.VariantType("Tup")
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int): ViewDef =
-      ViewDef(cls(Covariant), base(Covariant), dist, "")
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int) =
+      ViewDef.bidirectional(base(Covariant), cls(Covariant), dist, "")
 
-    List(
+    Scala.builtinViews ++ List(
       isSubTypeOf(B(_), A(_), 1),
       isSubTypeOf(C(_), A(_), 1),
       isSubTypeOf(D(_), C(_), 1),
@@ -69,7 +70,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       isSubTypeOf(v => MyLoop(T(v), v), v => MyBox(Loop(T(v), v), v), 2),
       isSubTypeOf(v => MyLoop(T(v), v), v => Box(Loop(T(v), v), v), 3),
       isSubTypeOf(v => YBag(T(v), v), v => Bag(T(v), v), 1),
-      isSubTypeOf(v => YBag(T(v), v), Y(_), 1))
+      isSubTypeOf(v => YBag(T(v), v), Y(_), 1)).flatten
   }
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {

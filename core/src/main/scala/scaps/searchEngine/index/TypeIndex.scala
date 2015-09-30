@@ -31,7 +31,7 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
   val analyzer = new KeywordAnalyzer
 
   def addEntities(entities: Seq[TypeDef]): Try[Unit] = Try {
-    val distinctEntities = entities.distinct
+    val distinctEntities = entities
     val indexedTypeDefs = allTypeDefs().get
 
     val entitiesWithModules = distinctEntities.map { cls =>
@@ -81,7 +81,7 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
    */
   def findTypeDefsBySuffix(suffix: String, moduleIds: Set[String] = Set()): Try[Seq[TypeDef]] = {
     val query = new BooleanQuery()
-    
+
     query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
     query.add(Index.moduleQuery(moduleIds, fields.modules), Occur.MUST)
 

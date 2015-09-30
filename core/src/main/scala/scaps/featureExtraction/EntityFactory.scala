@@ -62,10 +62,7 @@ trait EntityFactory extends Logging {
         .map((createValueDef _).tupled)
         .toList
 
-      (cls :: objValue.toList ::: members ::: referencedTypeDefs).flatMap {
-        case \/-(entity) => (entity :: createViewFromEntity(entity)).map(\/-(_))
-        case left        => List(left)
-      }
+      cls :: objValue.toList ::: members ::: referencedTypeDefs
     } else {
       Nil
     }
@@ -274,27 +271,31 @@ trait EntityFactory extends Logging {
       // create implicit conversions from Seq and subtypes thereof to repeated args
       if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
-        Seq(ViewDef(cls.toType, TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), implicitConversionDistance, ""))
+        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), cls.toType, implicitConversionDistance, "")
       } else {
-        cls.baseTypes.collect {
+        cls.baseTypes.flatMap {
           case TypeRef.Seq(t, _) =>
-            ViewDef(cls.toType, TypeRef.Repeated(t), implicitConversionDistance, "")
+            ViewDef.bidirectional(TypeRef.Repeated(t), cls.toType, implicitConversionDistance, "")
+          case _ =>
+            Nil
         }
       }
     }
 
     cls.baseTypes.zipWithIndex.flatMap {
       case (base, idx) =>
-        Seq(
-          ViewDef(cls.toType, base, idx + 1, cls.name))
+        ViewDef.bidirectional(base, cls.toType, idx + 1, cls.name)
     } ++ toRepeated
   }
 
-  private def createViewFromValue(t: ValueDef): List[ViewDef] = {
-    if (t.isImplicit && t.isStatic) {
-      t.tpe.withoutImplicitParams.etaExpanded match {
-        case TypeRef.Function(from :: Nil, to, _) =>
-          List(ViewDef(from.withVariance(Covariant), to, implicitConversionDistance, t.name))
+  private def createViewFromValue(v: ValueDef): List[ViewDef] = {
+    def hasImplicitParam(t: TypeRef): Boolean =
+      t.name == TypeRef.Implicit.name || t.args.exists(hasImplicitParam)
+
+    if (v.isImplicit && v.isStatic && !hasImplicitParam(v.tpe)) {
+      v.tpe.etaExpanded match {
+        case TypeRef.Function(from :: Nil, to, _) if !from.isTypeParam =>
+          ViewDef.bidirectional(from, to.withVariance(Contravariant), implicitConversionDistance, v.name)
         case _ =>
           Nil
       }
@@ -304,7 +305,7 @@ trait EntityFactory extends Logging {
 
   val implicitConversionDistance = 0.5f
 
-  private def createViewFromEntity(e: Definition): List[ViewDef] = e match {
+  def createViewFromEntity(e: Definition): List[ViewDef] = e match {
     case c: TypeDef  => createViewFromTypeDef(c)
     case t: ValueDef => createViewFromValue(t)
     case _           => List()

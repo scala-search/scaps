@@ -566,7 +566,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.O.C.Q.p", _.isStatic should be(false)))
   }
 
-  it should "extract scala doc identifiers" in {
+  it should "extract scala doc links" in {
     extractValues("""
       package p
 
@@ -589,24 +589,29 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.C.toString", _.docLink should be(Some("p.C@toString():String"))))
   }
 
-  it should "extract views from class definitions" in {
+  it should "extract views from subtype relations" in {
     val views = extractAllViews("""
       package p
-      
+
       class A
       class B extends A
       """)
 
     views.map(_.name) should (
-      contain("p.A:p.A:java.lang.Object") and
-      contain("p.A:p.A:scala.Any") and
-      contain("p.B:p.B:p.A") and
-      contain("p.B:p.B:java.lang.Object") and
-      contain("p.B:p.B:scala.Any"))
+      contain("p.A:-p.A:-java.lang.Object") and
+      contain("p.A:+java.lang.Object:+p.A") and
+      contain("p.A:-p.A:-scala.Any") and
+      contain("p.A:+scala.Any:+p.A") and
+      contain("p.B:-p.B:-p.A") and
+      contain("p.B:+p.A:+p.B") and
+      contain("p.B:-p.B:-java.lang.Object") and
+      contain("p.B:+java.lang.Object:+p.B") and
+      contain("p.B:-p.B:-scala.Any") and
+      contain("p.B:+scala.Any:+p.B"))
   }
 
   it should "extract views from implicit conversion methods" in {
-    val views = extractAllViews("""    
+    val views = extractAllViews("""
       package p
 
       object O {
@@ -618,8 +623,10 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)
 
     views.map(_.name) should (
-      contain("p.O.int2long:scala.Int:scala.Long") and
-      contain("p.O.int2fn:scala.Int:scala.Function1[scala.Long, java.lang.String]"))
+      contain("p.O.int2long:-scala.Int:-scala.Long") and
+      contain("p.O.int2long:+scala.Long:+scala.Int") and
+      contain("p.O.int2fn:-scala.Int:-scala.Function1[+scala.Long, -java.lang.String]") and
+      contain("p.O.int2fn:+scala.Function1[-scala.Long, +java.lang.String]:+scala.Int"))
   }
 
   it should "extract views from implicit conversion functions" in {
@@ -633,11 +640,13 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)
 
     views.map(_.name) should (
-      contain("p.O.int2long:scala.Int:scala.Long") and
-      contain("p.O.int2fn:scala.Int:scala.Function1[scala.Long, java.lang.String]"))
+      contain("p.O.int2long:-scala.Int:-scala.Long") and
+      contain("p.O.int2long:+scala.Long:+scala.Int") and
+      contain("p.O.int2fn:-scala.Int:-scala.Function1[+scala.Long, -java.lang.String]") and
+      contain("p.O.int2fn:+scala.Function1[-scala.Long, +java.lang.String]:+scala.Int"))
   }
-  
-  it should "extract views from implicit conversion classes" in {    
+
+  it should "extract views from implicit conversion classes" in {
     val views = extractAllViews("""
       package p
 
@@ -647,10 +656,11 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)
 
     views.map(_.name) should (
-      contain("p.O.IntExt.<init>:scala.Int:p.O.IntExt"))
+      contain("p.O.IntExt.<init>:-scala.Int:-p.O.IntExt") and
+      contain("p.O.IntExt.<init>:+p.O.IntExt:+scala.Int"))
   }
-  
-  it should "ignore implicit parameters when extracting views from methods" in {    
+
+  it should "ignore conversions requiring implicit parameters" in {
     val views = extractAllViews("""
       package p
 
@@ -661,11 +671,13 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)
 
     views.map(_.name) should (
-      contain("p.O.int2long:scala.Int:scala.Long") and
-      contain("p.O.int2float:scala.Int:scala.Float"))
+      not contain ("p.O.int2long:-scala.Int:-scala.Long") and
+      not contain ("p.O.int2long:+scala.Long:+scala.Int") and
+      not contain ("p.O.int2float:-scala.Int:-scala.Float") and
+      not contain ("p.O.int2float:+scala.Float:+scala.Int"))
   }
-  
-  it should "create views for all subtypes of scala.Seq to <repeated>" in {    
+
+  it should "create views for all subtypes of scala.Seq to <repeated>" in {
     val views = extractAllViews("""
       package p
 
@@ -676,7 +688,9 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)
 
     views.map(_.name) should (
-      contain(":scala.collection.immutable.List[_]:<repeated>[_]") and
-      contain(":scala.collection.Seq[_]:<repeated>[_]"))
+      contain(":-scala.collection.immutable.List[-_]:-<repeated>[-_]") and
+      contain(":+<repeated>[+_]:+scala.collection.immutable.List[+_]") and
+      contain(":-scala.collection.Seq[-_]:-<repeated>[-_]") and
+      contain(":+<repeated>[+_]:+scala.collection.Seq[+_]"))
   }
 }

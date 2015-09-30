@@ -26,6 +26,18 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
         s"$name$argStr"
     }
 
+  def annotatedSignature: String =
+    this match {
+      case Implicit(t, _) =>
+        t.annotatedSignature
+      case _ =>
+        val argStr = args match {
+          case Nil => ""
+          case as  => as.map(_.annotatedSignature).mkString("[", ", ", "]")
+        }
+        s"${variance.prefix}$name$argStr"
+    }
+
   def fingerprint: String = s"${variance.prefix}$name"
 
   def typeFingerprint: List[String] = this.toList
@@ -40,7 +52,10 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
 
   def withVariance(v: Variance): TypeRef =
     if (variance == v) this
-    else copy(variance = v, args = args.map(arg => arg.withVariance(arg.variance * v)))
+    else if (v == Invariant)
+      copy(variance = v, args = args.map(arg => arg.withVariance(arg.variance * v)))
+    else
+      copy(variance = v, args = args.map(arg => arg.withVariance(arg.variance.flip)))
 
   def transform(f: TypeRef => TypeRef): TypeRef =
     f(this.copy(args = args.map(_.transform(f))))

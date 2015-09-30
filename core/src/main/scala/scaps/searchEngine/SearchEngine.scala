@@ -114,15 +114,11 @@ class SearchEngine private[searchEngine] (
         else
           t.copy(module = module)
 
-      val entitiesWithSyntheticTypes = entities ++ List(
-        TypeDef(TypeRef.Unknown.name, Nil, Nil),
-        TypeDef(TypeRef.Implicit.name, TypeParameter("T", Invariant) :: Nil, Nil))
-
-      val valuesWithModule = entitiesWithSyntheticTypes
+      def valuesWithModule = entities
         .collect { case t: ValueDef => setModule(t) }
-      val typeDefsWithModule = entitiesWithSyntheticTypes
+      def typeDefsWithModule = entities
         .collect { case c: TypeDef => c.copy(referencedFrom = Set(module)) }
-      val viewDefWithModule = entitiesWithSyntheticTypes
+      def viewDefWithModule = entities
         .collect { case v: ViewDef => v.copy(modules = Set(module)) }
 
       val f = Future.sequence(List(

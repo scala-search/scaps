@@ -119,9 +119,6 @@ case class TypeParameter(
 
 case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, modules: Set[Module] = Set())
     extends Definition {
-  assert(from.variance == Covariant, s"$from is not covariant")
-  assert(to.variance == Covariant, s"$to is not covariant")
-
   def name = s"$definingEntityName:$fromKey:$toKey"
 
   def fromKey = ViewDef.key(from)
@@ -130,5 +127,10 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
 
 object ViewDef {
   def key(tpe: TypeRef) =
-    tpe.renameTypeParams(_ => "_").signature
+    tpe.renameTypeParams(_ => "_").annotatedSignature
+
+  def bidirectional(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, modules: Set[Module] = Set()) =
+    List(
+      ViewDef(from, to, distance, definingEntityName, modules),
+      ViewDef(to.withVariance(to.variance.flip), from.withVariance(from.variance.flip), distance, definingEntityName, modules))
 }

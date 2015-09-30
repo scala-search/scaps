@@ -9,7 +9,7 @@ import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.actorRef2Scala
 import akka.event.Logging
-import scalaz.std.stream.streamInstance
+import scalaz.std.list._
 import scalaz.\/
 import scaps.api.IndexBusy
 import scaps.api.IndexReady
