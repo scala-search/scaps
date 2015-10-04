@@ -77,6 +77,13 @@ object Dependencies {
     scalatags,
     sbtIo)
 
+  val scalaClientDependencies = Seq(
+    scalaz,
+    scalatest,
+    dispatch,
+    autowire,
+    upickle)
+
   val sbtPluginDependencies = Seq(
     dispatch,
     autowire,

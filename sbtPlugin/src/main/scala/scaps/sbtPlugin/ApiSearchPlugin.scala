@@ -15,59 +15,27 @@ import scaps.api.ScapsControlApi
 import org.slf4j.impl.StaticLoggerBinder
 import sbt.complete.Parser
 import scaps.api.IndexJob
+import scaps.api.BuildInfo
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
 
+  val scapsArtifact = "scaps-scala"
+
   object autoImport {
-    lazy val scapsHost = SettingKey[String]("scapsHost", "Hostname of the Scala API Search service.")
     lazy val scapsControlHost = SettingKey[String]("scapsControlHost", "Hostname of the Scala API Search control service.")
-
-    lazy val scaps = InputKey[Unit]("scaps", "Use Scaps to search for values and functions in the indexed libraries.")
-
-    lazy val scapsStatus = TaskKey[Unit]("scapsStatus", "Displays information about the current index state.")
     lazy val scapsModules = TaskKey[Seq[IndexJob]]("scapsModules", "Modules that will be indexed.")
-    lazy val scapsIndex = InputKey[Unit]("scapsIndex", "Requests indexing this project.")
+
+    lazy val Scaps = config("scaps").extend(Compile)
   }
 
   import autoImport._
 
-  override lazy val projectSettings = Seq(
-    scapsHost := "localhost:8080",
+  lazy val scapsSettings = Seq(
     scapsControlHost := "localhost:8081",
-    scaps := {
-      val log = streams.value.log
-      val query = spaceDelimited("<query>").parsed
-
-      val msgs = Await.result(scapsClient.value.search(query.mkString(" ")).call().map {
-        case Left(error) =>
-          error :: Nil
-        case Right(results) =>
-          results.take(3).map(_.signature)
-      }, 5.seconds)
-
-      msgs.foreach(log.info(_))
-
-      ()
-    },
-    scapsStatus := {
-      val log = streams.value.log
-
-      val status = Await.result(scapsClient.value.getStatus().call(), 5.seconds)
-
-      log.info(s"Scaps Work Queue:")
-      for { module <- status.workQueue } {
-        log.info(s"  ${module.moduleId}")
-      }
-
-      log.info(s"Scaps Indexed Modules:")
-      for { module <- status.indexedModules } {
-        log.info(s"  ${module.moduleId}")
-      }
-    },
     scapsModules := {
       val deps = libraryDependencies.value.collect {
-        case ModuleID(_, name, _, _, _, _, _, _, _, _, _) => name
+        case ModuleID(_, name, _, _, _, _, _, _, _, _, _) if name != scapsArtifact => name
       }
 
       val modules = updateClassifiers.value.configuration(Compile.name).get.modules
@@ -87,28 +55,31 @@ object ApiSearchPlugin extends AutoPlugin {
           mapping.map(_.toString + "#")))
       }.distinct
     },
-    scapsIndex := {
-      val log = streams.value.log
-
+    javaOptions := {
       val classpath = (fullClasspath in Compile).value.map {
         case Attributed(f) => f.getAbsolutePath
       }
 
-      val accepted = Await.result(controlClient.value.index(scapsModules.value, classpath).call(), 5.seconds)
+      val hostArg = s"-Dscaps.extraction.control-host=${scapsControlHost.value}"
+      val cpArgs = classpath.zipWithIndex.map {
+        case (cp, idx) => s"-Dscaps.extraction.classpath.${idx}=${cp}"
+      }
 
-      if (accepted)
-        log.info(s"${scapsControlHost.value} accepted index jobs")
-      else
-        log.warn(s"${scapsControlHost.value} rejected index jobs")
-    })
+      val moduleArgs = scapsModules.value.zipWithIndex.flatMap {
+        case (m, idx) =>
+          Seq(
+            s"-Dscaps.extraction.modules.${idx}.organization=${m.module.organization}",
+            s"-Dscaps.extraction.modules.${idx}.name=${m.module.name}",
+            s"-Dscaps.extraction.modules.${idx}.revision=${m.module.revision}",
+            s"-Dscaps.extraction.modules.${idx}.artifact=${m.artifactPath}",
+            s"-Dscaps.extraction.modules.${idx}.doc-url=${m.docUrlPrefix.getOrElse("")}")
+      }
 
-  lazy val scapsClient = Def.task {
-    StaticLoggerBinder.sbtLogger = streams.value.log
-    new DispatchClient(scapsHost.value, ScapsApi.apiPath)[ScapsApi]
-  }
+      (hostArg +: (cpArgs ++ moduleArgs))
+    },
+    fork := true,
+    mainClass := Some("scaps.scala.Main"))
 
-  lazy val controlClient = Def.task {
-    StaticLoggerBinder.sbtLogger = streams.value.log
-    new DispatchClient(scapsControlHost.value, ScapsControlApi.apiPath)[ScapsControlApi]
-  }
+  override lazy val projectSettings = inConfig(Scaps)(Defaults.compileSettings ++ scapsSettings) ++ Seq(
+    libraryDependencies += BuildInfo.organization %% scapsArtifact % BuildInfo.version)
 }

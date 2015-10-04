@@ -36,7 +36,7 @@ releaseProcess := Seq[ReleaseStep](
 // Root Project
 
 lazy val root = (project in file("."))
-  .aggregate(api_2_10, api_2_11, apiJS, core, evaluation, webservice, webserviceUI, sbtPlug)
+  .aggregate(api_2_10, api_2_11, apiJS, core, evaluation, webservice, webserviceUI, scalaClient, sbtPlug)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)
@@ -51,7 +51,9 @@ def apiSettings =
     libraryDependencies ++= Dependencies.apiDependencies ++ 
       Seq("com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"),
     target := baseDirectory.value / s"target-${scalaVersion.value}",
-    buildInfoKeys := Seq[BuildInfoKey](version),
+    buildInfoKeys := Seq[BuildInfoKey](
+      version, 
+      organization),
     buildInfoPackage := "scaps.api")
 
 lazy val api_2_10_cross = (crossProject in file("api"))
@@ -158,6 +160,15 @@ lazy val webserviceUI = (project in file("webserviceUI"))
       "org.scala-js" %%% "scalajs-dom" % "0.8.0",
       "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test",
       "org.monifu" %%% "monifu" % "1.0-M1"))
+
+// Scala Client
+
+lazy val scalaClient = (project in file("scala"))
+  .dependsOn(core)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "scaps-scala",
+    libraryDependencies ++= Dependencies.scalaClientDependencies)
 
 // SBT Plugin
 
