@@ -1,7 +1,7 @@
 package scaps
 
-import scala.collection.mutable.ListBuffer
-import scala.util.Random
+import _root_.scala.collection.mutable.ListBuffer
+import _root_.scala.util.Random
 
 package object utils {
   implicit class SampleSeqOps[T](s: Seq[T]) {
