@@ -1,4 +1,4 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import scala.tools.nsc.doc.ScaladocGlobal
 import scala.tools.nsc.reporters.ConsoleReporter

@@ -11,9 +11,9 @@ import scalaz.syntax.traverse.ToTraverseOps
 import scaps.api.Module
 import scaps.evaluation.stats.QueryStats
 import scaps.evaluation.stats.Stats
-import scaps.featureExtraction.CompilerUtils
-import scaps.featureExtraction.ExtractionError
-import scaps.featureExtraction.JarExtractor
+import scaps.scala.featureExtraction.CompilerUtils
+import scaps.scala.featureExtraction.ExtractionError
+import scaps.scala.featureExtraction.JarExtractor
 import scaps.searchEngine.QueryError
 import scaps.searchEngine.SearchEngine
 import scaps.settings.Settings

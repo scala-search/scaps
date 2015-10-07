@@ -6,13 +6,12 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
-
 import autowire._
 import scalaz.std.list.listInstance
 import scaps.api.ScapsControlApi
-import scaps.featureExtraction.CompilerUtils
-import scaps.featureExtraction.ExtractionError
-import scaps.featureExtraction.JarExtractor
+import scaps.scala.featureExtraction.JarExtractor
+import scaps.scala.featureExtraction.CompilerUtils;
+import scaps.scala.featureExtraction.ExtractionError;
 import scaps.utils.Logging
 
 object Main extends App with Logging {

@@ -1,4 +1,4 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import scaps.api._
 import scala.tools.nsc.Global

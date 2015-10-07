@@ -1,4 +1,4 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import scala.collection.mutable.ListBuffer
 import scala.reflect.internal.util.SourceFile

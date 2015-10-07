@@ -1,7 +1,8 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import java.io.File
 import java.util.jar.JarFile
+
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.reflect.internal.util.BatchSourceFile
 import scaps.api.Definition

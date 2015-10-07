@@ -1,6 +1,9 @@
 package scaps.featureExtraction
 
 import scaps.api._
+import scaps.scala.featureExtraction.CompilerUtils;
+import scaps.scala.featureExtraction.ExtractionError;
+import scaps.scala.featureExtraction.ScalaSourceExtractor;
 import scala.util.Random
 import scala.reflect.internal.util.BatchSourceFile
 import scalaz.std.list._

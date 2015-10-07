@@ -1,4 +1,4 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import scala.language.higherKinds
 import scalaz._

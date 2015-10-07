@@ -5,13 +5,13 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scaps.searchEngine.SearchEngine
-import scaps.featureExtraction.ExtractionError
-import scaps.featureExtraction.JarExtractor
+import scaps.scala.featureExtraction.ExtractionError
+import scaps.scala.featureExtraction.JarExtractor
 import scaps.settings.Settings
 import scaps.api.Module
 import scaps.utils.Logging
 import scalaz.std.list._
-import scaps.featureExtraction.CompilerUtils
+import scaps.scala.featureExtraction.CompilerUtils
 
 object Index extends App with Logging {
   val sourceJar = new File(args(0))
