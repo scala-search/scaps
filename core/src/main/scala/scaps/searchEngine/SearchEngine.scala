@@ -84,51 +84,30 @@ class SearchEngine private[searchEngine] (
 
   private val indexes = List(valueIndex, typeIndex, moduleIndex, viewIndex)
 
-  def indexEntities(modulesWithEntities: Seq[(Module, () => Seq[Definition])]): Try[Unit] =
+  def index(entities: Seq[Definition]): Try[Unit] =
     Try {
-      for {
-        (m, es) <- modulesWithEntities
-      } {
-        indexModule(m, es()).get
-        logger.info(s"Successfully indexed $m")
+      def values = entities.collect { case v: ValueDef => v }
+      def types = entities.collect { case t: TypeDef => t }
+      def views = entities.collect { case t: ViewDef => t }
+      def modules = entities.foldLeft(Set[Module]()) { (ms, d) =>
+        ms + d.module
       }
 
-      updateTypeFrequencies().get
-    }
-
-  def indexEntities(module: Module, entities: Seq[Definition]): Try[Unit] =
-    Try {
-      indexModule(module, entities).get
-      updateTypeFrequencies().get
-    }
-
-  private def indexModule(module: Module, entities: Seq[Definition]): Try[Unit] =
-    Try {
-      analyzers = Map()
-
-      deleteModule(module).get
-
-      def setModule(t: ValueDef) =
-        if (module == Module.Unknown)
-          t
-        else
-          t.copy(module = module)
-
-      def valuesWithModule = entities
-        .collect { case t: ValueDef => setModule(t) }
-      def typeDefsWithModule = entities
-        .collect { case c: TypeDef => c.copy(referencedFrom = Set(module)) }
-      def viewDefWithModule = entities
-        .collect { case v: ViewDef => v.copy(modules = Set(module)) }
-
       val f = Future.sequence(List(
-        Future { valueIndex.addEntities(valuesWithModule).get },
-        Future { typeIndex.addEntities(typeDefsWithModule).get },
-        Future { viewIndex.addEntities(viewDefWithModule).get }))
+        Future { valueIndex.addEntities(values).get },
+        Future { typeIndex.addEntities(types).get },
+        Future { viewIndex.addEntities(views).get }))
 
       Await.result(f, settings.index.timeout)
 
-      moduleIndex.addEntities(Seq(module)).get
+      moduleIndex.addEntities(modules.toSeq).get
+    }
+
+  def finalizeIndex(): Try[Unit] =
+    Try {
+      analyzers = Map()
+
+      updateTypeFrequencies().get
     }
 
   private def updateTypeFrequencies(): Try[Unit] =
@@ -142,16 +121,7 @@ class SearchEngine private[searchEngine] (
 
       val adjustedTfs = TypeFrequencies.adjustInvariantTopType(tfs)
 
-      val typeDefsWithFrequencies = typeIndex.allTypeDefs().get.map { cls =>
-        def freq(v: Variance) = adjustedTfs((v, cls.name))
-
-        cls.copy(typeFrequency = Map(
-          Covariant -> freq(Covariant),
-          Contravariant -> freq(Contravariant),
-          Invariant -> freq(Invariant)))
-      }
-
-      typeIndex.replaceAllEntities(typeDefsWithFrequencies)
+      typeIndex.updateTypeFrequencies(adjustedTfs)
 
       logger.info(s"Type frequencies have been updated")
     }
@@ -193,10 +163,10 @@ class SearchEngine private[searchEngine] (
   private var analyzers: Map[Set[String], QueryAnalyzer] = Map()
 
   private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
-    def findClassBySuffix(suffix: String) =
-      typeIndex.findTypeDefsBySuffix(suffix, moduleIds).get
-
     val analyzer = analyzers.get(moduleIds).fold {
+      def findClassBySuffix(suffix: String) =
+        typeIndex.findTypeDefsBySuffix(suffix, moduleIds).get
+
       val analyzer = new QueryAnalyzer(
         settings.query,
         Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),

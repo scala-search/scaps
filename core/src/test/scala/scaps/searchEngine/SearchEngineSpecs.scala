@@ -14,7 +14,9 @@ import scalaz.{ Contravariant => _, _ }
 
 class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
-  val module1 = (Module("test", "m1", "0.1.0"), extractAll("""
+  val m1 = Module("test", "m1", "0.1.0")
+
+  val module1 = extractAll("""
       package p
 
       object O {
@@ -22,12 +24,15 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
         def c = new C
         /** Creates a float */
         def f = 1f
+        def foo(i: Int) = i
       }
 
       class C
-      """))
+      """).map(_.withModule(m1))
 
-  val module2 = (Module("test", "m2", "0.1.0"), extractAll("""
+  val m2 = Module("test", "m2", "0.1.0")
+
+  val module2 = extractAll("""
       package q
 
       object O {
@@ -37,7 +42,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
       }
 
       class C
-      """))
+      """).map(_.withModule(m2))
 
   "the search engine" should "index values from various modules" in
     withSearchEngine { searchEngine =>
@@ -51,13 +56,13 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
   it should "index modules" in
     withSearchEngine { searchEngine =>
       searchEngine.indexedModules().get should (
-        contain(module1._1) and
-        contain(module2._1))
+        contain(m1) and
+        contain(m2))
     }
 
   it should "support queries with module filters" in
     withSearchEngine { searchEngine =>
-      val results = searchEngine.search("Int", Set(module1._1.moduleId))
+      val results = searchEngine.search("Int", Set(m1.moduleId))
         .get.fold(qe => fail(qe.toString), identity)
 
       results.map(_.name) should (
@@ -67,26 +72,11 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "accumulate referencedFrom fields from class entities" in
     withSearchEngine { searchEngine =>
-      val intTypeDefs = searchEngine.typeIndex.findTypeDefsBySuffix("Int").get
+      val intTypeDefs1 = searchEngine.typeIndex.findTypeDefsBySuffix("Int", Set(m1.moduleId)).get
+      intTypeDefs1.size should be(1)
 
-      intTypeDefs.size should be(1)
-      intTypeDefs.head.referencedFrom should be(
-        Set(module1._1, module2._1))
-    }
-
-  it should "remove module ids in referencedFrom when class is no longer referenced from a module" in
-    withSearchEngine { searchEngine =>
-      val f = searchEngine.indexEntities(module1._1, extractAll("""
-        package p
-
-        // empty, float is no longer referenced from module1
-        """)).get
-
-      val floatTypeDefs = searchEngine.typeIndex.findTypeDefsBySuffix("Float").get
-
-      floatTypeDefs.size should be(1)
-      floatTypeDefs.head.referencedFrom should be(
-        Set(module2._1))
+      val intTypeDefs2 = searchEngine.typeIndex.findTypeDefsBySuffix("Int", Set(m2.moduleId)).get
+      intTypeDefs2.size should be(1)
     }
 
   it should "yield an ambiguity error on ambiguities between selected modules" in
@@ -100,42 +90,11 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "not yield ambiguity errors when ambiguities are caused by excluded modules" in
     withSearchEngine { searchEngine =>
-      val result = searchEngine.search("C", Set(module1._1.moduleId)).get
+      val result = searchEngine.search("C", Set(m1.moduleId)).get
 
       result should matchPattern {
         case \/-(_) =>
       }
-    }
-
-  it should "overwritte values when reindexed with the same module id" in
-    withSearchEngine { searchEngine =>
-      val f = searchEngine.indexEntities(module1._1, extractAll("""
-        package p
-
-        object O {
-          def neu = 1
-        }
-        """)).get
-
-      val results = searchEngine.search("Int")
-        .get.fold(qe => fail(qe.toString), identity)
-
-      results.map(_.name) should (
-        not contain ("p.O.m")
-        and contain("p.O.neu"))
-    }
-
-  it should "overwritte typeDefs when reindexed with the same module id" in
-    withSearchEngine { searchEngine =>
-      searchEngine.indexEntities(module1._1, extractAll("""
-        package p
-
-        // empty, p.C does no longer exist in module1
-        """)).get
-
-      val c = searchEngine.typeIndex.findTypeDefsBySuffix("p.C").get
-
-      c should be(Seq())
     }
 
   it should "reinterpret queries with a single unknown type as keyword queries" in {
@@ -161,7 +120,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
   def withSearchEngine(block: SearchEngine => Unit): Unit =
     withSearchEngine(module1, module2)(block)
 
-  def withSearchEngine(modulesWithEntities: (Module, Seq[Definition])*)(block: SearchEngine => Unit) =
+  def withSearchEngine(modules: Seq[Definition]*)(block: SearchEngine => Unit) =
     withValueIndex { valueIndex =>
       withTypeIndex { typeIndex =>
         withModuleIndex { moduleIndex =>
@@ -171,9 +130,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
             val se = new SearchEngine(
               settings, valueIndex, typeIndex, moduleIndex, viewIndex)
 
-            for ((module, entities) <- modulesWithEntities) {
-              se.indexEntities(module, entities).get
-            }
+            modules.foreach(se.index)
 
             block(se)
           }

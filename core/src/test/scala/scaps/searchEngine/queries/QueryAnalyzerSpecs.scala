@@ -13,6 +13,7 @@ import scaps.settings.Settings
 import scaps.api.TypeDef
 import scaps.api.TypeRef
 import scaps.api.ViewDef
+import scaps.api.Module
 
 class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
 

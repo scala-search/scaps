@@ -53,7 +53,7 @@ object Common extends Logging {
 
       engine.resetIndexes().get
 
-      val modules = evaluationSettings.projects.map { project =>
+      evaluationSettings.projects.foreach { project =>
         val jar = new File(evaluationSettings.downloadDir, project.name)
 
         if (!jar.exists()) {
@@ -61,10 +61,10 @@ object Common extends Logging {
           (project.url #> jar).!!
         }
 
-        (Module("", project.name, ""), () => ExtractionError.logErrors(extractor(jar), logger.info(_)))
-      }
+        val defs = ExtractionError.logErrors(extractor(jar), logger.info(_))
 
-      engine.indexEntities(modules).get
+        engine.index(defs)
+      }
     }
     engine
   }
@@ -73,13 +73,16 @@ object Common extends Logging {
     if (engine.settings.index != newSettings.index) {
       println("Index time settings have changed!")
 
-      val entities = engine.valueIndex.allEntities().get ++ engine.typeIndex.allEntities().get
+      val entities =
+        engine.valueIndex.allEntities().get ++
+          engine.typeIndex.allEntities().get ++
+          engine.viewIndex.allEntities().get
       val newEngine = {
         val e = SearchEngine(newSettings).get
         e.resetIndexes().get
         e
       }
-      newEngine.indexEntities(Module.Unknown, entities.toStream).get
+      newEngine.index(entities).get
 
       newEngine
     } else {

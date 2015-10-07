@@ -19,6 +19,7 @@ import scaps.api.ValueDef
 import scaps.webservice.actors.Director
 import scaps.webservice.actors.UserInteractionLogger
 import scaps.api.IndexJob
+import scaps.api.Definition
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.ActorProtocol._
@@ -29,8 +30,12 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   implicit val _ = context.dispatcher
   implicit val timeout = Timeout(10.seconds)
 
-  override def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean] = {
-    (director ? Index(jobs, classpath)).mapTo[Boolean]
+  override def index(indexName: String, definitions: Seq[Definition]): Unit = {
+    director ! Index(indexName, definitions)
+  }
+
+  override def finalizeIndex(indexName: String): Unit = {
+    director ! FinalizeIndex(indexName)
   }
 
   override def getStatus(): Future[IndexStatus] =

@@ -5,6 +5,7 @@ import scaps.api.TypeRef
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import scaps.api.DocComment
+import scaps.api.Module
 
 class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {

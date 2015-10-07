@@ -11,6 +11,7 @@ import scaps.api.TypeRef
 import scaps.api.Variance
 import scaps.api.ViewDef
 import scaps.featureExtraction.Scala
+import scaps.api.Module
 
 class ViewIndexSpecs extends FlatSpec with Matchers {
   /*

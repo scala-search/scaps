@@ -16,6 +16,7 @@ case class Settings(
     query: QuerySettings) {
 
   def modQuery(f: QuerySettings => QuerySettings) = this.copy(query = f(query))
+  def modIndex(f: IndexSettings => IndexSettings) = this.copy(index = f(index))
 }
 
 object Settings {

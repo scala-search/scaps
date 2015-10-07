@@ -16,15 +16,17 @@ import scaps.featureExtraction.CompilerUtils
 object Index extends App with Logging {
   val sourceJar = new File(args(0))
 
+  val settings = Settings.fromApplicationConf
+
   val compiler = CompilerUtils.createCompiler(Nil)
   val extractor = new JarExtractor(compiler)
 
-  val engine = SearchEngine(Settings.fromApplicationConf).get
+  val engine = (SearchEngine(settings)).get
 
   engine.resetIndexes().get
 
   val entities =
     ExtractionError.logErrors(extractor(sourceJar), logger.info(_))
 
-  engine.indexEntities(Module.Unknown, entities).get
+  engine.index(entities).get
 }

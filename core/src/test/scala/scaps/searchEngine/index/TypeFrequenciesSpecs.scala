@@ -7,6 +7,7 @@ import scaps.api.Invariant
 import scaps.api.ValueDef
 import scaps.api.TypeRef
 import scaps.api.ViewDef
+import scaps.api.Module
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {

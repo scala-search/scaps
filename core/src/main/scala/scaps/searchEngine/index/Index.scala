@@ -21,6 +21,7 @@ import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
+import scaps.api.Module
 
 trait Index[E] {
   private[index] def dir: Directory
@@ -36,7 +37,6 @@ trait Index[E] {
   def allEntities(): Try[Seq[E]] =
     search(new MatchAllDocsQuery)
 
-  private[index] def toDocument(e: E): Document
   private[index] def toEntity(d: Document): E
 
   private[index] def search(query: Query, maxResults: Int = Int.MaxValue, explain: Option[(E, Explanation) => Unit] = None): Try[Seq[E]] =

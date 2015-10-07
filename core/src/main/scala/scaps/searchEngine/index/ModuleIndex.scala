@@ -30,7 +30,7 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
       writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
 
-  override def toDocument(entity: Module): Document = {
+  def toDocument(entity: Module): Document = {
     val doc = new Document
 
     doc.add(new TextField(fields.moduleId, entity.moduleId, Store.YES))

@@ -1,21 +1,43 @@
 package scaps.scala
 
 import java.io.File
-import scaps.featureExtraction.CompilerUtils
-import scaps.featureExtraction.JarExtractor
-import com.typesafe.config.ConfigFactory
-import scaps.api.ScapsControlApi
 
-object Main extends App {
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Random
+
+import autowire._
+import scalaz.std.list.listInstance
+import scaps.api.ScapsControlApi
+import scaps.featureExtraction.CompilerUtils
+import scaps.featureExtraction.ExtractionError
+import scaps.featureExtraction.JarExtractor
+import scaps.utils.Logging
+
+object Main extends App with Logging {
   val settings = ExtractionSettings.fromApplicationConf
 
-  val compiler = CompilerUtils.createCompiler(settings.classpath)
+  println(settings)
 
-  val extractor = new JarExtractor(compiler)
+  val extractor = new JarExtractor(
+    CompilerUtils.createCompiler(settings.classpath))
 
-  settings.modules.foreach { m =>
-    println(m)
+  val scaps = new DispatchClient(settings.controlHost, ScapsControlApi.apiPath)[ScapsControlApi]
+
+  val indexName = Random.nextInt().toString()
+
+  val defs = settings.modules.flatMap { m =>
+    ExtractionError.logErrors(extractor(new File(m.artifactPath)), logger.info(_))
+      .distinct
+      .map(_.withModule(m.module))
   }
 
-  val client = new DispatchClient(settings.controlHost, ScapsControlApi.apiPath)[ScapsControlApi]
+  defs.grouped(settings.maxDefinitionsPerRequest).foreach { ds =>
+    Await.ready(scaps.index(indexName, ds).call(), settings.requestTimeout)
+  }
+
+  Await.ready(scaps.finalizeIndex(indexName).call(), settings.requestTimeout)
+
+  System.exit(0)
 }

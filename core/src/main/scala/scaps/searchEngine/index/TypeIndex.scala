@@ -19,6 +19,10 @@ import scaps.api.Covariant
 import scaps.api.Module
 import scaps.api.TypeRef
 import scala.annotation.tailrec
+import scaps.api.Variance
+import org.apache.lucene.search.DocIdSetIterator
+import scaps.api.Contravariant
+import scaps.api.Invariant
 
 /**
  * Persists class entities and provides lookup for typeDefs by name.
@@ -30,50 +34,19 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
 
   val analyzer = new KeywordAnalyzer
 
-  def addEntities(entities: Seq[TypeDef]): Try[Unit] = Try {
-    val distinctEntities = entities
-    val indexedTypeDefs = allTypeDefs().get
-
-    val entitiesWithModules = distinctEntities.map { cls =>
-      indexedTypeDefs.find(_.name == cls.name)
-        .fold(cls) { indexedCls =>
-          cls.copy(referencedFrom = cls.referencedFrom ++ indexedCls.referencedFrom)
-        }
+  def addEntities(entities: Seq[TypeDef]): Try[Unit] =
+    withWriter { writer =>
+      entities.foreach { e =>
+        val idTerm = new Term(fields.id, id(e))
+        val doc = toDocument(e)
+        writer.updateDocument(idTerm, doc)
+      }
     }
 
+  def deleteEntitiesIn(module: Module): Try[Unit] =
     withWriter { writer =>
-      entitiesWithModules.foreach { entity =>
-        val doc = toDocument(entity)
-        writer.updateDocument(new Term(fields.name, entity.name), doc)
-      }
-    }.get
-  }
-
-  def replaceAllEntities(entities: Seq[TypeDef]): Try[Unit] =
-    withWriter { writer =>
-      val docs = entities.map(toDocument)
-      writer.deleteAll()
-      writer.addDocuments(docs.asJavaCollection)
+      writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
-
-  def deleteEntitiesIn(module: Module): Try[Unit] = Try {
-    val q = new TermQuery(new Term(fields.modules, module.moduleId))
-    val typeDefsInModule = search(q).get
-
-    withWriter { writer =>
-      typeDefsInModule.foreach { cls =>
-        val clsTerm = new Term(fields.name, cls.name)
-
-        val clsWithoutModule = cls.copy(referencedFrom = cls.referencedFrom - module)
-
-        if (clsWithoutModule.referencedFrom.isEmpty) {
-          writer.deleteDocuments(clsTerm)
-        } else {
-          writer.updateDocument(clsTerm, toDocument(clsWithoutModule))
-        }
-      }
-    }.get
-  }
 
   /**
    * Searches for class entities whose last parts of the full qualified name are `suffix`
@@ -83,9 +56,9 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
     val query = new BooleanQuery()
 
     query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
-    query.add(Index.moduleQuery(moduleIds, fields.modules), Occur.MUST)
+    query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
 
-    search(query)
+    search(query).map(_.map(_.withModule(Module.Unknown)).distinct)
   }
 
   def findTypeDef(name: String): Try[Option[TypeDef]] = Try {
@@ -95,7 +68,39 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
   def allTypeDefs(): Try[Seq[TypeDef]] =
     search(new MatchAllDocsQuery)
 
-  override def toDocument(entity: TypeDef): Document = {
+  def updateTypeFrequencies(tfs: Map[(Variance, String), Float]): Try[Unit] =
+    Try {
+      val updated = withSearcher { searcher =>
+        val docs = searcher.search(new MatchAllDocsQuery, Int.MaxValue)
+
+        for {
+          i <- 0 until docs.scoreDocs.length
+          docId = docs.scoreDocs(i).doc
+          if docId != DocIdSetIterator.NO_MORE_DOCS
+        } yield {
+          val doc = searcher.doc(docId)
+          val tpe = toEntity(doc)
+
+          def freq(v: Variance) = tfs((v, tpe.name))
+
+          tpe.copy(typeFrequency = Map(
+            Covariant -> freq(Covariant),
+            Contravariant -> freq(Contravariant),
+            Invariant -> freq(Invariant)))
+        }
+      }.get
+
+      replaceAllEntities(updated).get
+    }
+
+  private def replaceAllEntities(entities: Seq[TypeDef]): Try[Unit] =
+    withWriter { writer =>
+      val docs = entities.map(toDocument)
+      writer.deleteAll()
+      writer.addDocuments(docs.asJavaCollection)
+    }
+
+  def toDocument(entity: TypeDef): Document = {
     val doc = new Document
 
     doc.add(new TextField(fields.name, entity.name, Field.Store.YES))
@@ -106,12 +111,13 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
 
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
-    for (module <- entity.referencedFrom) {
-      doc.add(new TextField(fields.modules, module.moduleId, Field.Store.YES))
-    }
+    doc.add(new TextField(fields.moduleId, entity.module.moduleId, Field.Store.YES))
 
     doc
   }
+
+  private def id(t: TypeDef) =
+    s"${t.module.moduleId}:${t.name}"
 
   private def suffixes(name: String): List[String] = name match {
     case "" => Nil
@@ -131,9 +137,10 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
 
 object TypeIndex {
   object fields {
+    val id = "id"
     val name = "name"
     val suffix = "suffix"
     val entity = "entity"
-    val modules = "modules"
+    val moduleId = "moduleId"
   }
 }

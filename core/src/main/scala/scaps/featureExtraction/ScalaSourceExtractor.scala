@@ -24,10 +24,12 @@ class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
             \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
         }
       }
-    }).distinct.flatMap {
-      case right @ \/-(definition) => right :: createViewFromEntity(definition).map(\/.right)
-      case left                    => Seq(left)
-    }
+    })
+      .distinct
+      .flatMap {
+        case right @ \/-(definition) => right :: createViewFromEntity(definition).map(\/.right)
+        case left                    => Seq(left)
+      }
   }
 
   private def findClasses(tree: Tree): List[Symbol] =

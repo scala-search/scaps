@@ -5,9 +5,9 @@ import scaps.api.TypeDef
 import scaps.api.ValueDef
 import scaps.settings.Settings
 import scaps.utils.using
-
 import org.apache.lucene.store.Directory
 import org.apache.lucene.store.RAMDirectory
+import scaps.api.Module
 
 trait IndexUtils extends ExtractionUtils {
 

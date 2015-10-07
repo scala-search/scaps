@@ -5,14 +5,22 @@ sealed trait Definition {
 
   def shortName: String =
     EntityName.splitName(name).last
+
+  def module: Module
+
+  def withModule(m: Module): this.type = (this match {
+    case t: TypeDef  => t.copy(module = m)
+    case v: ValueDef => v.copy(module = m)
+    case v: ViewDef  => v.copy(module = m)
+  }).asInstanceOf[this.type]
 }
 
 case class TypeDef(
   name: String,
   typeParameters: List[TypeParameter],
   baseTypes: List[TypeRef],
-  referencedFrom: Set[Module] = Set(),
   comment: String = "",
+  module: Module = Module.Unknown,
   typeFrequency: Map[Variance, Float] = Map())
     extends Definition {
 
@@ -41,8 +49,8 @@ case class ValueDef(
   tpe: TypeRef,
   comment: DocComment,
   flags: Set[ValueDef.Flag] = Set(),
-  docLink: Option[String] = None,
-  module: Module = Module.Unknown)
+  module: Module = Module.Unknown,
+  docLink: Option[String] = None)
     extends Definition {
 
   override def toString() = {
@@ -117,7 +125,7 @@ case class TypeParameter(
   }
 }
 
-case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, modules: Set[Module] = Set())
+case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, module: Module = Module.Unknown)
     extends Definition {
   def name = s"$definingEntityName:$fromKey:$toKey"
 
@@ -129,8 +137,8 @@ object ViewDef {
   def key(tpe: TypeRef) =
     tpe.renameTypeParams(_ => "_").annotatedSignature
 
-  def bidirectional(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, modules: Set[Module] = Set()) =
+  def bidirectional(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String) =
     List(
-      ViewDef(from, to, distance, definingEntityName, modules),
-      ViewDef(to.withVariance(to.variance.flip), from.withVariance(from.variance.flip), distance, definingEntityName, modules))
+      ViewDef(from, to, distance, definingEntityName),
+      ViewDef(to.withVariance(to.variance.flip), from.withVariance(from.variance.flip), distance, definingEntityName))
 }

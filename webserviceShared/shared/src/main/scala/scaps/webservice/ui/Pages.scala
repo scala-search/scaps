@@ -101,8 +101,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         nav(cls := "navbar navbar-default navbar-fixed-bottom", minHeight := 0.px)(
           div(cls := "navbar-text", width := 100.pct, textAlign.center, marginTop := 4.px, marginBottom := 4.px) {
             val statusInfo = status match {
-              case IndexBusy(queue, _, _) => s", Index is Updating (${queue.size} Modules)"
-              case _                      => ""
+              case IndexBusy(_, _) => s", Index is Updating"
+              case _               => ""
             }
             span(
               s"by Lukas Wegmann | version ${BuildInfo.version}$statusInfo | ",

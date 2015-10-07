@@ -155,7 +155,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
   private[index] def findValuesByName(name: String): Try[Seq[ValueDef]] =
     search(queryBuilder.createBooleanQuery(fields.name, name))
 
-  override def toDocument(entity: ValueDef): Document = {
+  def toDocument(entity: ValueDef): Document = {
     val doc = new Document
 
     doc.add(new TextField(fields.name, entity.name, Store.NO))

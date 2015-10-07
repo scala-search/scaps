@@ -1,11 +1,17 @@
 package scaps.scala
 
-import scaps.api.Module
+import java.util.concurrent.TimeUnit
+
+import scala.collection.JavaConversions.asScalaBuffer
+import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationLong
+
 import com.typesafe.config.Config
-import scala.collection.JavaConversions._
 import com.typesafe.config.ConfigFactory
 
-case class ExtractionSettings(controlHost: String, classpath: List[String], modules: List[ModuleSettings])
+import scaps.api.Module
+
+case class ExtractionSettings(controlHost: String, maxDefinitionsPerRequest: Int, requestTimeout: Duration, classpath: List[String], modules: List[ModuleSettings])
 
 object ExtractionSettings {
   def fromApplicationConf =
@@ -14,6 +20,8 @@ object ExtractionSettings {
   def apply(conf: Config): ExtractionSettings =
     ExtractionSettings(
       conf.getString("control-host"),
+      conf.getInt("max-definitions-per-request"),
+      conf.getDuration("request-timeout", TimeUnit.SECONDS).seconds,
       conf.getStringList("classpath").toList,
       conf.getConfigList("modules").map(ModuleSettings.apply).toList)
 }

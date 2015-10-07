@@ -27,8 +27,11 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
 
   def addEntities(entities: Seq[ViewDef]): Try[Unit] =
     withWriter { writer =>
-      val docs = entities.map(toDocument)
-      writer.addDocuments(docs.asJava)
+      entities.foreach { e =>
+        val idTerm = new Term(fields.id, id(e))
+        val doc = toDocument(e)
+        writer.updateDocument(idTerm, doc)
+      }
     }
 
   def findAlternativesWithDistance(tpe: TypeRef, moduleIds: Set[String] = Set()): Try[Seq[(TypeRef, Float)]] = Try {
@@ -44,7 +47,7 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
     }
 
     tpe.variance match {
-      case _ => findViews(tpe, moduleIds).get.map(view => (alignTypeArgs(view.from, view.to), view.distance)).distinct
+      case _ => findViews(tpe, moduleIds).get.map(view => (alignTypeArgs(view.from, view.to), view.distance))
     }
   }
 
@@ -60,43 +63,29 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
 
       val query = new BooleanQuery()
       query.add(new TermQuery(new Term(fields.from, ViewDef.key(tpe))), Occur.MUST);
-      query.add(Index.moduleQuery(moduleIds, fields.modules), Occur.MUST)
+      query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
 
       altsOfGenericTpe ++ search(query).get
     }
 
-  def deleteEntitiesIn(module: Module): Try[Unit] = Try {
-    val q = new TermQuery(new Term(fields.modules, module.moduleId))
-    val viewDefsInModule = search(q).get
-
+  def deleteEntitiesIn(module: Module): Try[Unit] =
     withWriter { writer =>
-      viewDefsInModule.foreach { v =>
-        val vTerm = new Term(fields.name, v.name)
-
-        val vWithoutModule = v.copy(modules = v.modules - module)
-
-        if (vWithoutModule.modules.isEmpty) {
-          writer.deleteDocuments(vTerm)
-        } else {
-          writer.updateDocument(vTerm, toDocument(vWithoutModule))
-        }
-      }
-    }.get
-  }
-
-  override def toDocument(v: ViewDef) = {
-    val doc = new Document
-
-    doc.add(new TextField(fields.name, v.name, Store.YES))
-    doc.add(new TextField(fields.from, v.fromKey, Store.YES))
-
-    v.modules.foreach { m =>
-      doc.add(new TextField(fields.modules, m.moduleId, Store.YES))
+      writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
 
+  def toDocument(v: ViewDef) = {
+    val doc = new Document
+
+    doc.add(new TextField(fields.id, id(v), Store.YES))
+    doc.add(new TextField(fields.name, v.name, Store.YES))
+    doc.add(new TextField(fields.from, v.fromKey, Store.YES))
+    doc.add(new TextField(fields.moduleId, v.module.moduleId, Store.YES))
     doc.add(new StoredField(fields.entity, upickle.write(v)))
     doc
   }
+
+  private def id(v: ViewDef) =
+    s"${v.module.moduleId}:${v.name}"
 
   override def toEntity(doc: Document): ViewDef = {
     val json = doc.getValues(fields.entity)(0)
@@ -107,9 +96,10 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
 
 object ViewIndex {
   object fields {
+    val id = "id"
     val name = "name"
     val from = "from"
     val entity = "entity"
-    val modules = "modules"
+    val moduleId = "moduleId"
   }
 }

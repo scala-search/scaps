@@ -4,6 +4,8 @@ import dispatch._
 import dispatch.Defaults._
 
 class DispatchClient(hostName: String, apiPath: String) extends autowire.Client[String, upickle.Reader, upickle.Writer] {
+  val h = new Http
+
   override def doCall(req: Request): Future[String] = {
     val service = host(hostName)
 
@@ -13,7 +15,7 @@ class DispatchClient(hostName: String, apiPath: String) extends autowire.Client[
       .setContentType("application/json", "UTF-8")
       .<<(upickle.write(req.args))
 
-    Http(request).map(_.getResponseBody)
+    h(request).map(_.getResponseBody)
   }
 
   def read[Result: upickle.Reader](p: String) = upickle.read[Result](p)

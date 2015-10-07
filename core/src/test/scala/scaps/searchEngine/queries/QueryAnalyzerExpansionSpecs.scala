@@ -17,6 +17,7 @@ import scaps.api.TypeRef
 import scaps.api.Variance
 import scaps.api.ViewDef
 import scaps.featureExtraction.Scala
+import scaps.api.Module
 
 class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._

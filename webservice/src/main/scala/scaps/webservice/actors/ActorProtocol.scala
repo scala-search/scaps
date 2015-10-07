@@ -5,10 +5,13 @@ import scaps.api.ValueDef
 import scaps.api.Module
 import scaps.api.IndexJob
 import scaps.searchEngine.SearchEngine
+import scaps.api.Definition
 
 object ActorProtocol {
-  case class Index(jobs: Seq[IndexJob], classpath: Seq[String])
-  case class Indexed(jobs: Seq[IndexJob], error: Option[Throwable], updateEngine: SearchEngine)
+  case class Index(indexName: String, definitions: Seq[Definition])
+
+  case class FinalizeIndex(indexName: String)
+  case class Finalized(indexName: String)
 
   case class Search(query: String, moduleIds: Set[String], noResults: Int, offset: Int)
   type Result = String \/ Seq[ValueDef]

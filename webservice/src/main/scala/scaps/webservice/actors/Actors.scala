@@ -1,9 +1,7 @@
 package scaps.webservice.actors
 
 import java.io.File
-
 import scala.util.control.NonFatal
-
 import ActorProtocol._
 import akka.actor.Actor
 import akka.actor.Props
@@ -26,137 +24,114 @@ import scaps.searchEngine.TooUnspecific
 import scaps.searchEngine.UnexpectedNumberOfTypeArgs
 import scaps.settings.Settings
 import scaps.utils.TraversableOps
+import scaps.api.Definition
+import akka.actor.ActorRef
+import scala.io.Source
+import java.nio.file.Files
+import java.nio.file.Paths
+import scala.collection.JavaConverters._
+import scala.util.Try
+import scaps.api.IndexEmpty
+import scaps.api.IndexBusy
+import scaps.api.Module
 
 object Director {
   def props(settings: Settings)(
-    indexWorkerProps: SearchEngine => Props = IndexWorkerActor.props _,
-    searcherProps: SearchEngine => Props = Searcher.props _) =
-    Props(classOf[Director], settings, indexWorkerProps, searcherProps)
+    managerProps: Settings => Props = SearchEngineManager.props _) =
+    Props(classOf[Director], settings, managerProps)
 }
 
-/**
- * Manages the state of an instance of the search engine. Allows concurrent searching
- * while another index is being built.
- */
-class Director(baseSettings: Settings, indexWorkerProps: SearchEngine => Props, searcherProps: SearchEngine => Props) extends Actor {
+class Director(baseSettings: Settings, managerProps: Settings => Props) extends Actor {
+  import context._
+
+  val logger = Logging(system, this)
+
+  val activeIndexFilePath = Paths.get(s"${baseSettings.index.indexDir}/activeIndex")
+
+  def mkManager(indexName: String) = {
+    val settings = baseSettings.modIndex { index =>
+      index.copy(indexDir = s"${index.indexDir}/$indexName")
+    }
+
+    actorOf(managerProps(settings))
+  }
+
+  def receive = {
+
+    def ready(managers: Map[String, ActorRef], activeManager: Option[ActorRef]): Receive = {
+      case GetStatus =>
+        activeManager.fold {
+          sender ! IndexEmpty
+        } { mngr =>
+          mngr.tell(GetStatus, sender)
+        }
+      case s: Search =>
+        activeManager.fold {
+          sender ! \/.left("No active index found.")
+        } { mngr =>
+          mngr.tell(s, sender)
+        }
+      case i @ Index(indexName, _) =>
+        val manager = managers.get(indexName).getOrElse {
+          mkManager(indexName)
+        }
+
+        manager ! i
+        become(ready(managers + (indexName -> manager), activeManager))
+      case f @ FinalizeIndex(indexName) =>
+        managers.get(indexName).foreach { manager =>
+          manager ! f
+        }
+      case Finalized(indexName) =>
+        logger.debug(s"new active index: $sender ($indexName), previously: $activeManager")
+        Files.write(activeIndexFilePath, indexName.getBytes())
+        become(ready(managers, Some(sender)))
+    }
+
+    val activeManager = for {
+      lines <- Try { Files.readAllLines(activeIndexFilePath).asScala }.toOption
+      activeIndexName <- lines.headOption
+    } yield mkManager(activeIndexName)
+
+    ready(Map(), activeManager)
+  }
+}
+
+object SearchEngineManager {
+  def props(settings: Settings) =
+    Props(classOf[SearchEngineManager], settings, Searcher.props _)
+}
+
+class SearchEngineManager(settings: Settings, searcherProps: SearchEngine => Props) extends Actor {
   import context._
 
   val logger = Logging(system, this)
 
   def receive = {
-    def ready(searchEngine: SearchEngine, indexNo: Int): Receive = {
-      logger.info(s"Search engine uses index at ${searchEngine.settings.index.indexDir}")
+    val engine = SearchEngine(settings).get
 
-      val indexedModules = searchEngine.indexedModules().get
-      val status = IndexReady(indexedModules, Nil)
-
-      {
-        case i: Index =>
-          val workerIndexPath = mkIndexPath(baseSettings.index.indexDir, indexNo + 1)
-          val workerSettings = baseSettings.copy(index = baseSettings.index.copy(indexDir = workerIndexPath))
-          val workerEngine = SearchEngine(workerSettings).get
-          val indexWorker = actorOf(indexWorkerProps(workerEngine))
-
-          indexWorker ! i
-          sender ! true
-
-          become(indexing(searchEngine, IndexBusy(i.jobs.map(_.module), status.indexedModules, Nil), indexNo))
-        case s: Search =>
-          val searcher = actorOf(searcherProps(searchEngine))
-          searcher.tell(s, sender)
-        case GetStatus =>
-          sender ! status
-      }
-    }
-
-    def indexing(searchEngine: SearchEngine, status: IndexStatus, indexNo: Int): Receive = {
-      case i: Index =>
-        sender ! false
-      case Indexed(_, _, updatedEngine) =>
-        become(ready(updatedEngine, indexNo + 1))
-      case s: Search =>
-        val searcher = actorOf(searcherProps(searchEngine))
-        searcher.tell(s, sender)
+    def indexing(): Receive = {
       case GetStatus =>
-        sender ! status
+        sender ! IndexBusy(Nil, Nil)
+      case Index(_, defs) =>
+        engine.index(defs).get
+      case FinalizeIndex(name) =>
+        engine.finalizeIndex().get
+        sender ! Finalized(name)
+        become(ready(engine.indexedModules().get))
+    }
+    def ready(indexedModules: Seq[Module]): Receive = {
+      case GetStatus =>
+        sender ! IndexReady(indexedModules, Nil)
+      case s: Search =>
+        val searcher = actorOf(searcherProps(engine))
+        searcher.tell(s, sender)
+      case i: Index =>
+        self ! i
+        become(indexing())
     }
 
-    val baseDir = new File(baseSettings.index.indexDir)
-    baseDir.mkdirs()
-    val (indexPath, indexNo) = findCurrentIndexWithNo(baseDir)
-    val currentSettings = baseSettings.copy(index = baseSettings.index.copy(indexDir = indexPath))
-    val searchEngine = SearchEngine(currentSettings).get
-
-    ready(searchEngine, indexNo)
-  }
-
-  val indexName = """index-(\d+)""".r
-
-  def mkIndexPath(basePath: String, indexNo: Int): String =
-    s"$basePath/index-$indexNo"
-
-  def findCurrentIndexWithNo(baseDir: File): (String, Int) = {
-    baseDir.listFiles().toSeq
-      .filter(f => f.isDirectory())
-      .flatMap(f => f.getName match {
-        case indexName(n) => Some((f.getAbsolutePath, n.toInt))
-        case _            => None
-      })
-      .maxByOpt(_._2)
-      .getOrElse((mkIndexPath(baseDir.getAbsolutePath, 0), 0))
-  }
-}
-
-object IndexWorkerActor {
-  def props(searchEngine: SearchEngine) =
-    Props(classOf[IndexWorkerActor], searchEngine)
-}
-
-/**
- * Indexes source files.
- */
-class IndexWorkerActor(searchEngine: SearchEngine) extends Actor {
-  import scala.concurrent.ExecutionContext.Implicits.global
-
-  val logger = Logging(context.system, this)
-
-  def receive = {
-    case i @ Index(jobs, classpath) =>
-      val requestor = sender
-
-      val error = try {
-        val compiler = CompilerUtils.createCompiler(classpath)
-        val modulesWithEntities = jobs.map { job =>
-          (job.module, () => {
-            val extractor = new JarExtractor(compiler)
-
-            logger.info(s"start indexing ${job.module.moduleId} (${job.artifactPath})")
-
-            val entitiesWithErrors = extractor(new File(job.artifactPath))
-            val entities = ExtractionError.logErrors(entitiesWithErrors, logger.info(_))
-
-            entities.map {
-              case v: ValueDef =>
-                val docUrl = for {
-                  prefix <- job.docUrlPrefix
-                  lnk <- v.docLink
-                } yield prefix + lnk
-                v.copy(docLink = docUrl)
-              case e => e
-            }
-          })
-        }
-
-        searchEngine.indexEntities(modulesWithEntities).get
-
-        None
-      } catch {
-        case NonFatal(e) =>
-          logger.error(s"Indexing ${jobs} threw $e")
-          Some(e)
-      }
-
-      requestor ! Indexed(jobs, error, searchEngine)
+    ready(engine.indexedModules().get)
   }
 }
 

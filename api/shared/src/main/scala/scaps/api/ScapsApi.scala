@@ -3,18 +3,19 @@ package scaps.api
 import scala.concurrent.Future
 
 sealed trait IndexStatus {
-  def workQueue: Seq[Module]
   def indexedModules: Seq[Module]
   def indexErrors: Seq[String]
   def isReady: Boolean
-
-  def allModules = workQueue ++ indexedModules
+}
+case object IndexEmpty extends IndexStatus {
+  def indexedModules = Nil
+  def indexErrors = Nil
+  def isReady = false
 }
 case class IndexReady(indexedModules: Seq[Module], indexErrors: Seq[String]) extends IndexStatus {
-  val workQueue = Nil
   val isReady = true
 }
-case class IndexBusy(workQueue: Seq[Module], indexedModules: Seq[Module], indexErrors: Seq[String]) extends IndexStatus {
+case class IndexBusy(indexedModules: Seq[Module], indexErrors: Seq[String]) extends IndexStatus {
   val isReady = false
 }
 
@@ -49,9 +50,15 @@ object ScapsApi {
  */
 trait ScapsControlApi extends CommonApi {
   /**
-   * Rebuilds the index.
+   * Indexes `definitions` as parts of `module` in index `indexName`.
    */
-  def index(jobs: Seq[IndexJob], classpath: Seq[String]): Future[Boolean]
+  def index(indexName: String, definitions: Seq[Definition]): Unit
+
+  /**
+   * Finalizes the index. After this call has completed, subsequent search queries will be answered
+   * by the updated instance of the search engine.
+   */
+  def finalizeIndex(indexName: String): Unit
 }
 
 object ScapsControlApi {
