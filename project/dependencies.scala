@@ -46,7 +46,6 @@ object Dependencies {
   val sbtSlf4j = "com.github.eirslett" %% "sbt-slf4j" % "0.1"
 
   val coreDependencies = Seq(
-    scalaCompiler,
     upickle,
     scalatest,
     scalaz,
@@ -78,11 +77,15 @@ object Dependencies {
     sbtIo)
 
   val scalaClientDependencies = Seq(
+    scalaCompiler,
     scalaz,
     scalatest,
     dispatch,
     autowire,
-    upickle)
+    upickle,
+    config,
+    logging,
+    logback)
 
   val sbtPluginDependencies = Seq(
     dispatch,

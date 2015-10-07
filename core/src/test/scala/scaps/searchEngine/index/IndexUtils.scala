@@ -1,6 +1,6 @@
 package scaps.searchEngine.index
 
-import scaps.featureExtraction.ExtractionUtils
+import scaps.scala.featureExtraction.ExtractionUtils
 import scaps.api.TypeDef
 import scaps.api.ValueDef
 import scaps.settings.Settings

@@ -1,7 +1,6 @@
 package scaps.scala
 
 import java.io.File
-
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -10,11 +9,11 @@ import autowire._
 import scalaz.std.list.listInstance
 import scaps.api.ScapsControlApi
 import scaps.scala.featureExtraction.JarExtractor
-import scaps.scala.featureExtraction.CompilerUtils;
-import scaps.scala.featureExtraction.ExtractionError;
-import scaps.utils.Logging
+import scaps.scala.featureExtraction.CompilerUtils
+import scaps.scala.featureExtraction.ExtractionError
+import com.typesafe.scalalogging.StrictLogging
 
-object Main extends App with Logging {
+object Main extends App with StrictLogging {
   val settings = ExtractionSettings.fromApplicationConf
 
   println(settings)

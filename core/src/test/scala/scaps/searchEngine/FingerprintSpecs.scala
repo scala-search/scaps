@@ -2,7 +2,7 @@ package scaps.searchEngine
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
-import scaps.featureExtraction.ExtractionUtils
+import scaps.scala.featureExtraction.ExtractionUtils
 import scaps.api.Covariant
 import scaps.api.TypeRef
 import scaps.api.Variance

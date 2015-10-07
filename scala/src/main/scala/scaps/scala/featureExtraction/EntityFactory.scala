@@ -5,7 +5,6 @@ import scala.tools.nsc.Global
 import scala.util.Try
 import scalaz.{ Contravariant => _, _ }
 import scalaz.std.boolean._
-import scaps.utils.Logging
 import scala.annotation.tailrec
 import scala.tools.nsc.doc.model.ModelFactory
 import scala.tools.nsc.doc.Settings
@@ -16,8 +15,9 @@ import scala.tools.nsc.doc.model.ModelFactoryTypeSupport
 import scala.tools.nsc.doc.model.MemberLookup
 import scala.tools.nsc.doc.model.diagram.DiagramFactory
 import scala.collection.immutable.SortedMap
+import com.typesafe.scalalogging.StrictLogging
 
-trait EntityFactory extends Logging {
+trait EntityFactory extends StrictLogging {
   val compiler: Global
 
   val scaladoc = new ScalaDocParser(compiler, compiler.settings.asInstanceOf[Settings])

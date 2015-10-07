@@ -1,10 +1,7 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec
-
-import scaps.scala.featureExtraction.CompilerUtils;
-import scaps.scala.featureExtraction.JarExtractor;
 
 import java.io.File
 

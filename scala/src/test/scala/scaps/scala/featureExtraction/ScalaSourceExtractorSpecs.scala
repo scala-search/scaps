@@ -1,4 +1,4 @@
-package scaps.featureExtraction
+package scaps.scala.featureExtraction
 
 import org.scalatest.Matchers
 import org.scalatest.FlatSpec

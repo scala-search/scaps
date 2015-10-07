@@ -77,20 +77,29 @@ lazy val api_2_10 = api_2_10_cross.jvm
 lazy val api_2_11 = api_2_11_cross.jvm
 lazy val apiJS = api_2_11_cross.js
 
-// Core
+// Scala Client
 
-lazy val core = (project in file("core"))
+lazy val scalaClient = (project in file("scala"))
   .dependsOn(api_2_11)
   .settings(commonSettings: _*)
   .settings(
-    name := "scaps-core",
-    libraryDependencies ++= Dependencies.coreDependencies,
+    name := "scaps-scala",
+    libraryDependencies ++= Dependencies.scalaClientDependencies,
     testModules += "jarExtractorTests")
+
+// Core
+
+lazy val core = (project in file("core"))
+  .dependsOn(api_2_11, scalaClient % "test->compile;test->test")
+  .settings(commonSettings: _*)
+  .settings(
+    name := "scaps-core",
+    libraryDependencies ++= Dependencies.coreDependencies)
 
 // Evaluation
 
 lazy val evaluation = (project in file("evaluation"))
-  .dependsOn(core)
+  .dependsOn(core, scalaClient)
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-evaluation",
@@ -160,15 +169,6 @@ lazy val webserviceUI = (project in file("webserviceUI"))
       "org.scala-js" %%% "scalajs-dom" % "0.8.0",
       "com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test",
       "org.monifu" %%% "monifu" % "1.0-M1"))
-
-// Scala Client
-
-lazy val scalaClient = (project in file("scala"))
-  .dependsOn(core)
-  .settings(commonSettings: _*)
-  .settings(
-    name := "scaps-scala",
-    libraryDependencies ++= Dependencies.scalaClientDependencies)
 
 // SBT Plugin
 

@@ -3,7 +3,8 @@ package scaps.searchEngine.queries
 import scala.collection.immutable.Map
 import org.apache.lucene.store.RAMDirectory
 import org.scalatest.FlatSpec
-import scaps.featureExtraction.ExtractionUtils
+import org.scalatest.Matchers
+import scaps.scala.featureExtraction.ExtractionUtils
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
@@ -15,7 +16,7 @@ import scaps.api.TypeRef
 import scaps.api.ViewDef
 import scaps.api.Module
 
-class QueryAnalyzerSpecs extends FlatSpec with ExtractionUtils {
+class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
   // the namespace used for all analyzer tests
   // in order to make sure all required typeDefs from scala stdlib are loaded

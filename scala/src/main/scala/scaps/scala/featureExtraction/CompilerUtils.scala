@@ -2,10 +2,9 @@ package scaps.scala.featureExtraction
 
 import scala.tools.nsc.doc.ScaladocGlobal
 import scala.tools.nsc.reporters.ConsoleReporter
+import com.typesafe.scalalogging.StrictLogging
 
-import scaps.utils.Logging
-
-object CompilerUtils extends Logging{
+object CompilerUtils extends StrictLogging {
   def createCompiler(classpath: Seq[String]): ScaladocGlobal = {
     val settings = new scala.tools.nsc.doc.Settings(msg => throw sys.error(msg))
 

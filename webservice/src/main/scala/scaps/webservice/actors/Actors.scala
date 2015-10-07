@@ -13,9 +13,6 @@ import scaps.api.IndexBusy
 import scaps.api.IndexReady
 import scaps.api.IndexStatus
 import scaps.api.ValueDef
-import scaps.featureExtraction.CompilerUtils
-import scaps.featureExtraction.ExtractionError
-import scaps.featureExtraction.JarExtractor
 import scaps.searchEngine.NameAmbiguous
 import scaps.searchEngine.NameNotFound
 import scaps.searchEngine.SearchEngine
