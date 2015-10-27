@@ -54,24 +54,24 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val Tup = new TypeRef.VariantType("Tup")
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int) =
-      ViewDef.bidirectional(base(Covariant), cls(Covariant), dist, "")
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef) =
+      ViewDef.bidirectional(base(Covariant), cls(Covariant), 0.5f, "")
 
     Scala.builtinViews ++ List(
-      isSubTypeOf(B(_), A(_), 1),
-      isSubTypeOf(C(_), A(_), 1),
-      isSubTypeOf(D(_), C(_), 1),
-      isSubTypeOf(D(_), A(_), 2),
-      isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
-      isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
-      isSubTypeOf(v => GenericCBox(T(v), v), v => Box(C(v), v), 1),
-      isSubTypeOf(v => Loop(T(v), v), v => MyBox(Loop(T(v), v), v), 1),
-      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 2),
-      isSubTypeOf(v => MyLoop(T(v), v), v => Loop(T(v), v), 1),
-      isSubTypeOf(v => MyLoop(T(v), v), v => MyBox(Loop(T(v), v), v), 2),
-      isSubTypeOf(v => MyLoop(T(v), v), v => Box(Loop(T(v), v), v), 3),
-      isSubTypeOf(v => YBag(T(v), v), v => Bag(T(v), v), 1),
-      isSubTypeOf(v => YBag(T(v), v), Y(_), 1)).flatten
+      isSubTypeOf(B(_), A(_)),
+      isSubTypeOf(C(_), A(_)),
+      isSubTypeOf(D(_), C(_)),
+      isSubTypeOf(D(_), A(_)),
+      isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v)),
+      isSubTypeOf(CBox(_), v => Box(C(v), v)),
+      isSubTypeOf(v => GenericCBox(T(v), v), v => Box(C(v), v)),
+      isSubTypeOf(v => Loop(T(v), v), v => MyBox(Loop(T(v), v), v)),
+      isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v)),
+      isSubTypeOf(v => MyLoop(T(v), v), v => Loop(T(v), v)),
+      isSubTypeOf(v => MyLoop(T(v), v), v => MyBox(Loop(T(v), v), v)),
+      isSubTypeOf(v => MyLoop(T(v), v), v => Box(Loop(T(v), v), v)),
+      isSubTypeOf(v => YBag(T(v), v), v => Bag(T(v), v)),
+      isSubTypeOf(v => YBag(T(v), v), Y(_))).flatten
   }
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {
@@ -80,9 +80,9 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
     expand(q) should be(unified(
       Sum(
-        Leaf(A(Contravariant), 1d / 3, 0, 0),
-        Leaf(X(Contravariant), 1d / 3, 0, 0),
-        Leaf(D(Covariant), 1d / 3, 0, 0))))
+        Leaf(A(Contravariant), 1d / 3, 0, 1),
+        Leaf(X(Contravariant), 1d / 3, 0, 1),
+        Leaf(D(Covariant), 1d / 3, 0, 1))))
   }
 
   it should "use alternative types at covariant positions" in {
@@ -92,10 +92,10 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     expand(q) should be(unified(
       Sum(
         Max(
-          Leaf(A(Covariant), 1, 0, 0),
-          Leaf(B(Covariant), 1, 0, 1),
-          Leaf(C(Covariant), 1, 0, 1),
-          Leaf(D(Covariant), 1, 0, 2)))))
+          Leaf(A(Covariant), 1, 0, 1),
+          Leaf(B(Covariant), 1, 0, 0.5f),
+          Leaf(C(Covariant), 1, 0, 0.5f),
+          Leaf(D(Covariant), 1, 0, 0.5f)))))
   }
 
   it should "use alternative types at contravariant positions" in {
@@ -105,9 +105,9 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     expand(q) should be(unified(
       Sum(
         Max(
-          Leaf(D(Contravariant), 1, 0, 0),
-          Leaf(C(Contravariant), 1, 0, 1),
-          Leaf(A(Contravariant), 1, 0, 2)))))
+          Leaf(D(Contravariant), 1, 0, 1),
+          Leaf(C(Contravariant), 1, 0, 0.5f),
+          Leaf(A(Contravariant), 1, 0, 0.5f)))))
   }
 
   it should "split types with args into a sum query" in {
@@ -118,8 +118,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Sum(
         Max(
           Sum(
-            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0),
-            Leaf(A(Contravariant), 1d / 2, 1, 0))))))
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(A(Contravariant), 1d / 2, 1, 1))))))
   }
 
   it should "handle alternatives of types with args" in {
@@ -130,15 +130,15 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Sum(
         Max(
           Sum(
-            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0),
+            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
             Max(
-              Leaf(B(Contravariant), 1d / 2, 1, 0),
-              Leaf(A(Contravariant), 1d / 2, 1, 1))),
+              Leaf(B(Contravariant), 1d / 2, 1, 1),
+              Leaf(A(Contravariant), 1d / 2, 1, 0.5f))),
           Sum(
-            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
             Max(
-              Leaf(B(Contravariant), 1d / 2, 1, 0),
-              Leaf(A(Contravariant), 1d / 2, 1, 1)))))))
+              Leaf(B(Contravariant), 1d / 2, 1, 1),
+              Leaf(A(Contravariant), 1d / 2, 1, 0.5f)))))))
   }
 
   it should "handle alternatives with additional args" in {
@@ -149,12 +149,12 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Sum(
         Max(
           Sum(
-            Leaf(CBox(Contravariant), 1, 0, 0)),
+            Leaf(CBox(Contravariant), 1, 0, 1)),
           Sum(
-            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
             Max(
-              Leaf(C(Contravariant), 1d / 2, 1, 0),
-              Leaf(A(Contravariant), 1d / 2, 1, 1)))))))
+              Leaf(C(Contravariant), 1d / 2, 1, 1),
+              Leaf(A(Contravariant), 1d / 2, 1, 0.5f)))))))
   }
 
   it should "handle alternatives with unrelated args" in {
@@ -165,13 +165,13 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Sum(
         Max(
           Sum(
-            Leaf(GenericCBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0),
-            Leaf(X(Contravariant), 1d / 2, 1, 0)),
+            Leaf(GenericCBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(X(Contravariant), 1d / 2, 1, 1)),
           Sum(
-            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
             Max(
-              Leaf(C(Contravariant), 1d / 2, 1, 0),
-              Leaf(A(Contravariant), 1d / 2, 1, 1)))))))
+              Leaf(C(Contravariant), 1d / 2, 1, 1),
+              Leaf(A(Contravariant), 1d / 2, 1, 0.5f)))))))
   }
 
   it should "expand nested types" in {
@@ -181,22 +181,22 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val innerBoxParts =
       Max(
         Sum(
-          Leaf(Box(Wildcard(Covariant)), 1d / 4, 1, 0),
+          Leaf(Box(Wildcard(Covariant)), 1d / 4, 1, 1),
           Max(
-            Leaf(B(Covariant), 1d / 4, 2, 0))),
+            Leaf(B(Covariant), 1d / 4, 2, 1))),
         Sum(
-          Leaf(MyBox(Wildcard(Covariant)), 1d / 4, 1, 1),
+          Leaf(MyBox(Wildcard(Covariant)), 1d / 4, 1, 0.5f),
           Max(
-            Leaf(B(Covariant), 1d / 4, 2, 0))))
+            Leaf(B(Covariant), 1d / 4, 2, 1))))
 
     expand(q) should be(unified(
       Sum(
         Max(
           Sum(
-            Leaf(Box(Wildcard(Covariant)), 1d / 2, 0, 0),
+            Leaf(Box(Wildcard(Covariant)), 1d / 2, 0, 1),
             innerBoxParts),
           Sum(
-            Leaf(MyBox(Wildcard(Covariant)), 1d / 2, 0, 1),
+            Leaf(MyBox(Wildcard(Covariant)), 1d / 2, 0, 0.5f),
             innerBoxParts)))))
   }
 
@@ -206,9 +206,9 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
 
     expand(q) should be(unified(
       Sum(
-        Leaf(Tup(Wildcard(Covariant) :: Wildcard(Covariant) :: Nil, Covariant), 1d / 3, 0, 0),
-        Leaf(X(Covariant), 1d / 3, 1, 0),
-        Leaf(X(Covariant), 1d / 3, 1, 0))))
+        Leaf(Tup(Wildcard(Covariant) :: Wildcard(Covariant) :: Nil, Covariant), 1d / 3, 0, 1),
+        Leaf(X(Covariant), 1d / 3, 1, 1),
+        Leaf(X(Covariant), 1d / 3, 1, 1))))
   }
 
   it should "expand types with a subtype equal to one of the type arguments" in {
@@ -219,12 +219,12 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Sum(
         Max(
           Sum(
-            Leaf(YBag(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0),
-            Leaf(Y(Contravariant), 1d / 2, 1, 0)),
+            Leaf(YBag(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(Y(Contravariant), 1d / 2, 1, 1)),
           Sum(
-            Leaf(Bag(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
-            Leaf(Y(Contravariant), 1d / 2, 1, 0)),
-          Leaf(Y(Contravariant), 1d, 0, 1)))))
+            Leaf(Bag(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
+            Leaf(Y(Contravariant), 1d / 2, 1, 1)),
+          Leaf(Y(Contravariant), 1d, 0, 0.5f)))))
   }
 
   it should "not recurse on self referencing types" in {
@@ -235,17 +235,17 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       Sum(
         Max(
           Sum(
-            Leaf(MyLoop(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0),
-            Leaf(A(Contravariant), 1d / 2, 1, 0)),
+            Leaf(MyLoop(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
+            Leaf(A(Contravariant), 1d / 2, 1, 1)),
           Sum(
-            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 1),
-            Leaf(A(Contravariant), 1d / 2, 1, 0)),
+            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
+            Leaf(A(Contravariant), 1d / 2, 1, 1)),
           Sum(
-            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 2),
-            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 0)),
+            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
+            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 1)),
           Sum(
-            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 3),
-            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 0))))))
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
+            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 1))))))
   }
 
   val viewIndex = {

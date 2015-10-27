@@ -66,6 +66,7 @@ object Common extends Logging {
         engine.index(defs)
       }
     }
+    engine.finalizeIndex().get
     engine
   }
 
@@ -83,6 +84,7 @@ object Common extends Logging {
         e
       }
       newEngine.index(entities).get
+      newEngine.finalizeIndex().get
 
       newEngine
     } else {

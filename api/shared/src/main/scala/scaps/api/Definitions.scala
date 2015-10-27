@@ -18,7 +18,6 @@ sealed trait Definition {
 case class TypeDef(
   name: String,
   typeParameters: List[TypeParameter],
-  baseTypes: List[TypeRef],
   comment: String = "",
   module: Module = Module.Unknown,
   typeFrequency: Map[Variance, Float] = Map())
@@ -29,9 +28,7 @@ case class TypeDef(
       case Nil => ""
       case ps  => ps.mkString("[", ", ", "]")
     }
-    val bases = baseTypes.mkString("extends ", " with ", "")
-
-    s"$name$params $bases"
+    s"$name$params"
   }
 
   def isFunction = typeParameters.length > 0 && name == TypeRef.Function.name(typeParameters.length - 1)

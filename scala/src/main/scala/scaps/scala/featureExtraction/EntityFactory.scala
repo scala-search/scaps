@@ -24,15 +24,13 @@ trait EntityFactory extends StrictLogging {
 
   import compiler.{ TypeDef => _, TypeRef => _, DocComment => _, _ }
 
-  def extractEntities(classSym: Symbol): List[ExtractionError \/ Definition] =
+  def extractEntities(classSym: Symbol): Seq[ExtractionError \/ Definition] =
     if (isTypeOfInterest(classSym)) {
       logger.trace(s"Extract entities in ${qualifiedName(classSym, true)}")
 
-      val cls = createTypeDef(classSym)
+      val cls = withViews(classSym)(createTypeDef(classSym))
 
-      val objValue =
-        if (isValueOfInterest(classSym)) Some(createValueDef(classSym, false, getDocComment(classSym, classSym)))
-        else None
+      val objValue = createValueWithViewDefs(classSym, false, getDocComment(classSym, classSym))
 
       val memberSymsWithComments = (classSym.tpe.members
         .filter(isValueOfInterest)
@@ -54,15 +52,14 @@ trait EntityFactory extends StrictLogging {
       val referencedTypeDefs = memberSymsWithComments.flatMap {
         case (sym, _, _) =>
           sym.tpe.collect { case t => t.typeSymbol }
-            .filter(isTypeOfInterest _)
-            .map(createTypeDef _)
+            .flatMap(createTypeDef _)
       }.toList
 
       val members = memberSymsWithComments
-        .map((createValueDef _).tupled)
+        .flatMap((createValueWithViewDefs _).tupled)
         .toList
 
-      cls :: objValue.toList ::: members ::: referencedTypeDefs
+      cls ++ objValue ++ members ++ referencedTypeDefs
     } else {
       Nil
     }
@@ -71,13 +68,13 @@ trait EntityFactory extends StrictLogging {
     scaladoc(compiler.expandedDocComment(sym, site))
   }
 
-  def createTypeDef(sym: Symbol): ExtractionError \/ TypeDef =
-    \/.fromTryCatchNonFatal {
-      val baseTypes = sym.tpe.baseTypeSeq.toList.tail
-        .filter(tpe => isTypeOfInterest(tpe.typeSymbol))
-        .map(tpe => createTypeRef(tpe, Covariant))
-      TypeDef(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym), baseTypes)
-    }.leftMap(ExtractionError(qualifiedName(sym, true), _))
+  def createTypeDef(sym: Symbol): Seq[ExtractionError \/ Definition] =
+    if (isTypeOfInterest(sym)) Seq(
+      \/.fromTryCatchNonFatal {
+        TypeDef(qualifiedName(sym, true), typeParamsFromOwningTemplates(sym))
+      }.leftMap(ExtractionError(qualifiedName(sym, true), _)))
+    else
+      Seq()
 
   def isTypeOfInterest(sym: Symbol): Boolean =
     (sym.isClass || sym.isModuleOrModuleClass) &&
@@ -85,32 +82,49 @@ trait EntityFactory extends StrictLogging {
       !sym.isLocalClass &&
       sym.isPublic
 
-  def createValueDef(sym: Symbol, isPrimaryCtor: Boolean, comment: DocComment): ExtractionError \/ ValueDef =
-    \/.fromTryCatchNonFatal {
-      val (typeParams, tpe) = createTypeRef(sym)
+  def createViewDef(sym: Symbol, fromDef: Definition): Seq[Definition] = {
+    fromDef match {
+      case c: TypeDef  => createViewFromTypeDef(c, sym)
+      case t: ValueDef => createViewFromValue(t)
+      case _           => List()
+    }
+  }
 
-      val flags = Set.newBuilder[ValueDef.Flag]
+  def withViews(sym: Symbol)(res: Seq[ExtractionError \/ Definition]): Seq[ExtractionError \/ Definition] =
+    res ++ res.flatMap {
+      case \/-(definition) => createViewDef(sym, definition).map(\/.right)
+      case _               => Seq()
+    }
 
-      val isOverride =
-        !sym.allOverriddenSymbols.isEmpty ||
-          (sym.owner.isModule && sym.owner.baseClasses.drop(1).exists(_.tpe.decl(sym.name) != NoSymbol))
+  def createValueWithViewDefs(sym: Symbol, isPrimaryCtor: Boolean, comment: DocComment): Seq[ExtractionError \/ Definition] =
+    withViews(sym)(if (isValueOfInterest(sym)) Seq(
+      \/.fromTryCatchNonFatal {
+        val (typeParams, tpe) = createTypeRef(sym)
 
-      val isImplicit =
-        sym.isImplicit || (isPrimaryCtor && sym.owner.isImplicit)
+        val flags = Set.newBuilder[ValueDef.Flag]
 
-      // reimplements Symbol#isStatic to work on inherited members
-      def isStatic(s: Symbol): Boolean =
-        s.owner.hasPackageFlag ||
-          ((s.owner.hasModuleFlag || s.isConstructor) && isStatic(s.owner))
+        val isOverride =
+          !sym.allOverriddenSymbols.isEmpty ||
+            (sym.owner.isModule && sym.owner.baseClasses.drop(1).exists(_.tpe.decl(sym.name) != NoSymbol))
 
-      if (isOverride) flags += ValueDef.Overrides
-      if (isImplicit) flags += ValueDef.Implicit
-      if (isStatic(sym)) flags += ValueDef.Static
+        val isImplicit =
+          sym.isImplicit || (isPrimaryCtor && sym.owner.isImplicit)
 
-      ValueDef(qualifiedName(sym, false), typeParams, tpe, comment,
-        flags = flags.result,
-        docLink = link(sym))
-    }.leftMap(ExtractionError(qualifiedName(sym, false), _))
+        // reimplements Symbol#isStatic to work on inherited members
+        def isStatic(s: Symbol): Boolean =
+          s.owner.hasPackageFlag ||
+            ((s.owner.hasModuleFlag || s.isConstructor) && isStatic(s.owner))
+
+        if (isOverride) flags += ValueDef.Overrides
+        if (isImplicit) flags += ValueDef.Implicit
+        if (isStatic(sym)) flags += ValueDef.Static
+
+        ValueDef(qualifiedName(sym, false), typeParams, tpe, comment,
+          flags = flags.result,
+          docLink = link(sym))
+      }.leftMap(ExtractionError(qualifiedName(sym, false), _)))
+    else
+      Seq())
 
   def link(sym: Symbol): Option[String] = {
     // Generates a ScalaDoc Link
@@ -142,8 +156,7 @@ trait EntityFactory extends StrictLogging {
 
   def isValueOfInterest(sym: Symbol): Boolean =
     (sym.isValue || (sym.isConstructor && !sym.owner.isAbstractClass)) &&
-      sym.isPublic &&
-      !sym.isSynthetic
+      sym.isPublic
 
   def createTypeRef(sym: Symbol): (List[TypeParameter], TypeRef) = {
     val (params, memberType) =
@@ -266,14 +279,18 @@ trait EntityFactory extends StrictLogging {
       qualifiedName(typeSym.tpe.bounds.lo.typeSymbol, true),
       qualifiedName(typeSym.tpe.bounds.hi.typeSymbol, true))
 
-  private def createViewFromTypeDef(cls: TypeDef): List[ViewDef] = {
+  private def createViewFromTypeDef(cls: TypeDef, clsSym: Symbol): List[ViewDef] = {
+    val baseTypes = clsSym.tpe.baseTypeSeq.toList.tail
+      .filter(tpe => isTypeOfInterest(tpe.typeSymbol))
+      .map(tpe => createTypeRef(tpe, Covariant))
+
     val toRepeated = {
       // create implicit conversions from Seq and subtypes thereof to repeated args
       if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
         ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), cls.toType, implicitConversionDistance, "")
       } else {
-        cls.baseTypes.flatMap {
+        baseTypes.flatMap {
           case TypeRef.Seq(t, _) =>
             ViewDef.bidirectional(TypeRef.Repeated(t), cls.toType, implicitConversionDistance, "")
           case _ =>
@@ -282,9 +299,8 @@ trait EntityFactory extends StrictLogging {
       }
     }
 
-    cls.baseTypes.zipWithIndex.flatMap {
-      case (base, idx) =>
-        ViewDef.bidirectional(base, cls.toType, idx + 1, cls.name)
+    baseTypes.flatMap { baseCls =>
+      ViewDef.bidirectional(baseCls, cls.toType, subtypingDistance, cls.name)
     } ++ toRepeated
   }
 
@@ -303,11 +319,8 @@ trait EntityFactory extends StrictLogging {
       Nil
   }
 
-  val implicitConversionDistance = 0.5f
-
-  def createViewFromEntity(e: Definition): List[ViewDef] = e match {
-    case c: TypeDef  => createViewFromTypeDef(c)
-    case t: ValueDef => createViewFromValue(t)
-    case _           => List()
-  }
+  val subtypingDistance = 0.5f
+  val implicitConversionDistance = 0.9f
+  val aliasDistance = 0.95f
+  val identityDistance = 1f
 }

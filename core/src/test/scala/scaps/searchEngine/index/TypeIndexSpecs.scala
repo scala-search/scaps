@@ -78,6 +78,5 @@ class TypeIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   def cls(name: String)(args: String*)(baseTypes: TypeRef*) =
     TypeDef(
       name,
-      args.map(TypeParameter(_, Invariant)).toList,
-      baseTypes.toList ++ List(TypeRef.AnyRef(), TypeRef.Any()))
+      args.map(TypeParameter(_, Invariant)).toList)
 }

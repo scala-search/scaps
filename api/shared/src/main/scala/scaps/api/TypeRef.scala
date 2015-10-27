@@ -147,7 +147,7 @@ object TypeRef {
   object Char extends PrimitiveType("scala.Char")
   object String extends PrimitiveType("java.lang.String")
   object Nothing extends PrimitiveType("scala.Nothing") {
-    val cls = TypeDef(name, Nil, Nil)
+    val cls = TypeDef(name, Nil)
   }
 
   object Unknown extends PrimitiveType("<unknown>")

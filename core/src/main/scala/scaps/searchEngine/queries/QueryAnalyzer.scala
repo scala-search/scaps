@@ -220,7 +220,7 @@ class QueryAnalyzer private[searchEngine] (
           val partFraction = fraction / (partArgs.length + 1)
 
           val parts = partArgs.map(arg =>
-            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partFraction, depth + 1, 0)
+            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partFraction, depth + 1, 1)
             else alternatives(arg, partFraction, depth + 1, outerTpes))
 
           Sum(Leaf(tpe.withArgsAsParams, partFraction, depth, dist) :: parts)
@@ -236,7 +236,7 @@ class QueryAnalyzer private[searchEngine] (
 
       val outerTpesAndAlts = outerTpes + tpe ++ alternativesWithDistance.map(_._1)
 
-      val originalTypeParts = parts(tpe, fraction, depth, 0, outerTpesAndAlts)
+      val originalTypeParts = parts(tpe, fraction, depth, 1, outerTpesAndAlts)
       val alternativesParts =
         alternativesWithDistance.map {
           case (alt, dist) =>
@@ -279,7 +279,7 @@ class QueryAnalyzer private[searchEngine] (
       fraction(l) * Statistic.weightedGeometricMean(
         itf(l) -> settings.typeFrequencyWeight,
         1d / (l.depth + 1) -> settings.depthBoostWeight,
-        1d / (l.dist + 1) -> settings.distanceBoostWeight)
+        l.dist.toDouble -> settings.distanceBoostWeight)
     } else {
       fraction
     }

@@ -417,29 +417,6 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       ("p.T", _ => ()))
   }
 
-  it should "extract base types" in {
-    extractTypeDefs("""
-      package p
-
-      trait T
-
-      class C extends T
-
-      class D extends C with T
-
-      class E extends C
-      """)(
-      ("p.C", _.baseTypes should (
-        contain(TypeRef("p.T", Covariant, Nil)) and
-        contain(TypeRef.Any()))),
-      ("p.D", _.baseTypes should (
-        contain(TypeRef("p.C", Covariant, Nil)) and
-        contain(TypeRef("p.T", Covariant, Nil)))),
-      ("p.E", _.baseTypes should (
-        contain(TypeRef("p.C", Covariant, Nil)) and
-        contain(TypeRef("p.T", Covariant, Nil)))))
-  }
-
   it should "extract type definitions with type parameters" in {
     extractTypeDefs("""
       package p
@@ -447,23 +424,6 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       class C[T]
       """)(
       ("p.C", _.typeParameters should contain(TypeParameter("T", Invariant))))
-  }
-
-  it should "use the concrete type arguments in base types" in {
-    extractTypeDefs("""
-      package p
-
-      trait T[A]
-
-      class C extends T[Int]
-      class D[B] extends T[B]
-      """)(
-      ("p.C", _.baseTypes.mkString(", ") should include("p.T[scala.Int]")),
-      ("p.D", cls => {
-        cls.baseTypes.mkString(", ") should include("p.T[B]")
-        val tBase = cls.baseTypes.find(_.name == "p.T").get
-        tBase.args.foreach(_.isTypeParam should be(true))
-      }))
   }
 
   it should "yield referenced types as type definitions" in {
@@ -681,16 +641,11 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
     val views = extractAllViews("""
       package p
 
-      object O {
-        val l = List(1)
-        val s = Seq(1)
-      }
+      trait S[+T] extends Seq[T]
       """)
 
     views.map(_.name) should (
-      contain(":-scala.collection.immutable.List[-_]:-<repeated>[-_]") and
-      contain(":+<repeated>[+_]:+scala.collection.immutable.List[+_]") and
-      contain(":-scala.collection.Seq[-_]:-<repeated>[-_]") and
-      contain(":+<repeated>[+_]:+scala.collection.Seq[+_]"))
+      contain(":-p.S[-_]:-<repeated>[-_]") and
+      contain(":+<repeated>[+_]:+p.S[+_]"))
   }
 }
