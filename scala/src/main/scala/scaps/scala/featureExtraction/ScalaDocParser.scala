@@ -10,15 +10,21 @@ import scala.tools.nsc.doc.model.ModelFactoryImplicitSupport
 import scala.tools.nsc.doc.model.ModelFactoryTypeSupport
 import scala.tools.nsc.doc.model.TreeFactory
 import scala.tools.nsc.doc.model.diagram.DiagramFactory
-
 import scalaz.std.boolean.option
 import scaps.api.DocComment
+import scala.util.Try
 
 class ScalaDocParser(compiler: Global, settings: Settings) {
   def apply(comment: String): DocComment =
-    scaladoc.parse(comment)
+    Try { scaladoc.parse(comment) }.getOrElse(DocComment.empty)
 
-  private object scaladoc extends ModelFactory(compiler, compiler.settings.asInstanceOf[Settings]) with ModelFactoryImplicitSupport with ModelFactoryTypeSupport with DiagramFactory with CommentFactory with TreeFactory with MemberLookup {
+  val scaladocSettings = {
+    val sds = compiler.settings.asInstanceOf[Settings]
+    sds.docNoLinkWarnings.value_=(true)
+    sds
+  }
+
+  private object scaladoc extends ModelFactory(compiler, scaladocSettings) with ModelFactoryImplicitSupport with ModelFactoryTypeSupport with DiagramFactory with CommentFactory with TreeFactory with MemberLookup {
     import scala.tools.nsc.doc.base.comment._
 
     def parse(comment: String): DocComment =

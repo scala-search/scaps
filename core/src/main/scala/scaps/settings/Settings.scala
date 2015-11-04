@@ -62,8 +62,8 @@ case class QuerySettings(
     maxClauseCount: Int,
     maxResults: Int,
     views: Boolean,
-    fractions: Boolean,
     lengthNormWeight: Double,
+    fractionWeight: Double,
     depthBoostWeight: Double,
     distanceBoostWeight: Double,
     typeFrequencyWeight: Double,
@@ -76,6 +76,7 @@ case class QuerySettings(
   assertPositive(maxClauseCount)
   assertPositive(maxResults)
   assertPositive(lengthNormWeight)
+  assertPositive(fractionWeight)
   assertPositive(depthBoostWeight)
   assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
@@ -90,8 +91,8 @@ object QuerySettings {
       conf.getInt("max-clause-count"),
       conf.getInt("max-results"),
       conf.getBoolean(views),
-      conf.getBoolean(fractions),
       conf.getDouble(lengthNormWeight),
+      conf.getDouble(fractionWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
@@ -101,9 +102,9 @@ object QuerySettings {
 
   val views = "views"
 
-  val fractions = "fractions"
-
   val lengthNormWeight = "length-norm-weight"
+
+  val fractionWeight = "fraction-weight"
 
   val depthBoostWeight = "depth-boost-weight"
 

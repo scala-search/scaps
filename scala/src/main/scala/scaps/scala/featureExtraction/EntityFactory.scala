@@ -16,13 +16,15 @@ import scala.tools.nsc.doc.model.MemberLookup
 import scala.tools.nsc.doc.model.diagram.DiagramFactory
 import scala.collection.immutable.SortedMap
 import com.typesafe.scalalogging.StrictLogging
+import scala.collection.parallel.immutable.ParRange
+import scala.util.Failure
 
 trait EntityFactory extends StrictLogging {
   val compiler: Global
 
   val scaladoc = new ScalaDocParser(compiler, compiler.settings.asInstanceOf[Settings])
 
-  import compiler.{ TypeDef => _, TypeRef => _, DocComment => _, _ }
+  import compiler.{ TypeDef => _, TypeRef => _, DocComment => _, Try => _, _ }
 
   def extractEntities(classSym: Symbol): Seq[ExtractionError \/ Definition] =
     if (isTypeOfInterest(classSym)) {
@@ -214,6 +216,7 @@ trait EntityFactory extends StrictLogging {
           tpe.bounds.hi.typeSymbol.typeParams(idx).variance
         else
           tpe.typeSymbol.typeParams(idx).variance
+
       if (nscVariance.isPositive)
         variance
       else if (nscVariance.isContravariant)
@@ -222,16 +225,17 @@ trait EntityFactory extends StrictLogging {
         Invariant
     }
 
-    val args = tpe.typeArgs.zipWithIndex.map {
-      case (arg, idx) => createTypeRef(arg, getVariance(idx))
-    }
+    val args =
+      if (tpe.typeArgs.length != tpe.typeSymbol.typeParams.length)
+        Nil
+      else
+        tpe.typeArgs.zipWithIndex.map {
+          case (arg, idx) => createTypeRef(arg, getVariance(idx))
+        }
 
     if (tpe.typeSymbol.name == compiler.typeNames.BYNAME_PARAM_CLASS_NAME) {
       assert(args.length == 1)
       TypeRef.ByName(args.head, variance)
-    } else if (tpe.typeSymbol.name == compiler.typeNames.REPEATED_PARAM_CLASS_NAME) {
-      assert(args.length == 1)
-      TypeRef.Repeated(args.head, variance)
     } else if (tpe.typeSymbol.name == compiler.typeNames.REFINE_CLASS_NAME) {
       val parents = tpe.parents.map(createTypeRef(_, variance))
       TypeRef.Refinement(parents, variance)

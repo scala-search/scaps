@@ -4,7 +4,6 @@ import org.scalatest.Matchers
 import org.scalatest.FlatSpec
 import scala.reflect.internal.util.BatchSourceFile
 import scaps.api._
-import scala.util.Random
 
 class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUtils {
   "the scala source feature extractor" should "extract a value in an object" in {
@@ -87,6 +86,19 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)(
       ("p.T.m1", _.tpe.toString should be("+<memberAccess>[-p.T, +scala.Int]")),
       ("p.T.m2", _.tpe.toString should be("+<memberAccess>[-p.T, +<methodInvocation1>[-scala.Int, +scala.Int]]")))
+  }
+
+  it should "not treat inherited members of objects as member access" in {
+    extractValues("""
+      package p
+
+      trait T {
+        def m(i: Int) = i
+      }
+
+      object O extends T
+      """)(
+      ("p.O.m", _.tpe.toString should be("+<methodInvocation1>[-scala.Int, +scala.Int]")))
   }
 
   it should "treat nested member access like function application" in {
@@ -645,7 +657,7 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       """)
 
     views.map(_.name) should (
-      contain(":-p.S[-_]:-<repeated>[-_]") and
-      contain(":+<repeated>[+_]:+p.S[+_]"))
+      contain(":-p.S[-_]:-scala.<repeated>[-_]") and
+      contain(":+scala.<repeated>[+_]:+p.S[+_]"))
   }
 }

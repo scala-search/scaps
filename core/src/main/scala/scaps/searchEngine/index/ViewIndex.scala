@@ -46,9 +46,7 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
       alt.copy(args = alignedArgs)
     }
 
-    tpe.variance match {
-      case _ => findViews(tpe, moduleIds).get.map(view => (alignTypeArgs(view.from, view.to), view.distance))
-    }
+    findViews(tpe, moduleIds).get.map(view => (alignTypeArgs(view.from, view.to), view.distance)).distinct
   }
 
   private def findViews(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =

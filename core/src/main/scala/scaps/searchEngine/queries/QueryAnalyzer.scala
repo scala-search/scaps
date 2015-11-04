@@ -267,22 +267,13 @@ class QueryAnalyzer private[searchEngine] (
         getFrequency(l.tpe.variance, l.tpe.name))
   }
 
-  private val fraction: (ExpandedQuery.Leaf => Double) =
-    if (settings.fractions) { l => l.fraction }
-    else { _ => 1 }
-
-  private val weightsEnabled =
-    0 != (settings.depthBoostWeight + settings.distanceBoostWeight + settings.typeFrequencyWeight)
-
-  private val boost: (ExpandedQuery.Leaf => Double) =
-    if (weightsEnabled) { l =>
-      fraction(l) * Statistic.weightedGeometricMean(
-        itf(l) -> settings.typeFrequencyWeight,
-        1d / (l.depth + 1) -> settings.depthBoostWeight,
-        l.dist.toDouble -> settings.distanceBoostWeight)
-    } else {
-      fraction
-    }
+  private val boost: (ExpandedQuery.Leaf => Double) = { l =>
+    Statistic.weightedGeometricMean(
+      l.fraction -> settings.fractionWeight,
+      itf(l) -> settings.typeFrequencyWeight,
+      1d / (l.depth + 1) -> settings.depthBoostWeight,
+      l.dist.toDouble -> settings.distanceBoostWeight)
+  }
 
   /**
    * The inverse type frequency is defined as log10(10 / (10f + (1 - f)))

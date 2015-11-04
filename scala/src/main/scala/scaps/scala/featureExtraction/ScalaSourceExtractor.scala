@@ -60,7 +60,8 @@ object Scala {
   val builtinTypes =
     List(
       TypeDef(TypeRef.Nothing.name, Nil),
-      TypeDef(TypeRef.Unknown.name, Nil))
+      TypeDef(TypeRef.Unknown.name, Nil),
+      TypeDef(TypeRef.Repeated.name, List(TypeParameter("X", Covariant))))
 
   val builtinViews =
     List(

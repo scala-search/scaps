@@ -116,7 +116,7 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
       case tpe => List(tpe)
     }
 
-    // ouvalueost function applications are ignored
+    // outermost function applications are ignored
     Ignored((loop _ andThen paramsAndReturnTpes)(this))
   }
 
@@ -134,6 +134,11 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
       TypeRef.Function(args, res.etaExpanded, v)
     case t =>
       t
+  }
+
+  def functionArity: Int = this.normalize(Nil) match {
+    case TypeRef.Function(args, r, v) => args.length + r.functionArity
+    case t                            => 0
   }
 }
 
@@ -163,7 +168,7 @@ object TypeRef {
   }
 
   object ByName extends GenericType("<byname>")
-  object Repeated extends GenericType("<repeated>")
+  object Repeated extends GenericType("scala.<repeated>")
   object Implicit extends GenericType("<implicit>")
   object Option extends GenericType("scala.Option")
   object Seq extends GenericType("scala.collection.Seq")

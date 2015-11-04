@@ -5,6 +5,8 @@ import scalaz._
 import scalaz.syntax.monad._
 import scaps.api.Definition
 import scala.collection.generic.CanBuildFrom
+import java.io.StringWriter
+import java.io.PrintWriter
 
 case class ExtractionError(entityName: String, error: Throwable)
 
@@ -19,5 +21,10 @@ object ExtractionError {
     handleErrors(errorOrDefs)(_ => ())
 
   def logErrors[M[_]: MonadPlus](errorOrDefs: M[ExtractionError \/ Definition], log: String => Unit): M[Definition] =
-    handleErrors(errorOrDefs) { e => log(s"Error during extraction of ${e.entityName}: ${e.error}") }
+    handleErrors(errorOrDefs) { e =>
+      val sts = new StringWriter
+      val pw = new PrintWriter(sts)
+      e.error.printStackTrace(pw)
+      log(s"Error during extraction of ${e.entityName}: ${sts.toString()}")
+    }
 }

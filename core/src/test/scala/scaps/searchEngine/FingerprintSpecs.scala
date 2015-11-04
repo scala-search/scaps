@@ -27,10 +27,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = (1, 2, 3)
       }
       """)(
-      ("p.O.i", _.typeFingerprint.toString should (
-        include("+scala.Int") and
-        include("+scala.Int") and
-        include("+scala.Int"))))
+      ("p.O.i", _.typeFingerprint.count(_ == "+scala.Int") should be(3)))
   }
 
   it should "normalize member access" in {
