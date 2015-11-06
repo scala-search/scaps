@@ -103,6 +103,8 @@ object Evaluation extends App {
         fractionWeight -> Rng.choosedouble(0, 2),
         distanceBoostWeight -> Rng.choosedouble(0, 2),
         depthBoostWeight -> Rng.oneof(0d),
+        nameBoost -> Rng.choosedouble(0, 0.1),
+        docBoost -> Rng.choosedouble(0, 0.1),
         typeFrequencyWeight -> Rng.oneof(1d)))))
 
   var engine = Common.initSearchEngine(baseSettings, evaluationSettings)

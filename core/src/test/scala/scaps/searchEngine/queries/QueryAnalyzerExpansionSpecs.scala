@@ -57,7 +57,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef) =
       ViewDef.bidirectional(base(Covariant), cls(Covariant), 0.5f, "")
 
-    Scala.builtinViews ++ List(
+    List(
       isSubTypeOf(B(_), A(_)),
       isSubTypeOf(C(_), A(_)),
       isSubTypeOf(D(_), C(_)),

@@ -16,8 +16,6 @@ import scala.tools.nsc.doc.model.MemberLookup
 import scala.tools.nsc.doc.model.diagram.DiagramFactory
 import scala.collection.immutable.SortedMap
 import com.typesafe.scalalogging.StrictLogging
-import scala.collection.parallel.immutable.ParRange
-import scala.util.Failure
 
 trait EntityFactory extends StrictLogging {
   val compiler: Global
@@ -292,11 +290,11 @@ trait EntityFactory extends StrictLogging {
       // create implicit conversions from Seq and subtypes thereof to repeated args
       if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
-        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), cls.toType, implicitConversionDistance, "")
+        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), cls.toType, Scala.implicitConversionDistance, "")
       } else {
         baseTypes.flatMap {
           case TypeRef.Seq(t, _) =>
-            ViewDef.bidirectional(TypeRef.Repeated(t), cls.toType, implicitConversionDistance, "")
+            ViewDef.bidirectional(TypeRef.Repeated(t), cls.toType, Scala.implicitConversionDistance, "")
           case _ =>
             Nil
         }
@@ -304,7 +302,7 @@ trait EntityFactory extends StrictLogging {
     }
 
     baseTypes.flatMap { baseCls =>
-      ViewDef.bidirectional(baseCls, cls.toType, subtypingDistance, cls.name)
+      ViewDef.bidirectional(baseCls, cls.toType, Scala.subtypingDistance, cls.name)
     } ++ toRepeated
   }
 
@@ -315,16 +313,11 @@ trait EntityFactory extends StrictLogging {
     if (v.isImplicit && v.isStatic && !hasImplicitParam(v.tpe)) {
       v.tpe.etaExpanded match {
         case TypeRef.Function(from :: Nil, to, _) if !from.isTypeParam =>
-          ViewDef.bidirectional(from, to.withVariance(Contravariant), implicitConversionDistance, v.name)
+          ViewDef.bidirectional(from, to.withVariance(Contravariant), Scala.implicitConversionDistance, v.name)
         case _ =>
           Nil
       }
     } else
       Nil
   }
-
-  val subtypingDistance = 0.5f
-  val implicitConversionDistance = 0.9f
-  val aliasDistance = 0.95f
-  val identityDistance = 1f
 }

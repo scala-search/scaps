@@ -95,8 +95,8 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfC = tfs((Invariant, "p.C"))
 
     tfA should be(0f)
-    tfB should be(1f / maxFreq)
-    tfC should be(0f)
+    tfB should be(2f / maxFreq) // new B, m1
+    tfC should be(1f / maxFreq) // new C
   }
 
   it should "calculate type frequencies of generic types" in {
@@ -120,7 +120,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val tfB = tfs((Covariant, "p.B"))
 
     tfA should be(3f / maxFreq) // new A, m1, m2
-    tfB should be(3f / maxFreq) // new B, m3, m4
+    tfB should be(4f / maxFreq) // new A, new B, m3, m4
   }
 
   def typeFrequenciesWithMaxAbsoluteFrequency(source: String) = {
@@ -128,16 +128,11 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     val values = entities.collect { case t: ValueDef => t }
     val views = entities.collect { case v: ViewDef => v }.sortBy(_.from.name)
 
-    withValueIndex { valueIndex =>
-      valueIndex.addEntities(values)
-      withViewIndex { viewIndex =>
-        viewIndex.addEntities(views)
+    withViewIndex { viewIndex =>
+      viewIndex.addEntities(views)
 
-        val values = valueIndex.allEntities().get
-
-        (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), values, Int.MaxValue),
-          values.filter(!_.isOverride).length)
-      }
+      (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), values, Int.MaxValue),
+        values.filter(!_.isOverride).length)
     }
   }
 }

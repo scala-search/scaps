@@ -46,7 +46,9 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
     def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int) =
       ViewDef.bidirectional(base(Covariant), cls(Covariant), dist, "")
 
-    Scala.builtinViews ++
+    List(
+      ViewDef(TypeRef("_", Covariant, Nil, true), TypeRef.Nothing(Covariant), 1, ""),
+      ViewDef(TypeRef("_", Invariant, Nil, true), TypeRef.Unknown(Invariant), 1, "")) ++
       List(
         isSubTypeOf(B(_), A(_), 1),
         isSubTypeOf(C(_), A(_), 1),

@@ -35,18 +35,11 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
     }
 
   def findAlternativesWithDistance(tpe: TypeRef, moduleIds: Set[String] = Set()): Try[Seq[(TypeRef, Float)]] = Try {
-    def alignTypeArgs(source: TypeRef, alt: TypeRef): TypeRef = {
-      val alignedArgs = alt.args.map { arg =>
-        source.args.indexWhere(_.name == arg.name) match {
-          case -1     => alignTypeArgs(source, arg)
-          case argIdx => alignTypeArgs(source, tpe.args(argIdx).withVariance(arg.variance))
-        }
+    findViews(tpe, moduleIds).get
+      .flatMap { view =>
+        view(tpe).map((_, view.distance))
       }
-
-      alt.copy(args = alignedArgs)
-    }
-
-    findViews(tpe, moduleIds).get.map(view => (alignTypeArgs(view.from, view.to), view.distance)).distinct
+      .distinct
   }
 
   private def findViews(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =

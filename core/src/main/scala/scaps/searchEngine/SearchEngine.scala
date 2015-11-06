@@ -119,9 +119,7 @@ class SearchEngine private[searchEngine] (
         valueIndex.allEntities().get,
         settings.index.typeFrequenciesSampleSize)
 
-      val adjustedTfs = TypeFrequencies.adjustInvariantTopType(tfs)
-
-      typeIndex.updateTypeFrequencies(adjustedTfs)
+      typeIndex.updateTypeFrequencies(tfs)
 
       logger.info(s"Type frequencies have been updated")
     }

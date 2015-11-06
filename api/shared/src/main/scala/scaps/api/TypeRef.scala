@@ -6,6 +6,13 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
   def shortName: String =
     EntityName.splitName(name).last
 
+  def apply(paramName: String, arg: TypeRef): TypeRef = {
+    if (isTypeParam && name == paramName)
+      arg.withVariance(variance)
+    else
+      copy(args = args.map(_.apply(paramName, arg)))
+  }
+
   override def toString() = {
     val argStr = args match {
       case Nil => ""
