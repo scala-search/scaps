@@ -30,6 +30,7 @@ import scaps.api.TypeRef
 import scaps.api.TypeParameter
 import scaps.api.Variance
 import scaps.api.ViewDef
+import scaps.api.Result
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -138,7 +139,7 @@ class SearchEngine private[searchEngine] (
    * Concurrent calls to this methods are save. But calling `search` while another operation is running
    * (particularly `indexEntities`) may result in an exception.
    */
-  def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[ValueDef]] = Try {
+  def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[Result[ValueDef]]] = Try {
     for {
       parsed <- QueryParser(query)
       analyzed <- analyzeQuery(moduleIds, parsed).get

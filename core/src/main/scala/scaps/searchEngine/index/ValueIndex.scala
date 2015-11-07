@@ -1,11 +1,9 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -35,15 +33,18 @@ import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.QueryBuilder
-
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
+import scalaz.Scalaz._
 import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import scaps.api.Module
 import scaps.api.ValueDef
+import scaps.api.Result
+import org.apache.lucene.index.FieldInvertState
+import org.apache.lucene.queries.function.valuesource.QueryValueSource
 
 class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
   import ValueIndex._
@@ -77,7 +78,9 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
   private val queryBuilder = new QueryBuilder(analyzer)
 
   override val similarity = new PerFieldSimilarityWrapper {
-    val default = new DefaultSimilarity
+    val default = new DefaultSimilarity {
+      override def lengthNorm(fis: FieldInvertState) = math.sqrt(super.lengthNorm(fis)).toFloat
+    }
 
     override def get(field: String) = field match {
       case fields.moduleId => new ModuleIdSimilarity()
@@ -91,12 +94,10 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
       writer.addDocuments(docs.asJava)
     }
 
-  def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[ValueDef]] =
+  def find(query: ApiQuery, moduleIds: Set[String]): Try[ProcessingError \/ Seq[Result[ValueDef]]] =
     Try {
-      //      toLuceneQuery(query, moduleIds).map(
-      //        lq => search(lq, 6, Some((value, expl) => println(s"${value.withoutComment}\n${value.typeFingerprint}\n$expl"))).get)
       toLuceneQuery(query, moduleIds).map(
-        lq => search(lq, settings.query.maxResults).get)
+        lq => search(lq, settings.query.maxResults, settings.query.explainScores).get)
     }
 
   def deleteEntitiesIn(module: Module): Try[Unit] =
@@ -108,15 +109,8 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     try {
       val keys = new BooleanQuery
 
-      Option(queryBuilder.createBooleanQuery(fields.name, query.keywords))
-        .foreach { nameQuery =>
-          nameQuery.setBoost(settings.query.nameBoost.toFloat)
-          keys.add(nameQuery, Occur.SHOULD)
-        }
-
       Option(queryBuilder.createBooleanQuery(fields.doc, query.keywords))
         .foreach { docQuery =>
-          docQuery.setBoost(settings.query.docBoost.toFloat)
           keys.add(docQuery, Occur.SHOULD)
         }
 
@@ -139,7 +133,9 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
         keys
       } { tpe =>
         new TypeFingerprintQuery(
-          fields.fingerprint, tpe, keys, settings.query.fingerprintFrequencyCutoff, docLenBoost)
+          fields.fingerprint, tpe, keys,
+          settings.query.fingerprintFrequencyCutoff, settings.query.docBoost.toFloat,
+          docLenBoost)
       }
 
       val q = new BooleanQuery
@@ -153,14 +149,14 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
   }
 
   private[index] def findValuesByName(name: String): Try[Seq[ValueDef]] =
-    search(queryBuilder.createBooleanQuery(fields.name, name))
+    search(queryBuilder.createBooleanQuery(fields.name, name)).map(_.map(_.entity))
 
   def toDocument(entity: ValueDef): Document = {
     val doc = new Document
 
     doc.add(new TextField(fields.name, entity.name, Store.NO))
 
-    doc.add(new TextField(fields.doc, entity.comment.indexableContent, Store.NO))
+    doc.add(new TextField(fields.doc, (entity.name + "\n").multiply(3) + entity.comment.indexableContent, Store.NO))
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
 
     entity.typeFingerprint.foreach { fp =>

@@ -22,9 +22,9 @@ import scaps.api.Covariant
 /**
  * A Lucene query that scores type fingerprints in a field against a type query.
  */
-class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double, lengthNorm: FunctionQuery)
-  extends CustomScoreQuery(
-    TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, frequencyCutoff), lengthNorm) {
+class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double, docBoost: Float, lengthNorm: FunctionQuery)
+    extends CustomScoreQuery(
+      TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, frequencyCutoff), lengthNorm) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -40,12 +40,15 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
         customScore(doc, subQueryScore, valSrcScores(0))
 
       override def customScore(doc: Int, subQueryScore: Float, normFromValSrc: Float): Float = {
-        normFromValSrc * subQueryScore * score(doc)
+        (normFromValSrc * score(doc)) + normDocScore(subQueryScore)
       }
+
+      def normDocScore(docScore: Float): Float =
+        docBoost * math.log(docScore + 1).toFloat
 
       def score(doc: Int): Float = {
         // There is probably a faster way to access the field value for every matched document.
-        // Accessing the fingerprint through value vectors resulted in slightly worse performance.
+        // Though, accessing the fingerprint through value vectors resulted in slightly worse performance.
         val fingerprint = reader.document(doc).getValues(field)
 
         scorer.score(fingerprint)
@@ -59,12 +62,13 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
         val normExplanation = valSrcExpls(0)
         val queryScore = score(doc)
 
+        val docScore = normDocScore(subQueryExpl.getValue)
         val expl = new Explanation(
-          normExplanation.getValue * subQueryExpl.getValue * queryScore,
-          "type fingerprint score, product of:")
+          (normExplanation.getValue * queryScore) + docScore,
+          s"type fingerprint score, typeFingerprint * norm + $docScore of:")
         expl.addDetail(new Explanation(queryScore, "type fingerprint"))
-        expl.addDetail(subQueryExpl)
         expl.addDetail(normExplanation)
+        expl.addDetail(subQueryExpl)
         expl
       }
     }
@@ -93,7 +97,9 @@ object TypeFingerprintQuery extends Logging {
     }
 
     val matcherQuery = new BooleanQuery
-    matcherQuery.add(new ConstantScoreQuery(fingerprintMatcher), Occur.SHOULD)
+    val constantMatcher = new ConstantScoreQuery(fingerprintMatcher)
+    constantMatcher.setBoost(0f)
+    matcherQuery.add(constantMatcher, Occur.SHOULD)
     matcherQuery.add(subQuery, Occur.SHOULD)
 
     matcherQuery

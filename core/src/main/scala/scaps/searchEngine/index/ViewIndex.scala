@@ -56,7 +56,7 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
       query.add(new TermQuery(new Term(fields.from, ViewDef.key(tpe))), Occur.MUST);
       query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
 
-      altsOfGenericTpe ++ search(query).get
+      altsOfGenericTpe ++ search(query).get.map(_.entity)
     }
 
   def deleteEntitiesIn(module: Module): Try[Unit] =

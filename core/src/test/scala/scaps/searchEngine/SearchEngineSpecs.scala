@@ -46,7 +46,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   "the search engine" should "index values from various modules" in
     withSearchEngine { searchEngine =>
-      val results = searchEngine.search("Int").get.fold(qe => fail(qe.toString), identity)
+      val results = searchEngine.search("Int").get.fold(qe => fail(qe.toString), _.map(_.entity))
 
       results.map(_.name) should (
         contain("p.O.m") and
@@ -63,7 +63,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
   it should "support queries with module filters" in
     withSearchEngine { searchEngine =>
       val results = searchEngine.search("Int", Set(m1.moduleId))
-        .get.fold(qe => fail(qe.toString), identity)
+        .get.fold(qe => fail(qe.toString), _.map(_.entity))
 
       results.map(_.name) should (
         contain("p.O.m") and
@@ -99,7 +99,7 @@ class SearchEngineSpecs extends FlatSpec with Matchers with IndexUtils {
 
   it should "reinterpret queries with a single unknown type as keyword queries" in {
     withSearchEngine { se =>
-      se.search("create").get.getOrElse(Nil).map(_.name) should (
+      se.search("create").get.getOrElse(Nil).map(_.entity.name) should (
         contain("p.O.f"))
     }
   }

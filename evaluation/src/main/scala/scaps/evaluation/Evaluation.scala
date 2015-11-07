@@ -21,11 +21,11 @@ object Evaluation extends App {
   val baseSettings = Settings.fromApplicationConf.modQuery(_.copy(
     maxResults = 100,
     views = false,
-    fingerprintFrequencyCutoff = 0.8))
+    fingerprintFrequencyCutoff = 0.8,
+    explainScores = false))
 
   val baseRngs = Map[String, Rng[Double]](
     lengthNormWeight -> Rng.choosedouble(0, 0.5),
-    nameBoost -> Rng.oneof(0.1),
     docBoost -> Rng.oneof(0.05))
     .withDefaultValue(Rng.oneof(0d))
 
@@ -103,7 +103,6 @@ object Evaluation extends App {
         fractionWeight -> Rng.choosedouble(0, 2),
         distanceBoostWeight -> Rng.choosedouble(0, 2),
         depthBoostWeight -> Rng.oneof(0d),
-        nameBoost -> Rng.choosedouble(0, 0.1),
         docBoost -> Rng.choosedouble(0, 0.1),
         typeFrequencyWeight -> Rng.oneof(1d)))))
 
@@ -118,7 +117,6 @@ object Evaluation extends App {
       QuerySettings.distanceBoostWeight,
       QuerySettings.depthBoostWeight,
       QuerySettings.typeFrequencyWeight,
-      QuerySettings.nameBoost,
       QuerySettings.docBoost,
       QuerySettings.fingerprintFrequencyCutoff,
       "MAP",
@@ -147,7 +145,6 @@ object Evaluation extends App {
                 settings.query.distanceBoostWeight,
                 settings.query.depthBoostWeight,
                 settings.query.typeFrequencyWeight,
-                settings.query.nameBoost,
                 settings.query.docBoost,
                 settings.query.fingerprintFrequencyCutoff,
                 stats.meanAveragePrecision,
@@ -181,7 +178,6 @@ object Evaluation extends App {
       dist <- rngs(distanceBoostWeight)
       depth <- rngs(depthBoostWeight)
       tf <- rngs(typeFrequencyWeight)
-      nb <- rngs(nameBoost)
       db <- rngs(docBoost)
     } yield settings.copy(
       lengthNormWeight = lnw,
@@ -189,7 +185,6 @@ object Evaluation extends App {
       distanceBoostWeight = dist,
       depthBoostWeight = depth,
       typeFrequencyWeight = tf,
-      nameBoost = nb,
       docBoost = db)
 
   lazy val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")

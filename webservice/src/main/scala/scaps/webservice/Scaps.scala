@@ -20,6 +20,7 @@ import scaps.webservice.actors.Director
 import scaps.webservice.actors.UserInteractionLogger
 import scaps.api.IndexJob
 import scaps.api.Definition
+import scaps.api.Result
 
 class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   import scaps.webservice.actors.ActorProtocol._
@@ -41,11 +42,11 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
   override def getStatus(): Future[IndexStatus] =
     (director ? GetStatus).mapTo[IndexStatus]
 
-  override def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[ValueDef]]] = {
+  override def search(query: String, moduleIds: Set[String], noResults: Int, offset: Int): Future[Either[String, Seq[Result[ValueDef]]]] = {
     val searchMsg = Search(query, moduleIds, noResults, offset)
 
     val f = for {
-      result <- (director ? searchMsg).mapTo[String \/ Seq[ValueDef]]
+      result <- (director ? searchMsg).mapTo[String \/ Seq[Result[ValueDef]]]
     } yield {
       userInteractionLogger ! ((searchMsg, result))
       result.toEither

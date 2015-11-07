@@ -13,7 +13,7 @@ object Benchmark extends App {
   val outPath = args.lift(0)
   val runName = args.lift(1).getOrElse("")
 
-  val settings = Settings.fromApplicationConf
+  val settings = Settings.fromApplicationConf.modQuery(_.copy(explainScores = false))
   val evaluationSettings = EvaluationSettings.fromApplicationConf
 
   val engine = Common.initSearchEngine(settings, evaluationSettings)

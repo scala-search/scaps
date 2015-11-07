@@ -21,6 +21,8 @@ case class IndexBusy(indexedModules: Seq[Module], indexErrors: Seq[String]) exte
 
 case class IndexJob(module: Module, artifactPath: String, docUrlPrefix: Option[String])
 
+case class Result[E](entity: E, score: Float, explanation: Option[String])
+
 /**
  * The main API exposed to search engine users.
  *
@@ -32,7 +34,7 @@ trait ScapsApi extends CommonApi {
     query: String,
     moduleIds: Set[String] = Set(),
     noResults: Int = ScapsApi.defaultPageSize,
-    offset: Int = 0): Future[Either[String, Seq[ValueDef]]]
+    offset: Int = 0): Future[Either[String, Seq[Result[ValueDef]]]]
 
   def assessPositivley(query: String, moduleIds: Set[String], resultNo: Int, valueSignature: String): Unit
 }

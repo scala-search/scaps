@@ -6,6 +6,7 @@ import scaps.api.Module
 import scaps.api.IndexJob
 import scaps.searchEngine.SearchEngine
 import scaps.api.Definition
+import scaps.api.Result
 
 object ActorProtocol {
   case class Index(indexName: String, definitions: Seq[Definition])
@@ -14,7 +15,7 @@ object ActorProtocol {
   case class Finalized(indexName: String)
 
   case class Search(query: String, moduleIds: Set[String], noResults: Int, offset: Int)
-  type Result = String \/ Seq[ValueDef]
+  type ResultSet = String \/ Seq[Result[ValueDef]]
 
   case class PositiveAssessement(query: String, moduleIds: Set[String], resultNo: Int, signature: String)
 

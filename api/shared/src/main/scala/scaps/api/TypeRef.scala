@@ -161,6 +161,7 @@ object TypeRef {
   object Nothing extends PrimitiveType("scala.Nothing") {
     val cls = TypeDef(name, Nil)
   }
+  object Unit extends PrimitiveType("scala.Unit")
 
   object Unknown extends PrimitiveType("<unknown>")
 

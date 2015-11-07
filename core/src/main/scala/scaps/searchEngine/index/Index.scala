@@ -22,6 +22,8 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import scaps.api.Module
+import scaps.api.Result
+import scalaz.std.boolean
 
 trait Index[E] {
   private[index] def dir: Directory
@@ -34,12 +36,13 @@ trait Index[E] {
     writerInitialized = false
   }
 
-  def allEntities(): Try[Seq[E]] =
-    search(new MatchAllDocsQuery)
+  def allEntities(): Try[Seq[E]] = Try {
+    search(new MatchAllDocsQuery).get.map(_.entity)
+  }
 
   private[index] def toEntity(d: Document): E
 
-  private[index] def search(query: Query, maxResults: Int = Int.MaxValue, explain: Option[(E, Explanation) => Unit] = None): Try[Seq[E]] =
+  private[index] def search(query: Query, maxResults: Int = Int.MaxValue, explain: Boolean = false): Try[Seq[Result[E]]] =
     withSearcher { searcher =>
       val docs = searcher.search(query, maxResults)
 
@@ -49,10 +52,8 @@ trait Index[E] {
         if docId != DocIdSetIterator.NO_MORE_DOCS
       } yield {
         val res = toEntity(searcher.doc(docId))
-        explain.foreach { e =>
-          e(res, searcher.explain(query, docId))
-        }
-        res
+        Result(res, docs.scoreDocs(i).score,
+          boolean.option(explain, searcher.explain(query, docId).toString()))
       }
     }
 

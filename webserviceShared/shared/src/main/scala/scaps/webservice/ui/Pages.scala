@@ -12,6 +12,7 @@ import scaps.api.TypeRef.MemberAccess
 import scaps.api.TypeParameter
 import scaps.api.ScapsApi
 import scaps.api.BuildInfo
+import scaps.api.Result
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])
     extends Helpers[Builder, Output, FragT] {
@@ -148,7 +149,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-danger")(msg)
 
-  def results(currentPage: Int, query: String, enabledModuleIds: Set[String], results: Seq[ValueDef]) = {
+  def results(currentPage: Int, query: String, enabledModuleIds: Set[String], results: Seq[Result[ValueDef]]) = {
     val pager =
       nav(
         ul(cls := "pager")(
@@ -161,15 +162,16 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
     val renderedResults = results
       .zipWithIndex
-      .map { case (value, idx) => result((currentPage * ScapsApi.defaultPageSize) + idx, value) }
+      .map { case (res, idx) => result((currentPage * ScapsApi.defaultPageSize) + idx, res) }
 
     div(
       dl(renderedResults),
       pager)
   }
 
-  def result(resultNo: Int, value: ValueDef) = {
+  def result(resultNo: Int, res: Result[ValueDef]) = {
     val typeParamStyle = color := "#999999"
+    val value = res.entity
 
     def typeName(t: TypeRef) =
       if (value.typeParameters.exists(_.name == t.name))
@@ -237,8 +239,9 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
             span(tpe(owner), ".", strong(value.shortName), typeParams(memberTypeParams), signature(member))
           case t =>
             span(strong(value.name), typeParams(value.typeParameters), signature(t))
-        })),
+        }), small(float.right)(res.score)),
       dd(
+        res.explanation.map(e => pre(e)),
         div(cls := "docComment")(
           raw(value.comment.body),
           dl(value.comment.attributes.toList.flatMap {

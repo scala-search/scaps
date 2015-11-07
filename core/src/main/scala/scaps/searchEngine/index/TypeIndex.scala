@@ -58,15 +58,15 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
     query.add(new TermQuery(new Term(fields.suffix, suffix)), Occur.MUST)
     query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
 
-    search(query).map(_.map(_.withModule(Module.Unknown)).distinct)
+    search(query).map(_.map(_.entity.withModule(Module.Unknown)).distinct)
   }
 
   def findTypeDef(name: String): Try[Option[TypeDef]] = Try {
-    search(new TermQuery(new Term(fields.name, name))).get.headOption
+    search(new TermQuery(new Term(fields.name, name))).get.map(_.entity).headOption
   }
 
   def allTypeDefs(): Try[Seq[TypeDef]] =
-    search(new MatchAllDocsQuery)
+    search(new MatchAllDocsQuery).map(_.map(_.entity))
 
   def updateTypeFrequencies(tfs: Map[(Variance, String), Float]): Try[Unit] =
     Try {

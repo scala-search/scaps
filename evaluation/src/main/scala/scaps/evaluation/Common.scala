@@ -25,7 +25,7 @@ object Common extends Logging {
     queriesWithRelevantDocs.map {
       case (query, relevantResults) =>
         val (res, dur) = timers.withTime(engine.search(query).get)
-        res.map(results => QueryStats(query, results.map(_.signature), relevantResults, dur))
+        res.map(results => QueryStats(query, results.map(_.entity.signature), relevantResults, dur))
     }.sequenceU.map(Stats(_))
   }
 
