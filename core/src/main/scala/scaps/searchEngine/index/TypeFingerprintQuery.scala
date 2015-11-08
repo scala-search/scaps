@@ -40,13 +40,13 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
         customScore(doc, subQueryScore, valSrcScores(0))
 
       override def customScore(doc: Int, subQueryScore: Float, normFromValSrc: Float): Float = {
-        (normFromValSrc * score(doc)) + normDocScore(subQueryScore)
+        (normFromValSrc * score(doc)._1) + normDocScore(subQueryScore)
       }
 
       def normDocScore(docScore: Float): Float =
         docBoost * math.log(docScore + 1).toFloat
 
-      def score(doc: Int): Float = {
+      def score(doc: Int) = {
         // There is probably a faster way to access the field value for every matched document.
         // Though, accessing the fingerprint through value vectors resulted in slightly worse performance.
         val fingerprint = reader.document(doc).getValues(field)
@@ -60,13 +60,13 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
 
       override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpls: Array[Explanation]): Explanation = {
         val normExplanation = valSrcExpls(0)
-        val queryScore = score(doc)
+        val (queryScore, scoresPerTerm) = score(doc)
 
         val docScore = normDocScore(subQueryExpl.getValue)
         val expl = new Explanation(
           (normExplanation.getValue * queryScore) + docScore,
           s"type fingerprint score, typeFingerprint * norm + $docScore of:")
-        expl.addDetail(new Explanation(queryScore, "type fingerprint"))
+        expl.addDetail(new Explanation(queryScore, s"type fingerprint ${scoresPerTerm.mkString(", ")}"))
         expl.addDetail(normExplanation)
         expl.addDetail(subQueryExpl)
         expl
@@ -149,7 +149,7 @@ object TypeFingerprintQuery extends Logging {
 
   sealed trait FingerprintScorer {
 
-    def score(fingerprint: Seq[String]): Float = {
+    def score(fingerprint: Seq[String]): (Float, List[(String, Float)]) = {
       /*
        * This is just an heuristic that generally yields accurate results but
        * may not return the maximum score for a fingerprint (see ignored test cases).
@@ -183,14 +183,17 @@ object TypeFingerprintQuery extends Logging {
           .map(_._1)
       }
 
-      values.foldLeft((0f, FingerprintScorer.minimize(preparedScorer))) {
-        case ((score, scorer), fpt) =>
-          scorer.score(fpt).fold {
-            (score, scorer)
-          } {
-            case (newScore, newScorer) => (score + newScore, newScorer)
-          }
-      }._1
+      val (score, _, scorePerValue) =
+        values.foldLeft((0f, FingerprintScorer.minimize(preparedScorer), List[(String, Float)]())) {
+          case ((score, scorer, scorePerValue), fpt) =>
+            scorer.score(fpt).fold {
+              (score, scorer, scorePerValue)
+            } {
+              case (newScore, newScorer) =>
+                (score + newScore, newScorer, scorePerValue :+ (fpt -> newScore))
+            }
+        }
+      (score, scorePerValue)
     }
 
     /**

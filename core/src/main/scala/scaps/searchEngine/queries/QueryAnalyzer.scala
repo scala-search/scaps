@@ -268,8 +268,7 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private val boost: (ExpandedQuery.Leaf => Double) = { l =>
-    Statistic.weightedGeometricMean(
-      l.fraction -> settings.fractionWeight,
+    l.fraction * Statistic.weightedGeometricMean(
       itf(l) -> settings.typeFrequencyWeight,
       1d / (l.depth + 1) -> settings.depthBoostWeight,
       l.dist.toDouble -> settings.distanceBoostWeight)

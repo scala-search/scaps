@@ -78,9 +78,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
   private val queryBuilder = new QueryBuilder(analyzer)
 
   override val similarity = new PerFieldSimilarityWrapper {
-    val default = new DefaultSimilarity {
-      override def lengthNorm(fis: FieldInvertState) = math.sqrt(super.lengthNorm(fis)).toFloat
-    }
+    val default = new DefaultSimilarity
 
     override def get(field: String) = field match {
       case fields.moduleId => new ModuleIdSimilarity()
@@ -122,7 +120,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
             val fingerprintLength = fingerprintLengthValues.intVal(doc)
             (1d /
               (math.pow(
-                lengthWeight * math.abs(query.queryFingerprintLength - fingerprintLength),
+                lengthWeight * math.max(0, fingerprintLength - query.queryFingerprintLength),
                 2) + 1)).toFloat
           }
 
@@ -156,7 +154,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 
     doc.add(new TextField(fields.name, entity.name, Store.NO))
 
-    doc.add(new TextField(fields.doc, (entity.name + "\n").multiply(3) + entity.comment.indexableContent, Store.NO))
+    doc.add(new TextField(fields.doc, (entity.name + "\n").multiply(2) + entity.comment.indexableContent, Store.NO))
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
 
     entity.typeFingerprint.foreach { fp =>
@@ -164,7 +162,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     }
 
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
-    doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.toList.length))
+    doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.normalize(Nil).typeFingerprint.length))
 
     doc
   }

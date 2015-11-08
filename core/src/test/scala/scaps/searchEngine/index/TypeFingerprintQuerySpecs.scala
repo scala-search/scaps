@@ -13,9 +13,9 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   "a fingerprint scorer" should "score a simple type query" in {
     val scorer = FingerprintScorer(tpe("A", 1))
 
-    scorer.score("+A" :: Nil) should be(1)
-    scorer.score("+A" :: "+B" :: Nil) should be(1)
-    scorer.score("+B" :: Nil) should be(0)
+    scorer.score("+A" :: Nil)._1 should be(1)
+    scorer.score("+A" :: "+B" :: Nil)._1 should be(1)
+    scorer.score("+B" :: Nil)._1 should be(0)
   }
 
   it should "score sum queries" in {
@@ -24,8 +24,8 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
         tpe("A", 1),
         tpe("B", 2)))
 
-    scorer.score("+A" :: Nil) should be(1)
-    scorer.score("+A" :: "+B" :: Nil) should be(3)
+    scorer.score("+A" :: Nil)._1 should be(1)
+    scorer.score("+A" :: "+B" :: Nil)._1 should be(3)
   }
 
   it should "score max queries" in {
@@ -34,10 +34,10 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
         tpe("A", 1),
         tpe("B", 2)))
 
-    scorer.score("+A" :: Nil) should be(1)
-    scorer.score("+B" :: Nil) should be(2)
-    scorer.score("+A" :: "+B" :: Nil) should be(2)
-    scorer.score("+B" :: "+A" :: Nil) should be(2)
+    scorer.score("+A" :: Nil)._1 should be(1)
+    scorer.score("+B" :: Nil)._1 should be(2)
+    scorer.score("+A" :: "+B" :: Nil)._1 should be(2)
+    scorer.score("+B" :: "+A" :: Nil)._1 should be(2)
   }
 
   it should "allow multiple matches on sum queries that are part of a max query" in {
@@ -48,7 +48,7 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
           tpe("B", 2),
           tpe("C", 0.5))))
 
-    scorer.score("+A" :: "+B" :: "+C" :: Nil) should be(2.5f)
+    scorer.score("+A" :: "+B" :: "+C" :: Nil)._1 should be(2.5f)
   }
 
   it should "score repeated types" in {
@@ -60,13 +60,13 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
         tpe("A", 1),
         tpe("A", 1)))
 
-    scorer.score("+A" :: "+A" :: Nil) should be(2f)
-    scorer.score("+A" :: "+B" :: Nil) should be(1.5f)
-    scorer.score("+A" :: "+A" :: "+A" :: Nil) should be(2.9f)
-    scorer.score("+B" :: "+A" :: "+A" :: Nil) should be(2.5f)
+    scorer.score("+A" :: "+A" :: Nil)._1 should be(2f)
+    scorer.score("+A" :: "+B" :: Nil)._1 should be(1.5f)
+    scorer.score("+A" :: "+A" :: "+A" :: Nil)._1 should be(2.9f)
+    scorer.score("+B" :: "+A" :: "+A" :: Nil)._1 should be(2.5f)
   }
 
-  it should "score repeated types with widly varying values" in {
+  it should "score repeated types with varying values" in {
     val scorer = FingerprintScorer(
       Sum(
         Max(
@@ -74,8 +74,8 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
           tpe("B", 0.5)),
         tpe("A", 1)))
 
-    scorer.score("+A" :: "+B" :: Nil) should be(1.5f)
-    scorer.score("+A" :: "+A" :: "+B" :: Nil) should be(1.5f)
+    scorer.score("+A" :: "+B" :: Nil)._1 should be(1.5f)
+    scorer.score("+A" :: "+A" :: "+B" :: Nil)._1 should be(1.5f)
   }
 
   // not relevant because up to now such expression trees do not exists
@@ -87,7 +87,7 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
           tpe("B", 1),
           tpe("C", 1))))
 
-    scorer.score("+A" :: "+B" :: "+C" :: Nil) should be(2)
+    scorer.score("+A" :: "+B" :: "+C" :: Nil)._1 should be(2)
   }
 
   "the value frequency cutoff" should "not be exceeded" in {

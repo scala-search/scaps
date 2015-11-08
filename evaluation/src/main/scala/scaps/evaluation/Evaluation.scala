@@ -99,11 +99,10 @@ object Evaluation extends App {
       baseSettings.modQuery(_.copy(
         views = true)),
       baseRngs ++ Map(
-        lengthNormWeight -> Rng.oneof(0.2d),
-        fractionWeight -> Rng.choosedouble(0, 2),
+        lengthNormWeight -> Rng.choosedouble(0, 1),
         distanceBoostWeight -> Rng.choosedouble(0, 2),
         depthBoostWeight -> Rng.oneof(0d),
-        docBoost -> Rng.choosedouble(0, 0.1),
+        docBoost -> Rng.choosedouble(0, 2),
         typeFrequencyWeight -> Rng.oneof(1d)))))
 
   var engine = Common.initSearchEngine(baseSettings, evaluationSettings)
@@ -113,7 +112,6 @@ object Evaluation extends App {
       "run",
       QuerySettings.views,
       QuerySettings.lengthNormWeight,
-      QuerySettings.fractionWeight,
       QuerySettings.distanceBoostWeight,
       QuerySettings.depthBoostWeight,
       QuerySettings.typeFrequencyWeight,
@@ -141,7 +139,6 @@ object Evaluation extends App {
                 runName,
                 settings.query.views,
                 settings.query.lengthNormWeight,
-                settings.query.fractionWeight,
                 settings.query.distanceBoostWeight,
                 settings.query.depthBoostWeight,
                 settings.query.typeFrequencyWeight,
@@ -149,7 +146,7 @@ object Evaluation extends App {
                 settings.query.fingerprintFrequencyCutoff,
                 stats.meanAveragePrecision,
                 stats.meanRecallAt10,
-                stats.duration.toMillis + " ms")
+                stats.duration.toMillis)
 
               println(cells.mkString("", "; ", ";\n"))
               writer.write(cells.mkString("", "; ", ";\n"))
@@ -174,14 +171,12 @@ object Evaluation extends App {
   def randomize(settings: QuerySettings, rngs: Map[String, Rng[Double]]): Rng[QuerySettings] =
     for {
       lnw <- rngs(lengthNormWeight)
-      frac <- rngs(fractionWeight)
       dist <- rngs(distanceBoostWeight)
       depth <- rngs(depthBoostWeight)
       tf <- rngs(typeFrequencyWeight)
       db <- rngs(docBoost)
     } yield settings.copy(
       lengthNormWeight = lnw,
-      fractionWeight = frac,
       distanceBoostWeight = dist,
       depthBoostWeight = depth,
       typeFrequencyWeight = tf,
