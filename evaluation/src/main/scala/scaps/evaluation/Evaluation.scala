@@ -25,7 +25,7 @@ object Evaluation extends App {
     explainScores = false))
 
   val baseRngs = Map[String, Rng[Double]](
-    lengthNormWeight -> Rng.choosedouble(0, 0.5),
+    penaltyWeight -> Rng.choosedouble(0, 0.5),
     docBoost -> Rng.oneof(0.05))
     .withDefaultValue(Rng.oneof(0d))
 
@@ -99,7 +99,7 @@ object Evaluation extends App {
       baseSettings.modQuery(_.copy(
         views = true)),
       baseRngs ++ Map(
-        lengthNormWeight -> Rng.choosedouble(0, 1),
+        penaltyWeight -> Rng.choosedouble(0, 1),
         distanceBoostWeight -> Rng.choosedouble(0, 2),
         depthBoostWeight -> Rng.oneof(0d),
         docBoost -> Rng.choosedouble(0, 2),
@@ -111,7 +111,7 @@ object Evaluation extends App {
     val headers = List(
       "run",
       QuerySettings.views,
-      QuerySettings.lengthNormWeight,
+      QuerySettings.penaltyWeight,
       QuerySettings.distanceBoostWeight,
       QuerySettings.depthBoostWeight,
       QuerySettings.typeFrequencyWeight,
@@ -138,7 +138,7 @@ object Evaluation extends App {
               val cells = List[Any](
                 runName,
                 settings.query.views,
-                settings.query.lengthNormWeight,
+                settings.query.penaltyWeight,
                 settings.query.distanceBoostWeight,
                 settings.query.depthBoostWeight,
                 settings.query.typeFrequencyWeight,
@@ -170,13 +170,13 @@ object Evaluation extends App {
 
   def randomize(settings: QuerySettings, rngs: Map[String, Rng[Double]]): Rng[QuerySettings] =
     for {
-      lnw <- rngs(lengthNormWeight)
+      pw <- rngs(penaltyWeight)
       dist <- rngs(distanceBoostWeight)
       depth <- rngs(depthBoostWeight)
       tf <- rngs(typeFrequencyWeight)
       db <- rngs(docBoost)
     } yield settings.copy(
-      lengthNormWeight = lnw,
+      penaltyWeight = pw,
       distanceBoostWeight = dist,
       depthBoostWeight = depth,
       typeFrequencyWeight = tf,

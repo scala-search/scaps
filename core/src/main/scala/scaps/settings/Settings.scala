@@ -62,7 +62,7 @@ case class QuerySettings(
     maxClauseCount: Int,
     maxResults: Int,
     views: Boolean,
-    lengthNormWeight: Double,
+    penaltyWeight: Double,
     depthBoostWeight: Double,
     distanceBoostWeight: Double,
     typeFrequencyWeight: Double,
@@ -74,7 +74,7 @@ case class QuerySettings(
 
   assertPositive(maxClauseCount)
   assertPositive(maxResults)
-  assertPositive(lengthNormWeight)
+  assertPositive(penaltyWeight)
   assertPositive(depthBoostWeight)
   assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
@@ -88,7 +88,7 @@ object QuerySettings {
       conf.getInt("max-clause-count"),
       conf.getInt("max-results"),
       conf.getBoolean(views),
-      conf.getDouble(lengthNormWeight),
+      conf.getDouble(penaltyWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
@@ -98,7 +98,7 @@ object QuerySettings {
 
   val views = "views"
 
-  val lengthNormWeight = "length-norm-weight"
+  val penaltyWeight = "penalty-weight"
 
   val depthBoostWeight = "depth-boost-weight"
 

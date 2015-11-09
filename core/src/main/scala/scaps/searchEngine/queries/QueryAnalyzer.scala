@@ -127,7 +127,7 @@ class QueryAnalyzer private[searchEngine] (
   def apply(raw: RawQuery): SemanticError \/ ApiQuery =
     raw match {
       case RawQuery.Keywords(keys) =>
-        \/.right(ApiQuery(keys, None, 0))
+        \/.right(ApiQuery(keys, None))
       case RawQuery.Full(keys, tpe) =>
         for {
           resolved <- resolveNames(tpe)
@@ -135,7 +135,7 @@ class QueryAnalyzer private[searchEngine] (
           expanded = ExpandedQuery.minimize(expandQuery(normalizedType))
           typeQuery = toApiTypeQuery(expanded)
         } yield {
-          ApiQuery(keys, Some(typeQuery), normalizedType.typeFingerprint.length)
+          ApiQuery(keys, Some(typeQuery))
         }
     }
 

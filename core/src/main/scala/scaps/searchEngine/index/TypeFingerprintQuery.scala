@@ -13,18 +13,18 @@ import org.apache.lucene.search.ConstantScoreQuery
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-
 import scaps.searchEngine.ApiTypeQuery
 import scaps.utils.Logging
 import scaps.api.Contravariant
 import scaps.api.Covariant
+import scaps.settings.QuerySettings
 
 /**
  * A Lucene query that scores type fingerprints in a field against a type query.
  */
-class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, frequencyCutoff: Double, docBoost: Float, lengthNorm: FunctionQuery)
+class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, settings: QuerySettings)
     extends CustomScoreQuery(
-      TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, frequencyCutoff), lengthNorm) {
+      TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, settings.fingerprintFrequencyCutoff)) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -37,37 +37,30 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
       val reader = context.reader()
 
       override def customScore(doc: Int, subQueryScore: Float, valSrcScores: Array[Float]): Float =
-        customScore(doc, subQueryScore, valSrcScores(0))
-
-      override def customScore(doc: Int, subQueryScore: Float, normFromValSrc: Float): Float = {
-        (normFromValSrc * score(doc)._1) + normDocScore(subQueryScore)
-      }
+        (score(doc)._1) + normDocScore(subQueryScore)
 
       def normDocScore(docScore: Float): Float =
-        docBoost * math.log(docScore + 1).toFloat
+        (settings.docBoost * math.log(docScore + 1)).toFloat
 
       def score(doc: Int) = {
         // There is probably a faster way to access the field value for every matched document.
         // Though, accessing the fingerprint through value vectors resulted in slightly worse performance.
         val fingerprint = reader.document(doc).getValues(field)
 
-        scorer.score(fingerprint)
-      }
+        val (fpScore, penalty, exp) = scorer.score(fingerprint)
+        val penalized = (1d / (math.pow(settings.penaltyWeight * penalty, 2) + 1)).toFloat * fpScore
 
-      override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpl: Explanation): Explanation = {
-        customExplain(doc, subQueryExpl, Array(valSrcExpl))
+        (penalized, penalty, exp)
       }
 
       override def customExplain(doc: Int, subQueryExpl: Explanation, valSrcExpls: Array[Explanation]): Explanation = {
-        val normExplanation = valSrcExpls(0)
-        val (queryScore, scoresPerTerm) = score(doc)
+        val (queryScore, penalty, scoresPerTerm) = score(doc)
 
         val docScore = normDocScore(subQueryExpl.getValue)
         val expl = new Explanation(
-          (normExplanation.getValue * queryScore) + docScore,
-          s"type fingerprint score, typeFingerprint * norm + $docScore of:")
-        expl.addDetail(new Explanation(queryScore, s"type fingerprint ${scoresPerTerm.mkString(", ")}"))
-        expl.addDetail(normExplanation)
+          (queryScore) + docScore,
+          s"type fingerprint score, typeFingerprint + $docScore of:")
+        expl.addDetail(new Explanation(queryScore, s"type fingerprint ${scoresPerTerm.mkString(", ")}, penalty: $penalty"))
         expl.addDetail(subQueryExpl)
         expl
       }
@@ -149,7 +142,7 @@ object TypeFingerprintQuery extends Logging {
 
   sealed trait FingerprintScorer {
 
-    def score(fingerprint: Seq[String]): (Float, List[(String, Float)]) = {
+    def score(fingerprint: Seq[String]): (Float, Float, List[(String, Float)]) = {
       /*
        * This is just an heuristic that generally yields accurate results but
        * may not return the maximum score for a fingerprint (see ignored test cases).
@@ -161,72 +154,56 @@ object TypeFingerprintQuery extends Logging {
        * fingerprint.
        *
        * The following heuristic first orders the fingerprint by the maximum
-       * achievable score of each individual value and uses this order to score
+       * achievable score of each individual term and uses this order to score
        * the fingerprint as a whole.
        */
-      val (valueScores, preparedScorer) = prepare(fingerprint.distinct)
+      val termsByMaxPotentialScore =
+        fingerprint.foldLeft((List[(String, Float)](), termScores)) {
+          case ((acc, termScores), fp) =>
+            termScores.getOrElse(fp, List(0f)) match {
+              case x :: Nil =>
+                ((fp -> x) :: acc, termScores - fp)
+              case x :: rest =>
+                ((fp -> x) :: acc, termScores + (fp -> rest))
+              case Nil => ???
+            }
+        }._1.sortBy(-_._2).map(_._1)
 
-      val values = {
-        val (valuesWithMaxScore, _) = valueScores
-          .sortBy(-_._2)
-          .foldLeft((List[(String, Float)](), fingerprint)) {
-            case ((acc, fp), (value, score)) =>
-              if (fp.contains(value))
-                ((value, score) :: acc, fp.diff(List(value)))
-              else
-                (acc, fp)
-          }
-
-        valuesWithMaxScore
-          .filter(_._2 > 0f)
-          .sortBy(-_._2)
-          .map(_._1)
-      }
-
-      val (score, _, scorePerValue) =
-        values.foldLeft((0f, FingerprintScorer.minimize(preparedScorer), List[(String, Float)]())) {
-          case ((score, scorer, scorePerValue), fpt) =>
+      val (score, unmatchedTerms, scorer, scorePerValue) =
+        termsByMaxPotentialScore.foldLeft((0f, 0, this, List[(String, Float)]())) {
+          case ((score, unmatchedTerms, scorer, scorePerValue), fpt) =>
             scorer.score(fpt).fold {
-              (score, scorer, scorePerValue)
+              (score, unmatchedTerms + 1, scorer, scorePerValue)
             } {
               case (newScore, newScorer) =>
-                (score + newScore, newScorer, scorePerValue :+ (fpt -> newScore))
+                (score + newScore, unmatchedTerms, newScorer, scorePerValue :+ (fpt -> newScore))
             }
         }
-      (score, scorePerValue)
+
+      val penalty = unmatchedTerms + scorer.unevaluatedBranches
+
+      (score, penalty, scorePerValue)
     }
 
-    /**
-     * Collects all scores possible for each type in `fingerprint` and returns a new scorer
-     * without leaves that wont match any of the types in `fingerprint`.
-     */
-    def prepare(fingerprint: Seq[String]): (Seq[(String, Float)], FingerprintScorer) = {
-      def prepareChildren(fingerprint: Seq[String],
-                          childNodes: List[FingerprintScorer],
-                          mkNode: List[FingerprintScorer] => FingerprintScorer): (Seq[(String, Float)], FingerprintScorer) = {
-        val childRes = childNodes.map(_.prepare(fingerprint))
-        val childScores = childRes.flatMap(_._1)
-        val matchingChilds = childRes.map(_._2).filter(_ != DeadLeaf)
+    def unevaluatedBranches: Float = this match {
+      case SumNode(children) => children.map(_.unevaluatedBranches).sum
+      case MaxNode(children) => children.map(_.unevaluatedBranches).sum / children.length
+      case _: Leaf           => 1
+      case DeadLeaf          => 0
+    }
 
-        if (matchingChilds.isEmpty) {
-          (Seq(), DeadLeaf)
-        } else {
-          (childScores, mkNode(matchingChilds))
-        }
-      }
-
-      this match {
-        case SumNode(children) => prepareChildren(fingerprint, children, SumNode(_))
-        case MaxNode(children) => prepareChildren(fingerprint, children, MaxNode(_))
-        case Leaf(tpe, boost) =>
-          if (fingerprint.contains(tpe)) {
-            (Seq(tpe -> boost), this)
-          } else {
-            (Seq(), DeadLeaf)
+    lazy val termScores: Map[String, List[Float]] = {
+      def rec(scorer: FingerprintScorer): Map[String, List[Float]] = scorer match {
+        case Leaf(tpe, s) => Map(tpe -> List(s))
+        case DeadLeaf     => Map()
+        case InnerNode(children) =>
+          children.flatMap(rec).foldLeft(Map[String, List[Float]]()) {
+            case (acc, (tpe, scores)) =>
+              acc + (tpe -> (scores ++ acc.getOrElse(tpe, Nil)))
           }
-        case DeadLeaf =>
-          (Seq(), this)
       }
+
+      rec(this).mapValues(_.sortBy(-_))
     }
 
     /**
@@ -278,4 +255,12 @@ object TypeFingerprintQuery extends Logging {
   case class MaxNode(children: List[FingerprintScorer]) extends FingerprintScorer
   case class Leaf(tpe: String, boost: Float) extends FingerprintScorer
   object DeadLeaf extends FingerprintScorer
+
+  object InnerNode {
+    def unapply(scorer: FingerprintScorer): Option[List[FingerprintScorer]] = scorer match {
+      case SumNode(cs) => Some(cs)
+      case MaxNode(cs) => Some(cs)
+      case _           => None
+    }
+  }
 }

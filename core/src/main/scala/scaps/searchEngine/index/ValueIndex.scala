@@ -1,9 +1,11 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
+
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
+
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -16,42 +18,39 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.analysis.util.CharTokenizer
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store
-import org.apache.lucene.document.NumericDocValuesField
 import org.apache.lucene.document.StoredField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.Term
-import org.apache.lucene.queries.function.FunctionQuery
-import org.apache.lucene.queries.function.FunctionValues
-import org.apache.lucene.queries.function.valuesource.IntFieldSource
-import org.apache.lucene.queries.function.valuesource.SimpleFloatFunction
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.Query
-import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.QueryBuilder
+
+import scalaz.Scalaz._
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
-import scalaz.Scalaz._
+import scaps.api.Module
+import scaps.api.Result
+import scaps.api.ValueDef
 import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
-import scaps.api.Module
-import scaps.api.ValueDef
-import scaps.api.Result
-import org.apache.lucene.index.FieldInvertState
-import org.apache.lucene.queries.function.valuesource.QueryValueSource
 
 class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
   import ValueIndex._
 
   private val nameAnalyzer = new Analyzer {
     override def createComponents(fieldName: String, reader: Reader) = {
-      val tokenizer = new IdentifierAndWhitespaceDelimiterTokenizer(reader)
+      val tokenizer = new CharTokenizer(reader) {
+        override def isTokenChar(c: Int): Boolean = {
+          !(Character.isWhitespace(c) || c == '.')
+        }
+      }
+
       val ts1 = new WordDelimiterFilter(
         tokenizer,
         WordDelimiterFilter.GENERATE_WORD_PARTS |
@@ -81,8 +80,10 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     val default = new DefaultSimilarity
 
     override def get(field: String) = field match {
-      case fields.moduleId => new ModuleIdSimilarity()
-      case _               => default
+      case fields.moduleId => new DefaultSimilarity {
+        override def idf(docFreq: Long, numDocs: Long) = 1f
+      }
+      case _ => default
     }
   }
 
@@ -112,28 +113,10 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
           keys.add(docQuery, Occur.SHOULD)
         }
 
-      def docLenBoost = new FunctionQuery(
-        new SimpleFloatFunction(new IntFieldSource(fields.fingerprintLength)) {
-          val lengthWeight = settings.query.lengthNormWeight / math.sqrt(query.queryFingerprintLength)
-
-          def func(doc: Int, fingerprintLengthValues: FunctionValues): Float = {
-            val fingerprintLength = fingerprintLengthValues.intVal(doc)
-            (1d /
-              (math.pow(
-                lengthWeight * math.max(0, fingerprintLength - query.queryFingerprintLength),
-                2) + 1)).toFloat
-          }
-
-          def name(): String = "docLenNormalization"
-        })
-
       val keysAndTypes = query.tpe.fold[Query] {
         keys
-      } { tpe =>
-        new TypeFingerprintQuery(
-          fields.fingerprint, tpe, keys,
-          settings.query.fingerprintFrequencyCutoff, settings.query.docBoost.toFloat,
-          docLenBoost)
+      } { tpeQuery =>
+        new TypeFingerprintQuery(fields.fingerprint, tpeQuery, keys, settings.query)
       }
 
       val q = new BooleanQuery
@@ -162,7 +145,6 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     }
 
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
-    doc.add(new NumericDocValuesField(fields.fingerprintLength, entity.tpe.normalize(Nil).typeFingerprint.length))
 
     doc
   }
@@ -181,16 +163,5 @@ object ValueIndex {
     val doc = "doc"
     val entity = "entity"
     val moduleId = "moduleId"
-    val fingerprintLength = "fingerprintLength"
-  }
-
-  class ModuleIdSimilarity extends DefaultSimilarity {
-    override def idf(docFreq: Long, numDocs: Long) = 1f
-  }
-
-  class IdentifierAndWhitespaceDelimiterTokenizer(reader: Reader) extends CharTokenizer(reader) {
-    override def isTokenChar(c: Int): Boolean = {
-      !(Character.isWhitespace(c) || c == '.')
-    }
   }
 }
