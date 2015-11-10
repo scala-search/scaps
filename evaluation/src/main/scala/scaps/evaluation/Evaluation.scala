@@ -99,10 +99,10 @@ object Evaluation extends App {
       baseSettings.modQuery(_.copy(
         views = true)),
       baseRngs ++ Map(
-        penaltyWeight -> Rng.choosedouble(0, 1),
-        distanceBoostWeight -> Rng.choosedouble(0, 2),
+        penaltyWeight -> Rng.choosedouble(0, 0.5),
+        distanceBoostWeight -> Rng.choosedouble(0, 1),
         depthBoostWeight -> Rng.oneof(0d),
-        docBoost -> Rng.choosedouble(0, 2),
+        docBoost -> Rng.choosedouble(0, 1),
         typeFrequencyWeight -> Rng.oneof(1d)))))
 
   var engine = Common.initSearchEngine(baseSettings, evaluationSettings)

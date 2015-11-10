@@ -1,11 +1,9 @@
 package scaps.searchEngine.index
 
 import java.io.Reader
-
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.Try
-
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.core.KeywordAnalyzer
@@ -28,7 +26,6 @@ import org.apache.lucene.search.similarities.DefaultSimilarity
 import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.QueryBuilder
-
 import scalaz.Scalaz._
 import scalaz.{ \/ => \/ }
 import scalaz.syntax.either.ToEitherOps
@@ -39,6 +36,7 @@ import scaps.searchEngine.ApiQuery
 import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
+import org.apache.lucene.index.FieldInvertState
 
 class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
   import ValueIndex._
@@ -77,7 +75,17 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
   private val queryBuilder = new QueryBuilder(analyzer)
 
   override val similarity = new PerFieldSimilarityWrapper {
-    val default = new DefaultSimilarity
+    val default = new DefaultSimilarity {
+      override def lengthNorm(state: FieldInvertState): Float = {
+        val numTerms =
+          if (discountOverlaps)
+            state.getLength - state.getNumOverlap
+          else
+            state.getLength
+
+        state.getBoost * (1.0 / math.pow(numTerms + 10, 0.25)).toFloat
+      }
+    }
 
     override def get(field: String) = field match {
       case fields.moduleId => new DefaultSimilarity {
