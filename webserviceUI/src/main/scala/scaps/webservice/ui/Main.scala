@@ -58,17 +58,17 @@ object Main {
         dom.location.href = DomPages.searchUri(q, ms)
     }
 
-  val positiveAssessment = PublishSubject[(html.Div, Int, String)]
+  val positiveAssessment = PublishSubject[(html.Div, String)]
 
   @JSExport
-  def assessPositively(feedbackElement: html.Div, resultNo: Int, signature: String): Unit = {
-    positiveAssessment.onNext((feedbackElement, resultNo, signature))
+  def assessPositively(feedbackElement: html.Div, signature: String): Unit = {
+    positiveAssessment.onNext((feedbackElement, signature))
     ()
   }
 
   Observable.combineLatest(query, moduleIds, positiveAssessment).foreach {
-    case (query, moduleIds, (feedbackElem, resultNo, signature)) =>
-      scaps.assessPositivley(query, moduleIds, resultNo, signature).call()
+    case (query, moduleIds, (feedbackElem, signature)) =>
+      scaps.assessPositivley(query, moduleIds, signature).call()
         .map(_ => DomPages.feedbackReceived)
         .recover { case _ => DomPages.feedbackError }
         .foreach(answer => replaceContent(feedbackElem, answer.render))

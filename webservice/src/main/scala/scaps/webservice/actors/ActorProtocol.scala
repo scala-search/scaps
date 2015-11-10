@@ -17,7 +17,7 @@ object ActorProtocol {
   case class Search(query: String, moduleIds: Set[String], noResults: Int, offset: Int)
   type ResultSet = String \/ Seq[Result[ValueDef]]
 
-  case class PositiveAssessement(query: String, moduleIds: Set[String], resultNo: Int, signature: String)
+  case class PositiveAssessement(query: String, moduleIds: Set[String], signature: String)
 
   case object GetStatus
 }

@@ -59,6 +59,6 @@ class Scaps(context: ActorRefFactory) extends ScapsApi with ScapsControlApi {
     }
   }
 
-  override def assessPositivley(query: String, moduleIds: Set[String], resultNo: Int, valueSignature: String): Unit =
-    userInteractionLogger ! PositiveAssessement(query, moduleIds, resultNo, valueSignature)
+  override def assessPositivley(query: String, moduleIds: Set[String], valueSignature: String): Unit =
+    userInteractionLogger ! PositiveAssessement(query, moduleIds, valueSignature)
 }

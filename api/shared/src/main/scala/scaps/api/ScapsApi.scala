@@ -36,7 +36,7 @@ trait ScapsApi extends CommonApi {
     noResults: Int = ScapsApi.defaultPageSize,
     offset: Int = 0): Future[Either[String, Seq[Result[ValueDef]]]]
 
-  def assessPositivley(query: String, moduleIds: Set[String], resultNo: Int, valueSignature: String): Unit
+  def assessPositivley(query: String, moduleIds: Set[String], valueSignature: String): Unit
 }
 
 object ScapsApi {

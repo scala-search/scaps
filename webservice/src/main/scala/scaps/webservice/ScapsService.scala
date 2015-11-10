@@ -15,6 +15,7 @@ import spray.http.HttpHeaders._
 import spray.http.CacheDirectives._
 import spray.routing.ExceptionHandler
 import scaps.api.IndexReady
+import scaps.api.ValueDef
 
 class ScapsServiceActor(val apiImpl: Scaps) extends Actor with ScapsService {
   def actorRefFactory = context
@@ -72,19 +73,25 @@ trait ScapsService extends HttpService {
                     modulesFromQuery
                 }
 
-                parameters('q, 'p.as[Int] ? 0) { (query, resultPage) =>
+                parameters('q) { (query) =>
                   if (query.isEmpty())
                     reject
                   else
                     complete {
-                      val resultOffset = resultPage * ScapsApi.defaultPageSize
+                      import scaps.api.Result
+
+                      def groupResults(rs: Seq[Result[ValueDef]]): Seq[(ValueDef, Seq[Result[ValueDef]])] =
+                        rs.groupBy(_.entity.group).toSeq.sortBy(-_._2.head.score)
 
                       for {
                         status <- indexStatus
                         enabledModuleIds <- moduleIds
-                        result <- apiImpl.search(query, moduleIds = enabledModuleIds, offset = resultOffset)
-                        page = HtmlPages.skeleton(status, enabledModuleIds,
-                          result.fold(HtmlPages.queryError(_), HtmlPages.results(resultPage, query, enabledModuleIds, _)), query)
+                        result <- apiImpl.search(query, moduleIds = enabledModuleIds, noResults = 100)
+                        grouped = result.right.map(groupResults _)
+                        content = grouped.fold(
+                          HtmlPages.queryError(_),
+                          HtmlPages.groupedResults(query, enabledModuleIds, _))
+                        page = HtmlPages.skeleton(status, enabledModuleIds, content, query)
                       } yield HttpEntity(MediaTypes.`text/html`, page.toString())
                     }
                 } ~

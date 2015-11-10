@@ -139,13 +139,28 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
   def etaExpanded: TypeRef = this match {
     case TypeRef.MethodInvocation(args, res, v) =>
       TypeRef.Function(args, res.etaExpanded, v)
+    case TypeRef.MemberAccess(owner, member) =>
+      TypeRef.Function(List(owner), member.etaExpanded, Covariant)
     case t =>
       t
   }
 
-  def functionArity: Int = this.normalize(Nil) match {
-    case TypeRef.Function(args, r, v) => args.length + r.functionArity
-    case t                            => 0
+  def curried: TypeRef = etaExpanded match {
+    case TypeRef.Function(Nil, res, v)      => res
+    case TypeRef.Function(a :: Nil, res, v) => TypeRef.Function(List(a.curried), res.curried, v)
+    case TypeRef.Function(a :: as, res, v)  => TypeRef.Function(List(a.curried), TypeRef.Function(as, res, v).curried, v)
+    case t                                  => t.copy(args = args.map(_.curried))
+  }
+
+  def structure: TypeRef = {
+    def inner(t: TypeRef): TypeRef = TypeRef("_", Invariant, Nil, true)
+
+    def outer(t: TypeRef): TypeRef = t match {
+      case TypeRef.Function(as, r, _) => copy(args = as.map(inner) :+ outer(r))
+      case _                          => inner(t)
+    }
+
+    outer(curried)
   }
 }
 

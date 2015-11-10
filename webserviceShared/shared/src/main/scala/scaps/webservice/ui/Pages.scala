@@ -38,8 +38,8 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     def boot(searchFormId: String, resultContainerId: String) =
       s"$main.main(document.getElementById('$searchFormId'), document.getElementById('$resultContainerId'))"
 
-    def assessPositively(feedbackElementId: String, resultNo: Int, value: ValueDef) =
-      s"$main.assessPositively(document.getElementById('$feedbackElementId'), $resultNo, '${value.signature}')"
+    def assessPositively(feedbackElementId: String, value: ValueDef) =
+      s"$main.assessPositively(document.getElementById('$feedbackElementId'), '${value.signature}')"
   }
 
   def searchUri(query: String, enabledModuleIds: Set[String] = Set(), page: Int = 0) = {
@@ -61,8 +61,10 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
         meta(httpEquiv := "X-UA-Compatible", content := "IE=edge"),
         meta(name := "viewport", content := "width=device-width, initial-scale=1"),
         title(pageTitle),
-        stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"),
+        stylesheet("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"),
         stylesheet("docStyles.css"),
+        javascript("https://code.jquery.com/jquery-2.1.4.min.js"),
+        javascript("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"),
         if (prodMode)
           javascript("scaps-webservice-ui-opt.js")
         else
@@ -149,27 +151,37 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def error(msg: String) =
     div(cls := "alert alert-danger")(msg)
 
-  def results(currentPage: Int, query: String, enabledModuleIds: Set[String], results: Seq[Result[ValueDef]]) = {
-    val pager =
-      nav(
-        ul(cls := "pager")(
-          when(currentPage > 0) {
-            li(cls := "previous")(a(href := searchUri(query, enabledModuleIds, currentPage - 1))(raw("&larr; Previous")))
-          },
-          when(results.size == ScapsApi.defaultPageSize) {
-            li(cls := "previous")(a(href := searchUri(query, enabledModuleIds, currentPage + 1))(raw("Next &rarr;")))
-          }))
+  def groupedResults(query: String, enabledModuleIds: Set[String], results: Seq[(ValueDef, Seq[Result[ValueDef]])]): Modifier =
+    div(results.toList.map((group _).tupled))
 
-    val renderedResults = results
-      .zipWithIndex
-      .map { case (res, idx) => result((currentPage * ScapsApi.defaultPageSize) + idx, res) }
+  def group(key: ValueDef, results: Seq[Result[ValueDef]]): Modifier = {
+    def prty(tpe: TypeRef): String = tpe match {
+      case TypeRef.Function(a :: Nil, res, _) => prty(a) + " => " + prty(res)
+      case t                                  => t.name
+    }
 
-    div(
-      dl(renderedResults),
-      pager)
+    val keyId = key.signature.hashCode().toString
+
+    val bestMatch = dl(marginBottom := 10.px, result(results.head))
+
+    val remaining =
+      if (results.tail.isEmpty)
+        None
+      else {
+        Some(
+          div(cls := "panel panel-default",
+            div(cls := "panel-heading",
+              a(data("toggle") := "collapse", href := "#" + keyId, aria.expanded := false, aria.controls := keyId,
+                results.tail.length + " more results matching ", strong(key.name + ": " + prty(key.tpe)))),
+            div(id := keyId, cls := "panel-collapse collapse",
+              div(cls := "panel-body",
+                dl(results.tail.map(result))))))
+      }
+
+    div(bestMatch, remaining)
   }
 
-  def result(resultNo: Int, res: Result[ValueDef]) = {
+  def result(res: Result[ValueDef]) = {
     val typeParamStyle = color := "#999999"
     val value = res.entity
 
@@ -223,7 +235,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
 
       div(id := feedbackElemId, display.inline)(
         a(href := "javascript:void(0);",
-          onclick := jsCallbacks.assessPositively(feedbackElemId, resultNo, value))(
+          onclick := jsCallbacks.assessPositively(feedbackElemId, value))(
             span(cls := "glyphicon glyphicon-thumbs-up"), " This is what i've been looking for"))
     }
 

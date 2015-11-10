@@ -16,7 +16,7 @@ class UserInteractionLogger extends Actor {
     case (Search(query, moduleIds, noResults, offset), \/-(_)) =>
       val page = offset / noResults
       logger.info(s"succeeded; $query; $moduleIds; $page;")
-    case PositiveAssessement(query, resultNo, moduleIds, signature) =>
-      logger.info(s"plusOne; $query; $moduleIds; $resultNo; $signature;")
+    case PositiveAssessement(query, moduleIds, signature) =>
+      logger.info(s"plusOne; $query; $moduleIds; $signature;")
   }
 }

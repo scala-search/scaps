@@ -74,6 +74,8 @@ case class ValueDef(
     s"$name$params: ${tpe.signature}"
   }
 
+  lazy val group = ValueDef(EntityName.splitName(name).last, Nil, tpe.curried.structure, DocComment.empty, Set(), Module.Unknown, None)
+
   def typeFingerprint: List[String] =
     tpe.normalize(typeParameters).typeFingerprint
 
