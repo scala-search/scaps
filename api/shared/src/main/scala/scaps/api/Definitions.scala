@@ -66,12 +66,14 @@ case class ValueDef(
   /**
    * A unique description of the value including its name and type.
    */
-  def signature: String = {
+  def signature: String = signature(false)
+
+  def signature(withImplicits: Boolean): String = {
     val params = typeParameters match {
       case Nil => ""
       case ps  => ps.mkString("[", ", ", "]")
     }
-    s"$name$params: ${tpe.signature}"
+    s"$name$params: ${tpe.signature(withImplicits)}"
   }
 
   lazy val group = ValueDef(EntityName.splitName(name).last, Nil, tpe.curried.structure, DocComment.empty, Set(), Module.Unknown, None)

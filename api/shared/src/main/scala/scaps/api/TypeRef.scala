@@ -21,14 +21,16 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
     s"${variance.prefix}$name$argStr"
   }
 
-  def signature: String =
+  def signature: String = signature(false)
+
+  def signature(withImplicits: Boolean): String =
     this match {
-      case Implicit(t, _) =>
-        t.signature
+      case Implicit(t, _) if !withImplicits =>
+        t.signature(withImplicits)
       case _ =>
         val argStr = args match {
           case Nil => ""
-          case as  => as.map(_.signature).mkString("[", ", ", "]")
+          case as  => as.map(_.signature(withImplicits)).mkString("[", ", ", "]")
         }
         s"$name$argStr"
     }
@@ -153,7 +155,10 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
   }
 
   def structure: TypeRef = {
-    def inner(t: TypeRef): TypeRef = TypeRef("_", Invariant, Nil, true)
+    def inner(t: TypeRef): TypeRef = t match {
+      case TypeRef.Implicit(a, v) => TypeRef.Implicit(inner(a), v)
+      case _                      => TypeRef("_", Invariant, Nil, true)
+    }
 
     def outer(t: TypeRef): TypeRef = t match {
       case TypeRef.Function(as, r, _) => copy(args = as.map(inner) :+ outer(r))

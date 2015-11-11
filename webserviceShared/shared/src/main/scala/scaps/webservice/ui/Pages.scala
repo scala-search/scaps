@@ -157,10 +157,11 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
   def group(key: ValueDef, results: Seq[Result[ValueDef]]): Modifier = {
     def prty(tpe: TypeRef): String = tpe match {
       case TypeRef.Function(a :: Nil, res, _) => prty(a) + " => " + prty(res)
+      case TypeRef.Implicit(a, _)             => "?" + prty(a)
       case t                                  => t.name
     }
 
-    val keyId = key.signature.hashCode().toString
+    val keyId = key.signature(true).hashCode().toString
 
     val bestMatch = dl(marginBottom := 10.px, result(results.head))
 
