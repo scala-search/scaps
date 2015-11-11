@@ -157,6 +157,7 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
   def structure: TypeRef = {
     def inner(t: TypeRef): TypeRef = t match {
       case TypeRef.Implicit(a, v) => TypeRef.Implicit(inner(a), v)
+      case TypeRef.Repeated(a, v) => TypeRef.Repeated(inner(a), v)
       case _                      => TypeRef("_", Invariant, Nil, true)
     }
 

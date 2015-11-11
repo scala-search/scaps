@@ -158,6 +158,7 @@ abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder
     def prty(tpe: TypeRef): String = tpe match {
       case TypeRef.Function(a :: Nil, res, _) => prty(a) + " => " + prty(res)
       case TypeRef.Implicit(a, _)             => "?" + prty(a)
+      case TypeRef.Repeated(a, _)             => prty(a) + "*"
       case t                                  => t.name
     }
 
