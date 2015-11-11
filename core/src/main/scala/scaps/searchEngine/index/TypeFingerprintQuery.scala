@@ -48,7 +48,7 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
         val fingerprint = reader.document(doc).getValues(field)
 
         val (fpScore, penalty, exp) = scorer.score(fingerprint)
-        val penalized = (1d / (math.pow(settings.penaltyWeight * penalty, 2) + 1)).toFloat * fpScore
+        val penalized = (1f / (settings.penaltyWeight.toFloat * penalty + 1f)) * fpScore
 
         (penalized, penalty, exp)
       }
