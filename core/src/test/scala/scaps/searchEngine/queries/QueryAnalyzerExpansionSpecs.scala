@@ -18,6 +18,7 @@ import scaps.api.Variance
 import scaps.api.ViewDef
 import scaps.scala.featureExtraction.Scala
 import scaps.api.Module
+import scaps.api.Invariant
 
 class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
@@ -25,10 +26,10 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   /*
    * Mocked type hierarchies:
    *
-   *        A          X          Box[+T]      Box[C]       Box[C]       MyBox[Loop]    Bag[+T]  Y   Tup[+T1, +T2]
-   *        ^                       ^            ^            ^              ^            ^      ^
-   *    /---|---\                   |            |            |              |            |      |
-   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]   Loop[+T]        YBag[+T]
+   *        A          X          Box[+T]      Box[C]       Box[C]       MyBox[Loop]    Bag[+T]  Y   Tup[+T1, +T2]  Map[K, +V]
+   *        ^                       ^            ^            ^              ^            ^      ^                      ^
+   *    /---|---\                   |            |            |              |            |      |                      |
+   *    B       C                MyBox[+T]      CBox    GenericCBox[+T]   Loop[+T]        YBag[+T]                 HMap[K, +V]
    *            ^                                                            ^
    *            |                                                            |
    *            D                                                        MyLoop[+T]
@@ -41,6 +42,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val Y = new TypeRef.PrimitiveType("Y")
 
   val T = (v: Variance) => TypeRef("T", v, Nil, isTypeParam = true)
+  val U = (v: Variance) => TypeRef("U", v, Nil, isTypeParam = true)
   val Wildcard = (v: Variance) => TypeRef("_", v, Nil, isTypeParam = true)
 
   val Box = new TypeRef.GenericType("Box")
@@ -52,6 +54,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val Bag = new TypeRef.GenericType("Bag")
   val YBag = new TypeRef.GenericType("YBag")
   val Tup = new TypeRef.VariantType("Tup")
+  val Map = (K: TypeRef, V: TypeRef, v: Variance) => TypeRef("Map", v, List(K.withVariance(Invariant), V.withVariance(v)))
+  val HMap = (K: TypeRef, V: TypeRef, v: Variance) => TypeRef("HMap", v, List(K.withVariance(Invariant), V.withVariance(v)))
 
   val views = {
     def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef) =
@@ -71,7 +75,8 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
       isSubTypeOf(v => MyLoop(T(v), v), v => MyBox(Loop(T(v), v), v)),
       isSubTypeOf(v => MyLoop(T(v), v), v => Box(Loop(T(v), v), v)),
       isSubTypeOf(v => YBag(T(v), v), v => Bag(T(v), v)),
-      isSubTypeOf(v => YBag(T(v), v), Y(_))).flatten
+      isSubTypeOf(v => YBag(T(v), v), Y(_)),
+      isSubTypeOf(v => HMap(T(v), U(v), v), v => Map(T(v), U(v), v))).flatten
   }
 
   "the query analyzer expansion" should "split a simple type query into its parts" in {
@@ -246,6 +251,22 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
           Sum(
             Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
             Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 1))))))
+  }
+
+  it should "" in {
+    val q = Map(A(Invariant), B(Covariant), Covariant)
+
+    expand(q) should be(unified(
+      Sum(
+        Max(
+          Sum(
+            Leaf(Map(Wildcard(Invariant), Wildcard(Covariant), Covariant), 1d / 3, 0, 1),
+            Leaf(A(Invariant), 1d / 3, 1, 1),
+            Leaf(B(Covariant), 1d / 3, 1, 1)),
+          Sum(
+            Leaf(HMap(Wildcard(Invariant), Wildcard(Covariant), Covariant), 1d / 3, 0, 0.5f),
+            Leaf(A(Invariant), 1d / 3, 1, 1),
+            Leaf(B(Covariant), 1d / 3, 1, 1))))))
   }
 
   val viewIndex = {

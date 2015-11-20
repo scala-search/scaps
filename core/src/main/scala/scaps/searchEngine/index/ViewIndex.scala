@@ -42,7 +42,7 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
       .distinct
   }
 
-  private def findViews(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =
+  def findViews(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =
     Try {
       val altsOfGenericTpe =
         if (tpe.args.exists(!_.isTypeParam))

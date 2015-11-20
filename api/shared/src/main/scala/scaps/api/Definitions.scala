@@ -136,7 +136,7 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
   def apply(t: TypeRef): Option[TypeRef] = {
     val paramMap = findParamMap(from, t)
     Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
-      to(paramWithArg._1, paramWithArg._2)
+      t(paramWithArg._1, paramWithArg._2)
     })
   }
 
