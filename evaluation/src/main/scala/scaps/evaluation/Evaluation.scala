@@ -18,98 +18,80 @@ object Evaluation extends App {
 
   val evaluationSettings = EvaluationSettings.fromApplicationConf
 
-  val baseSettings = Settings.fromApplicationConf.modQuery(_.copy(
-    maxResults = 100,
-    views = false,
-    fingerprintFrequencyCutoff = 0.8,
-    explainScores = false))
+  val baseSettings = Settings.fromApplicationConf
+    .modQuery(_.copy(
+      maxResults = 100,
+      views = false,
+      fingerprintFrequencyCutoff = 0.8))
 
   val baseRngs = Map[String, Rng[Double]](
-    penaltyWeight -> Rng.choosedouble(0, 0.5),
-    docBoost -> Rng.oneof(0.05))
+    depthBoostWeight -> Rng.oneof(0d))
     .withDefaultValue(Rng.oneof(0d))
 
   // (name, number of configurations tested, configuration generator)
   val runs: List[(String, Int, Rng[Settings])] = List(
-    //    ("Baseline", 50, randomize(
-    //      baseSettings,
-    //      baseRngs ++ Map(
-    //        nameBoost -> Rng.oneof(0.1),
-    //        docBoost -> Rng.choosedouble(0, 0.5)))),
-    //    ("Baseline+All", 500, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        fractions = true)),
-    //      baseRngs ++ Map(
-    //        depthBoostWeight -> Rng.choosedouble(0, 2),
-    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM", 50, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true)),
-    //      baseRngs)),
-    //    ("FEM+Di", 50, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true)),
-    //      baseRngs ++ Map(
-    //        distanceBoostWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM+De", 50, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true)),
-    //      baseRngs ++ Map(
-    //        depthBoostWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM+TF", 50, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true)),
-    //      baseRngs ++ Map(
-    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM+Fr", 50, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true,
-    //        fractions = true)),
-    //      baseRngs)),
-    //    ("FEM-Di", 500, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true,
-    //        fractions = true)),
-    //      baseRngs ++ Map(
-    //        depthBoostWeight -> Rng.choosedouble(0, 2),
-    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM-De", 500, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true,
-    //        fractions = true)),
-    //      baseRngs ++ Map(
-    //        distanceBoostWeight -> Rng.choosedouble(0, 2),
-    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM-TF", 500, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true,
-    //        fractions = true)),
-    //      baseRngs ++ Map(
-    //        distanceBoostWeight -> Rng.choosedouble(0, 2),
-    //        depthBoostWeight -> Rng.choosedouble(0, 2)))),
-    //    ("FEM-Fr", 500, randomize(
-    //      baseSettings.modQuery(_.copy(
-    //        views = true,
-    //        fractions = false)),
-    //      baseRngs ++ Map(
-    //        distanceBoostWeight -> Rng.choosedouble(0, 2),
-    //        depthBoostWeight -> Rng.choosedouble(0, 2),
-    //        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("FEM+All", 500, randomize(
-      baseSettings.modQuery(_.copy(
-        views = true)),
+    ("I0: Baseline", 1, randomize(
+      baseSettings
+        .modIndex(_.copy(polarizedTypes = false))
+        .modQuery(_.copy(views = false)),
+      baseRngs ++ Map(
+        penaltyWeight -> Rng.oneof(0d),
+        distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
+        docBoost -> Rng.oneof(0.4d),
+        typeFrequencyWeight -> Rng.oneof(0d)))),
+    ("I1: Penalized", 20, randomize(
+      baseSettings
+        .modIndex(_.copy(polarizedTypes = false))
+        .modQuery(_.copy(views = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.5),
-        distanceBoostWeight -> Rng.choosedouble(0, 1),
-        depthBoostWeight -> Rng.oneof(0d),
-        docBoost -> Rng.choosedouble(0, 1),
+        distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
+        docBoost -> Rng.oneof(0.4d),
+        typeFrequencyWeight -> Rng.oneof(0d)))),
+    ("I2: ITF", 20, randomize(
+      baseSettings
+        .modIndex(_.copy(polarizedTypes = false))
+        .modQuery(_.copy(views = false)),
+      baseRngs ++ Map(
+        penaltyWeight -> Rng.choosedouble(0, 0.5),
+        distanceBoostWeight -> Rng.oneof(0d),
+        docBoost -> Rng.oneof(0.4d),
+        typeFrequencyWeight -> Rng.oneof(1d)))),
+    ("I3: Polarized", 20, randomize(
+      baseSettings
+        .modIndex(_.copy(polarizedTypes = true))
+        .modQuery(_.copy(views = false)),
+      baseRngs ++ Map(
+        penaltyWeight -> Rng.choosedouble(0, 0.5),
+        distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
+        docBoost -> Rng.oneof(0.4d),
+        typeFrequencyWeight -> Rng.oneof(0d)))),
+    ("I4: ITF & Polarized", 20, randomize(
+      baseSettings
+        .modIndex(_.copy(polarizedTypes = true))
+        .modQuery(_.copy(views = false)),
+      baseRngs ++ Map(
+        penaltyWeight -> Rng.choosedouble(0, 0.5),
+        distanceBoostWeight -> Rng.oneof(0d),
+        docBoost -> Rng.oneof(0.4d),
+        typeFrequencyWeight -> Rng.oneof(1d)))),
+    ("I5: FEM", 100, randomize(
+      baseSettings
+        .modIndex(_.copy(polarizedTypes = true))
+        .modQuery(_.copy(views = true)),
+      baseRngs ++ Map(
+        penaltyWeight -> Rng.choosedouble(0, 0.5),
+        distanceBoostWeight -> Rng.choosedouble(0, 2),
+        docBoost -> Rng.oneof(0.4d),
         typeFrequencyWeight -> Rng.oneof(1d)))))
 
   var engine = Common.initSearchEngine(baseSettings, evaluationSettings)
 
   using(new FileWriter(outputFile)) { writer =>
     val headers = List(
+      "rid",
       "run",
+      "polarized-types",
       QuerySettings.views,
       QuerySettings.penaltyWeight,
       QuerySettings.distanceBoostWeight,
@@ -124,8 +106,11 @@ object Evaluation extends App {
     println(headers.mkString("", "; ", ";\n"))
     writer.write(headers.mkString("", "; ", ";\n"))
 
-    runs.foreach {
-      case (runName, noConfigurations, settingsGenerator) =>
+    val queryHeaders = List("rid", "run", "qid", "query", "AP", "R@10")
+    using(new FileWriter(queryDetailsOutputFile)) { w => w.write(queryHeaders.mkString("", "; ", ";\n")) }
+
+    runs.zipWithIndex.foreach {
+      case ((runName, noConfigurations, settingsGenerator), ridx) =>
         println(s"start '$runName'")
         val allStats = settingsGenerator.fill(noConfigurations).runUnsafe(Math.pow(42, 42).toLong).map { settings =>
           engine = Common.updateSearchEngine(engine, settings)
@@ -136,7 +121,9 @@ object Evaluation extends App {
             },
             stats => {
               val cells = List[Any](
+                ridx,
                 runName,
+                settings.index.polarizedTypes,
                 settings.query.views,
                 settings.query.penaltyWeight,
                 settings.query.distanceBoostWeight,
@@ -146,7 +133,7 @@ object Evaluation extends App {
                 settings.query.fingerprintFrequencyCutoff,
                 stats.meanAveragePrecision,
                 stats.meanRecallAt10,
-                stats.duration.toMillis)
+                stats.meanDuration.toMillis)
 
               println(cells.mkString("", "; ", ";\n"))
               writer.write(cells.mkString("", "; ", ";\n"))
@@ -155,10 +142,25 @@ object Evaluation extends App {
             })
         }
 
+        val run = RunStats(runName, allStats)
+
         using(new FileWriter(statsOutputFile, true)) { statsWriter =>
-          val run = RunStats(runName, allStats)
           println(run)
           statsWriter.write(run.toString)
+        }
+
+        using(new FileWriter(queryDetailsOutputFile, true)) { writer =>
+          run.topByMAP._1.queryStats.foreach { qs =>
+            val cells = List[Any](
+              ridx,
+              runName,
+              qs.id,
+              qs.query,
+              qs.averagePrecision,
+              qs.recallAt10)
+
+            writer.write(cells.mkString("", "; ", ";\n"))
+          }
         }
     }
   }.get
@@ -194,6 +196,11 @@ object Evaluation extends App {
     new File(outputDir).mkdirs()
     new File(s"$outputDir/evaluation-stats-${format.format(now)}.txt")
   }
+
+  def queryDetailsOutputFile() = {
+    new File(outputDir).mkdirs()
+    new File(s"$outputDir/evaluation-queries-${format.format(now)}.csv")
+  }
 }
 
 case class RunStats(name: String, stats: List[(Stats, List[Any])]) {
@@ -201,7 +208,7 @@ case class RunStats(name: String, stats: List[(Stats, List[Any])]) {
   def topByR10 = stats.maxBy(_._1.meanRecallAt10)
   def avgMAP = stats.map(_._1.meanAveragePrecision).sum / stats.length
   def avgR10 = stats.map(_._1.meanRecallAt10).sum / stats.length
-  def avgRuntime = stats.map(_._1.queryStats.map(_.duration).reduce(_ + _)).reduce(_ + _) / stats.length
+  def avgRuntime = stats.map(_._1.meanDuration).reduce(_ + _) / stats.length
 
   override def toString =
     s"""

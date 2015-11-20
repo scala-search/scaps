@@ -30,7 +30,7 @@ object Benchmark extends App {
       val queryData = stats.queryStats.map { qs =>
         runInfo ::: qs.query :: qs.averagePrecision :: qs.recallAt10 :: qs.duration.toMillis :: Nil
       }
-      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision :: stats.meanRecallAt10 :: stats.duration.toMillis :: Nil)
+      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision :: stats.meanRecallAt10 :: stats.meanDuration.toMillis :: Nil)
     })
 
   val csvRows = entries.map(_.mkString("", "; ", ";"))

@@ -117,6 +117,7 @@ private[queries] object ExpandedQuery {
  * `findTypeDefsBySuffix` and `findAlternativesWithDistance`
  */
 class QueryAnalyzer private[searchEngine] (
+    polarizedTypes: Boolean,
     settings: QuerySettings,
     findTypeDefsBySuffix: (String) => Seq[TypeDef],
     findAlternativesWithDistance: (TypeRef) => Seq[(TypeRef, Float)]) {
@@ -131,8 +132,9 @@ class QueryAnalyzer private[searchEngine] (
       case RawQuery.Full(keys, tpe) =>
         for {
           resolved <- resolveNames(tpe)
-          normalizedType = toType(resolved).normalize(Nil)
-          expanded = ExpandedQuery.minimize(expandQuery(normalizedType))
+          normalized = toType(resolved).normalize(Nil)
+          polarized = if (polarizedTypes) normalized else normalized.withVariance(Invariant)
+          expanded = ExpandedQuery.minimize(expandQuery(polarized))
           typeQuery = toApiTypeQuery(expanded)
         } yield {
           ApiQuery(keys, Some(typeQuery))

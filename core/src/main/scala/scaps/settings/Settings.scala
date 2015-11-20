@@ -39,7 +39,8 @@ object Settings {
 case class IndexSettings(
     indexDir: String,
     timeout: Duration,
-    typeFrequenciesSampleSize: Int) {
+    typeFrequenciesSampleSize: Int,
+    polarizedTypes: Boolean) {
 
   val typeDefsDir = new File(indexDir + "/typeDefs")
   val modulesDir = new File(indexDir + "/modules")
@@ -55,7 +56,8 @@ object IndexSettings {
     IndexSettings(
       conf.getString("index-dir"),
       conf.getDuration("timeout", TimeUnit.MILLISECONDS).millis,
-      conf.getInt("type-frequencies-sample-size"))
+      conf.getInt("type-frequencies-sample-size"),
+      conf.getBoolean("polarized-types"))
 }
 
 case class QuerySettings(

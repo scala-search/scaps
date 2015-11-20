@@ -22,10 +22,10 @@ import scaps.utils.timers
 
 object Common extends Logging {
   def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
-    queriesWithRelevantDocs.map {
-      case (query, relevantResults) =>
+    queriesWithRelevantDocs.zipWithIndex.map {
+      case ((query, relevantResults), idx) =>
         val (res, dur) = timers.withTime(engine.search(query).get)
-        res.map(results => QueryStats(query, results.map(_.entity.signature), relevantResults, dur))
+        res.map(results => QueryStats(idx, query, results.map(_.entity.signature), relevantResults, dur))
     }.sequenceU.map(Stats(_))
   }
 

@@ -37,6 +37,7 @@ import scaps.searchEngine.ProcessingError
 import scaps.searchEngine.TooUnspecific
 import scaps.settings.Settings
 import org.apache.lucene.index.FieldInvertState
+import scaps.api.Invariant
 
 class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef] {
   import ValueIndex._
@@ -148,8 +149,12 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     doc.add(new TextField(fields.doc, (entity.name + "\n").multiply(2) + entity.comment.indexableContent, Store.NO))
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
 
-    entity.typeFingerprint.foreach { fp =>
-      doc.add(new TextField(fields.fingerprint, fp, Store.YES))
+    val fp =
+      if (settings.index.polarizedTypes) entity.typeFingerprint
+      else entity.tpe.normalize(entity.typeParameters).withVariance(Invariant).typeFingerprint
+
+    fp.foreach { term =>
+      doc.add(new TextField(fields.fingerprint, term, Store.YES))
     }
 
     doc.add(new StoredField(fields.entity, upickle.write(entity)))

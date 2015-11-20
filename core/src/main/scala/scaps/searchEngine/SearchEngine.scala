@@ -118,7 +118,8 @@ class SearchEngine private[searchEngine] (
       val tfs = TypeFrequencies(
         viewIndex.findAlternativesWithDistance(_, Set()).get.map(_._1),
         valueIndex.allEntities().get,
-        settings.index.typeFrequenciesSampleSize)
+        settings.index.typeFrequenciesSampleSize,
+        settings.index.polarizedTypes)
 
       typeIndex.updateTypeFrequencies(tfs)
 
@@ -167,6 +168,7 @@ class SearchEngine private[searchEngine] (
         typeIndex.findTypeDefsBySuffix(suffix, moduleIds).get
 
       val analyzer = new QueryAnalyzer(
+        settings.index.polarizedTypes,
         settings.query,
         Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),
         Memo.mutableHashMapMemo(viewIndex.findAlternativesWithDistance(_, moduleIds).get))

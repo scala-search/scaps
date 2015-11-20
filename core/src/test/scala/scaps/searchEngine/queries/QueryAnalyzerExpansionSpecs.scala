@@ -255,6 +255,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   }
 
   val analyzer = new QueryAnalyzer(
+    Settings.fromApplicationConf.index.polarizedTypes,
     Settings.fromApplicationConf.query,
     _ => ???,
     viewIndex.findAlternativesWithDistance(_).get.filter(_._1.name != TypeRef.Nothing.name))

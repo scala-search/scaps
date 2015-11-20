@@ -213,6 +213,8 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
     val viewsIndex = new ViewIndex(new RAMDirectory)
     viewsIndex.addEntities(views)
 
-    new QueryAnalyzer(settings, findTypeDefsBySuffix, viewsIndex.findAlternativesWithDistance(_).get)
+    new QueryAnalyzer(
+      Settings.fromApplicationConf.index.polarizedTypes,
+      settings, findTypeDefsBySuffix, viewsIndex.findAlternativesWithDistance(_).get)
   }
 }

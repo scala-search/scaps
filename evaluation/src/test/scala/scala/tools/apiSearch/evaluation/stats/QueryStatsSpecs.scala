@@ -65,8 +65,8 @@ class QueryStatsSpecs extends FreeSpec with Matchers {
   }
 
   def avep(results: Seq[Int], relevant: Set[Int]) =
-    QueryStats[Int]("", results, relevant, Duration.Zero).averagePrecision
+    QueryStats[Int](0, "", results, relevant, Duration.Zero).averagePrecision
 
   def recall10(results: Seq[Int], relevant: Set[Int]) =
-    QueryStats[Int]("", results, relevant, Duration.Zero).recallAt10
+    QueryStats[Int](0, "", results, relevant, Duration.Zero).recallAt10
 }
