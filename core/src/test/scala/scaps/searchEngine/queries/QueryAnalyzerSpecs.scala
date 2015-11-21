@@ -136,15 +136,6 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
       include("scala.Any"))
   }
 
-  it should "yield a lower boost for types in deeper nested positions" in {
-    val res = expectSuccess("(Float, (Int, _))")
-
-    val Float = res.allTypes.find(_.typeName == TypeRef.Float.name).get
-    val Int = res.allTypes.find(_.typeName == TypeRef.Int.name).get
-
-    Float.boost should be > (Int.boost)
-  }
-
   it should "yield a boost of 1 for a single type" in {
     val res = expectSuccess("Aa")
 

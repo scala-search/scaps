@@ -1,5 +1,9 @@
 package scaps.api
 
+case class FingerprintTerm(variance: Variance, tpe: String) {
+  override def toString = s"${variance.prefix}$tpe"
+}
+
 case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isTypeParam: Boolean = false) {
   import TypeRef._
 
@@ -47,15 +51,16 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
         s"${variance.prefix}$name$argStr"
     }
 
-  def fingerprint: String = s"${variance.prefix}$name"
+  def term: FingerprintTerm = FingerprintTerm(variance, name)
 
-  def typeFingerprint: List[String] = this.toList
+  def fingerprint: List[FingerprintTerm] = this.toList
     .filter {
       case TypeRef.Ignored(_, _) => false
       case _                     => true
     }
-    .map(_.fingerprint)
-    .sorted
+    .map(_.term)
+
+  def fingerprintStrings: List[String] = fingerprint.map(_.toString).sorted
 
   def toList: List[TypeRef] = this :: args.flatMap(_.toList)
 

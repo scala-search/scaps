@@ -16,7 +16,7 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = 1
       }
       """)(
-      ("p.O.i", _.typeFingerprint should be(List(TypeRef.Int(Covariant).fingerprint))))
+      ("p.O.i", _.typeFingerprint should be(List(TypeRef.Int(Covariant).term.toString))))
   }
 
   it should "support repeated types" in {

@@ -151,7 +151,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 
     val fp =
       if (settings.index.polarizedTypes) entity.typeFingerprint
-      else entity.tpe.normalize(entity.typeParameters).withVariance(Invariant).typeFingerprint
+      else entity.tpe.normalize(entity.typeParameters).withVariance(Invariant).fingerprintStrings
 
     fp.foreach { term =>
       doc.add(new TextField(fields.fingerprint, term, Store.YES))

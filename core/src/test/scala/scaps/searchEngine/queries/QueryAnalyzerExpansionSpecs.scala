@@ -186,22 +186,22 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     val innerBoxParts =
       Max(
         Sum(
-          Leaf(Box(Wildcard(Covariant)), 1d / 4, 1, 1),
+          Leaf(Box(Wildcard(Covariant)), 1d / 3, 1, 1),
           Max(
-            Leaf(B(Covariant), 1d / 4, 2, 1))),
+            Leaf(B(Covariant), 1d / 3, 2, 1))),
         Sum(
-          Leaf(MyBox(Wildcard(Covariant)), 1d / 4, 1, 0.5f),
+          Leaf(MyBox(Wildcard(Covariant)), 1d / 3, 1, 0.5f),
           Max(
-            Leaf(B(Covariant), 1d / 4, 2, 1))))
+            Leaf(B(Covariant), 1d / 3, 2, 1))))
 
     expand(q) should be(unified(
       Sum(
         Max(
           Sum(
-            Leaf(Box(Wildcard(Covariant)), 1d / 2, 0, 1),
+            Leaf(Box(Wildcard(Covariant)), 1d / 3, 0, 1),
             innerBoxParts),
           Sum(
-            Leaf(MyBox(Wildcard(Covariant)), 1d / 2, 0, 0.5f),
+            Leaf(MyBox(Wildcard(Covariant)), 1d / 3, 0, 0.5f),
             innerBoxParts)))))
   }
 
@@ -246,14 +246,14 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
             Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
             Leaf(A(Contravariant), 1d / 2, 1, 1)),
           Sum(
-            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
-            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 1)),
+            Leaf(MyBox(Wildcard(Contravariant), Contravariant), 1d / 3, 0, 0.5f),
+            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 3, 1, 1)),
           Sum(
-            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 2, 0, 0.5f),
-            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 2, 1, 1))))))
+            Leaf(Box(Wildcard(Contravariant), Contravariant), 1d / 3, 0, 0.5f),
+            Leaf(Loop(Wildcard(Contravariant), Contravariant), 1d / 3, 1, 1))))))
   }
 
-  it should "" in {
+  it should "expand types with multiple args" in {
     val q = Map(A(Invariant), B(Covariant), Covariant)
 
     expand(q) should be(unified(
@@ -278,7 +278,7 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
   val analyzer = new QueryAnalyzer(
     Settings.fromApplicationConf.index.polarizedTypes,
     Settings.fromApplicationConf.query,
-    _ => ???,
+    _ => Nil,
     viewIndex.findAlternativesWithDistance(_).get.filter(_._1.name != TypeRef.Nothing.name))
 
   def expand(q: TypeRef) =

@@ -79,7 +79,7 @@ case class ValueDef(
   lazy val group = ValueDef(EntityName.splitName(name).last, Nil, tpe.curried.structure, DocComment.empty, Set(), Module.Unknown, None)
 
   def typeFingerprint: List[String] =
-    tpe.normalize(typeParameters).typeFingerprint
+    tpe.normalize(typeParameters).fingerprintStrings
 
   def withoutComment = copy(comment = DocComment.empty)
 
