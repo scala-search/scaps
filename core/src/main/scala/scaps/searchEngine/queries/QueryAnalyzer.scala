@@ -283,11 +283,17 @@ class QueryAnalyzer private[searchEngine] (
     def apply(tpe: TypeRef, norm: Double): TermSpecifity = {
       val fp = tpe.fingerprint
 
-      val itfs = tpe.fingerprint.map(t => (t, math.sqrt(1 - getFrequency(t))))
+      val itfs = tpe.fingerprint.map(t => (t, math.sqrt(1 - frequency(t))))
       val sum = itfs.map(_._2).sum
 
       TermSpecifity(itfs.map { case (t, itf) => (t, norm * itf / sum) }.toMap)
     }
+
+    val frequency =
+      if (settings.termSpecifity)
+        getFrequency _
+      else
+        (_: FingerprintTerm) => 0f
   }
 
   private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {

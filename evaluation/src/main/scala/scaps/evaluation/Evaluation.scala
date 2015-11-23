@@ -32,8 +32,11 @@ object Evaluation extends App {
   val runs: List[(String, Int, Rng[Settings])] = List(
     ("I0: Baseline", 1, randomize(
       baseSettings
-        .modIndex(_.copy(polarizedTypes = false))
-        .modQuery(_.copy(views = false)),
+        .modIndex(_.copy(
+          polarizedTypes = false))
+        .modQuery(_.copy(
+          views = false,
+          termSpecifity = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
         distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
@@ -41,8 +44,11 @@ object Evaluation extends App {
         typeFrequencyWeight -> Rng.oneof(0d)))),
     ("I1: Penalized", 20, randomize(
       baseSettings
-        .modIndex(_.copy(polarizedTypes = false))
-        .modQuery(_.copy(views = false)),
+        .modIndex(_.copy(
+          polarizedTypes = false))
+        .modQuery(_.copy(
+          views = false,
+          termSpecifity = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.5),
         distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
@@ -50,8 +56,11 @@ object Evaluation extends App {
         typeFrequencyWeight -> Rng.oneof(0d)))),
     ("I2: ITF", 20, randomize(
       baseSettings
-        .modIndex(_.copy(polarizedTypes = false))
-        .modQuery(_.copy(views = false)),
+        .modIndex(_.copy(
+          polarizedTypes = false))
+        .modQuery(_.copy(
+          views = false,
+          termSpecifity = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.5),
         distanceBoostWeight -> Rng.oneof(0d),
@@ -59,26 +68,47 @@ object Evaluation extends App {
         typeFrequencyWeight -> Rng.oneof(1d)))),
     ("I3: Polarized", 20, randomize(
       baseSettings
-        .modIndex(_.copy(polarizedTypes = true))
-        .modQuery(_.copy(views = false)),
+        .modIndex(_.copy(
+          polarizedTypes = true))
+        .modQuery(_.copy(
+          views = false,
+          termSpecifity = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.5),
         distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
         docBoost -> Rng.oneof(0.4d),
         typeFrequencyWeight -> Rng.oneof(0d)))),
-    ("I4: ITF & Polarized", 20, randomize(
+    ("I4: Specifities", 20, randomize(
       baseSettings
-        .modIndex(_.copy(polarizedTypes = true))
-        .modQuery(_.copy(views = false)),
+        .modIndex(_.copy(
+          polarizedTypes = false))
+        .modQuery(_.copy(
+          views = false,
+          termSpecifity = true)),
+      baseRngs ++ Map(
+        penaltyWeight -> Rng.choosedouble(0, 0.5),
+        distanceBoostWeight -> Rng.oneof(1d), // enable distance to get a non-zero weights sum
+        docBoost -> Rng.oneof(0.4d),
+        typeFrequencyWeight -> Rng.oneof(0d)))),
+    ("I5: FEM without Views", 20, randomize(
+      baseSettings
+        .modIndex(_.copy(
+          polarizedTypes = true))
+        .modQuery(_.copy(
+          views = false,
+          termSpecifity = true)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.5),
         distanceBoostWeight -> Rng.oneof(0d),
         docBoost -> Rng.oneof(0.4d),
         typeFrequencyWeight -> Rng.oneof(1d)))),
-    ("I5: FEM", 100, randomize(
+    ("I6: FEM", 100, randomize(
       baseSettings
-        .modIndex(_.copy(polarizedTypes = true))
-        .modQuery(_.copy(views = true)),
+        .modIndex(_.copy(
+          polarizedTypes = true))
+        .modQuery(_.copy(
+          views = true,
+          termSpecifity = true)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.5),
         distanceBoostWeight -> Rng.choosedouble(0, 2),
@@ -93,6 +123,7 @@ object Evaluation extends App {
       "run",
       "polarized-types",
       QuerySettings.views,
+      QuerySettings.termSpecifity,
       QuerySettings.penaltyWeight,
       QuerySettings.distanceBoostWeight,
       QuerySettings.depthBoostWeight,
@@ -125,6 +156,7 @@ object Evaluation extends App {
                 runName,
                 settings.index.polarizedTypes,
                 settings.query.views,
+                settings.query.termSpecifity,
                 settings.query.penaltyWeight,
                 settings.query.distanceBoostWeight,
                 settings.query.depthBoostWeight,
