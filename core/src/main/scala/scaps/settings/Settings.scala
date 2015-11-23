@@ -64,7 +64,7 @@ case class QuerySettings(
     maxClauseCount: Int,
     maxResults: Int,
     views: Boolean,
-    termSpecifity: Boolean,
+    termSpecificity: Boolean,
     penaltyWeight: Double,
     depthBoostWeight: Double,
     distanceBoostWeight: Double,
@@ -91,7 +91,7 @@ object QuerySettings {
       conf.getInt("max-clause-count"),
       conf.getInt("max-results"),
       conf.getBoolean(views),
-      conf.getBoolean(termSpecifity),
+      conf.getBoolean(termSpecificity),
       conf.getDouble(penaltyWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
@@ -102,7 +102,7 @@ object QuerySettings {
 
   val views = "views"
 
-  val termSpecifity = "term-specifity"
+  val termSpecificity = "term-specificity"
 
   val penaltyWeight = "penalty-weight"
 

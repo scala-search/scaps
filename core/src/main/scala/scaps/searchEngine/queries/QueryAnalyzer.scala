@@ -208,7 +208,7 @@ class QueryAnalyzer private[searchEngine] (
         throw MaximumClauseCountExceededException
     }
 
-    def parts(tpe: TypeRef, depth: Int, dist: Float, outerTpes: Set[TypeRef], termSpecifity: TermSpecifity): Alternative = {
+    def parts(tpe: TypeRef, depth: Int, dist: Float, outerTpes: Set[TypeRef], termSpecifity: TermSpecificity): Alternative = {
       increaseCount()
 
       tpe match {
@@ -229,7 +229,7 @@ class QueryAnalyzer private[searchEngine] (
       }
     }
 
-    def alternatives(tpe: TypeRef, depth: Int, outerTpes: Set[TypeRef], termSpecifity: TermSpecifity): Part = {
+    def alternatives(tpe: TypeRef, depth: Int, outerTpes: Set[TypeRef], termSpecifity: TermSpecificity): Part = {
       increaseCount()
 
       val alternativesWithDistance =
@@ -250,19 +250,19 @@ class QueryAnalyzer private[searchEngine] (
 
     tpe match {
       case TypeRef.Ignored(_, _) =>
-        parts(tpe, 0, 0, Set(), TermSpecifity(tpe, 1))
+        parts(tpe, 0, 0, Set(), TermSpecificity(tpe, 1))
       case _ =>
         val itpe = TypeRef.Ignored(tpe :: Nil, Covariant)
-        parts(itpe, 0, 0, Set(), TermSpecifity(itpe, 1))
+        parts(itpe, 0, 0, Set(), TermSpecificity(itpe, 1))
     }
   }
 
-  case class TermSpecifity(specifities: Map[FingerprintTerm, Double]) {
+  case class TermSpecificity(specifities: Map[FingerprintTerm, Double]) {
     def apply(term: FingerprintTerm) = specifities(term)
 
     def crop(part: TypeRef) = {
       val fp = part.fingerprint
-      TermSpecifity(specifities.filterKeys { t => fp.contains(t) })
+      TermSpecificity(specifities.filterKeys { t => fp.contains(t) })
     }
 
     def updateForAlternative(orig: TypeRef, alt: TypeRef) = {
@@ -272,28 +272,30 @@ class QueryAnalyzer private[searchEngine] (
       val newInner = alt.args.flatMap(_.fingerprint)
 
       if (newInner.length < innerTerms.length || newInner.exists { t => !innerTerms.contains(t) }) {
-        TermSpecifity(alt, specifities.values.sum)
+        TermSpecificity(alt, specifities.values.sum)
       } else {
-        TermSpecifity(specifities + (newOuter -> specifities(outerTerm))).crop(alt)
+        (TermSpecificity(specifities + (newOuter -> specifities(outerTerm)))).crop(alt)
       }
     }
   }
 
-  object TermSpecifity {
-    def apply(tpe: TypeRef, norm: Double): TermSpecifity = {
+  object TermSpecificity {
+    def apply(tpe: TypeRef, norm: Double): TermSpecificity = {
       val fp = tpe.fingerprint
 
       val itfs = tpe.fingerprint.map(t => (t, math.sqrt(1 - frequency(t))))
       val sum = itfs.map(_._2).sum
 
-      TermSpecifity(itfs.map { case (t, itf) => (t, norm * itf / sum) }.toMap)
+      TermSpecificity(itfs.map { case (t, itf) => (t, norm * itf / sum) }.toMap)
     }
 
     val frequency =
-      if (settings.termSpecifity)
-        getFrequency _
+      if (settings.termSpecificity)
+        // use frequency buckets to prohibit small specificity differences
+        // this allows for a more aggressive query rewriting
+        (t: FingerprintTerm) => math.floor(getFrequency(t) * 20) / 20
       else
-        (_: FingerprintTerm) => 0f
+        (_: FingerprintTerm) => 0d
   }
 
   private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {
