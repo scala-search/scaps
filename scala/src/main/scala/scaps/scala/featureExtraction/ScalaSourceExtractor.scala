@@ -64,7 +64,7 @@ object Scala {
       TypeDef(TypeRef.Repeated.name, List(TypeParameter("X", Covariant))))
 
   val subtypingDistance = 0.5f
-  val implicitConversionDistance = 0.9f
+  val implicitConversionDistance = 0.7f
   val aliasDistance = 0.95f
   val identityDistance = 1f
 

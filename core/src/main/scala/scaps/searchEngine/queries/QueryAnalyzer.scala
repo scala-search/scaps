@@ -266,15 +266,16 @@ class QueryAnalyzer private[searchEngine] (
     }
 
     def updateForAlternative(orig: TypeRef, alt: TypeRef) = {
-      val outerTerm = orig.term
       val innerTerms = orig.args.flatMap(_.fingerprint)
-      val newOuter = alt.term
-      val newInner = alt.args.flatMap(_.fingerprint)
+      val newInnerTerms = alt.args.flatMap(_.fingerprint)
 
-      if (newInner.length < innerTerms.length || newInner.exists { t => !innerTerms.contains(t) }) {
+      val underivedInnerTerms =
+        newInnerTerms.length < innerTerms.length || newInnerTerms.exists { t => !innerTerms.contains(t) }
+
+      if (underivedInnerTerms) {
         TermSpecificity(alt, specifities.values.sum)
       } else {
-        (TermSpecificity(specifities + (newOuter -> specifities(outerTerm)))).crop(alt)
+        (TermSpecificity(specifities + (alt.term -> specifities(orig.term)))).crop(alt)
       }
     }
   }
