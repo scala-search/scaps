@@ -66,6 +66,7 @@ case class QuerySettings(
     views: Boolean,
     termSpecificity: Boolean,
     penaltyWeight: Double,
+    specificityWeight: Double,
     depthBoostWeight: Double,
     distanceBoostWeight: Double,
     typeFrequencyWeight: Double,
@@ -93,6 +94,7 @@ object QuerySettings {
       conf.getBoolean(views),
       conf.getBoolean(termSpecificity),
       conf.getDouble(penaltyWeight),
+      conf.getDouble(specificityWeight),
       conf.getDouble(depthBoostWeight),
       conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
@@ -105,6 +107,8 @@ object QuerySettings {
   val termSpecificity = "term-specificity"
 
   val penaltyWeight = "penalty-weight"
+
+  val specificityWeight = "specificity-weight"
 
   val depthBoostWeight = "depth-boost-weight"
 

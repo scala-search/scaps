@@ -21,12 +21,14 @@ import scaps.utils.Logging
 import scaps.utils.timers
 
 object Common extends Logging {
-  def runQueries(engine: SearchEngine, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
+  def runQueries(engine: SearchEngine, settings: Settings, queriesWithRelevantDocs: List[(String, Set[String])]): QueryError \/ Stats = {
     queriesWithRelevantDocs.zipWithIndex.map {
       case ((query, relevantResults), idx) =>
         val (res, dur) = timers.withTime(engine.search(query).get)
-        res.map(results => QueryStats(idx, query, results.map(_.entity.signature), relevantResults, dur))
-    }.sequenceU.map(Stats(_))
+        res.map { results =>
+          QueryStats(idx, query, results.map(_.entity.signature), relevantResults, dur)
+        }
+    }.sequenceU.map(Stats(_, settings))
   }
 
   def initSearchEngine(settings: Settings, evaluationSettings: EvaluationSettings) = {

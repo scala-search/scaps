@@ -21,16 +21,16 @@ object Benchmark extends App {
   val now = (new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")).format(Calendar.getInstance.getTime())
   val runInfo = now :: runName :: Nil
 
-  val entries = Common.runQueries(engine, evaluationSettings.queries).fold(
+  val entries = Common.runQueries(engine, settings, evaluationSettings.queries).fold(
     error => {
       println(error)
       List(runInfo ::: "<MAP>" :: "---" :: "---" :: "---" :: Nil)
     },
     stats => {
       val queryData = stats.queryStats.map { qs =>
-        runInfo ::: qs.query :: qs.averagePrecision :: qs.recallAt10 :: qs.duration.toMillis :: Nil
+        runInfo ::: qs.query :: qs.averagePrecision :: qs.recallAt(5) :: qs.recallAt(10) :: qs.duration.toMillis :: Nil
       }
-      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision :: stats.meanRecallAt10 :: stats.meanDuration.toMillis :: Nil)
+      queryData ::: List(runInfo ::: "<MAP>" :: stats.meanAveragePrecision :: stats.meanRecallAt(5) :: stats.meanRecallAt(10) :: stats.meanDuration.toMillis :: Nil)
     })
 
   val csvRows = entries.map(_.mkString("", "; ", ";"))

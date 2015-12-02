@@ -3,21 +3,34 @@ package scaps.evaluation.stats
 import scala.annotation.tailrec
 import scala.Ordering
 import scala.concurrent.duration.Duration
+import scalaz.std.option._
 
 case class QueryStats(
     id: Int,
     query: String,
+    relRanks: Map[String, Option[Int]],
     retrievedDocs: Int,
-    relevantRetrievedDocs: Int,
-    relevantDocs: Int,
-    accumulatedPrecision: Double,
-    relevantRetrievedInTop10: Int,
     duration: Duration) {
+
+  val relevantRetrievedDocs = relRanks.count(_._2.isDefined)
+  val relevantDocs = relRanks.size
+
+  val accumulatedPrecision = {
+    val ranks = relRanks.flatMap(_._2).toSet
+
+    (1 to retrievedDocs).map { k =>
+      if (ranks(k))
+        QueryStats.precision(ranks.count(_ <= k), k)
+      else
+        0d
+    }.sum
+  }
 
   val recall = relevantRetrievedDocs.toDouble / relevantDocs
   val precision = QueryStats.precision(relevantRetrievedDocs, retrievedDocs)
   val averagePrecision = accumulatedPrecision / relevantDocs
-  val recallAt10 = relevantRetrievedInTop10.toDouble / Math.min(relevantDocs, 10)
+
+  def recallAt(n: Int) = relRanks.count(_._2.getOrElse(Int.MaxValue) <= n).toDouble / Math.min(relevantDocs, n)
 
   override def toString() =
     s"ret: $retrievedDocs, rel: $relevantDocs, relret: $relevantRetrievedDocs, recall: $recall, precision: $precision, accp: $accumulatedPrecision, avep: $averagePrecision"
@@ -27,28 +40,12 @@ object QueryStats {
   def precision(relret: Int, ret: Int): Double =
     if (ret == 0) 0d else (relret.toDouble / ret)
 
-  def apply[A](id: Int, query: String, results: Seq[A], relevant: Set[A], duration: Duration): QueryStats = {
-    def next(prev: QueryStats, isRelevant: Boolean) = {
-      val isRel = if (isRelevant) 1 else 0
-      val ret = prev.retrievedDocs + 1
-      val relret = prev.relevantRetrievedDocs + isRel
-      val relret10 = if (ret <= 10) relret else prev.relevantRetrievedInTop10
-      prev.copy(
-        retrievedDocs = ret,
-        relevantRetrievedDocs = relret,
-        accumulatedPrecision = prev.accumulatedPrecision + (QueryStats.precision(relret, ret) * isRel),
-        relevantRetrievedInTop10 = relret10)
-    }
-
-    @tailrec
-    def loop(results: Seq[A], prev: QueryStats): QueryStats = {
-      if (results.isEmpty || prev.relevantRetrievedDocs >= prev.relevantDocs) prev
-      else {
-        loop(results.tail, next(prev, relevant(results.head)))
-      }
-    }
-
-    loop(results, QueryStats(id, query, 0, 0, relevant.size, 0d, 0, duration))
+  def apply(id: Int, query: String, results: Seq[String], relevant: Set[String], duration: Duration): QueryStats = {
+    val relRanks = relevant.map { res =>
+      val idx = results.indexWhere { _ == res }
+      res -> (if (idx == -1) None else Some(idx + 1))
+    }.toMap
+    QueryStats(id, query, relRanks, results.size, duration)
   }
 
   implicit val queryStatsOrdering =

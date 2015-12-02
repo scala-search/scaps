@@ -284,7 +284,7 @@ class QueryAnalyzer private[searchEngine] (
     def apply(tpe: TypeRef, norm: Double): TermSpecificity = {
       val fp = tpe.fingerprint
 
-      val itfs = tpe.fingerprint.map(t => (t, math.sqrt(1 - frequency(t))))
+      val itfs = tpe.fingerprint.map(t => (t, (1 - frequency(t))))
       val sum = itfs.map(_._2).sum
 
       TermSpecificity(itfs.map { case (t, itf) => (t, norm * itf / sum) }.toMap)
@@ -313,7 +313,8 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private val boost: (ExpandedQuery.Leaf => Double) = { l =>
-    l.fraction * Statistic.weightedGeometricMean(
+    Statistic.weightedGeometricMean(
+      l.fraction -> settings.specificityWeight,
       itf(l.tpe.term) -> settings.typeFrequencyWeight,
       1d / (l.depth + 1) -> settings.depthBoostWeight,
       l.dist.toDouble -> settings.distanceBoostWeight)

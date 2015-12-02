@@ -62,11 +62,26 @@ class QueryStatsSpecs extends FreeSpec with Matchers {
         recall10(results, Set(9, 10)) should be(1d)
       }
     }
+
+    "should keep ranks of relevant items" - {
+      val results = 1 to 100
+
+      "when all relevant results are retrieved" in {
+        ranks(results, Set(1, 10)) should be(Map("1" -> Option(1), "10" -> Option(10)))
+      }
+
+      "when one relevant result is missing" in {
+        ranks(results, Set(1, 999)) should be(Map("1" -> Option(1), "999" -> None))
+      }
+    }
   }
 
   def avep(results: Seq[Int], relevant: Set[Int]) =
-    QueryStats[Int](0, "", results, relevant, Duration.Zero).averagePrecision
+    QueryStats(0, "", results.map(_.toString), relevant.map(_.toString), Duration.Zero).averagePrecision
 
   def recall10(results: Seq[Int], relevant: Set[Int]) =
-    QueryStats[Int](0, "", results, relevant, Duration.Zero).recallAt10
+    QueryStats(0, "", results.map(_.toString), relevant.map(_.toString), Duration.Zero).recallAt(10)
+
+  def ranks(results: Seq[Int], relevant: Set[Int]) =
+    QueryStats(0, "", results.map(_.toString), relevant.map(_.toString), Duration.Zero).relRanks
 }
