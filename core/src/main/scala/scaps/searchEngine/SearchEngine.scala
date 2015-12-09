@@ -171,7 +171,7 @@ class SearchEngine private[searchEngine] (
         settings.index.polarizedTypes,
         settings.query,
         Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),
-        Memo.mutableHashMapMemo(viewIndex.findAlternativesWithDistance(_, moduleIds).get))
+        Memo.mutableHashMapMemo(viewIndex.findViews(_, moduleIds).get))
 
       analyzers += (moduleIds -> analyzer)
 

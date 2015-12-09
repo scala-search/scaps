@@ -206,6 +206,6 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
     new QueryAnalyzer(
       Settings.fromApplicationConf.index.polarizedTypes,
-      settings, findTypeDefsBySuffix, viewsIndex.findAlternativesWithDistance(_).get)
+      settings, findTypeDefsBySuffix, viewsIndex.findViews(_, Set()).get)
   }
 }

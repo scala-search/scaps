@@ -39,12 +39,11 @@ object Evaluation extends App {
           polarizedTypes = false))
         .modQuery(_.copy(
           views = false,
-          termSpecificity = false)),
+          fractions = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
-        specificityWeight -> Rng.oneof(1d),
         distanceBoostWeight -> Rng.oneof(0d),
-        docBoost -> Rng.oneof(0.4d),
+        docBoost -> Rng.oneof(0.05d),
         typeFrequencyWeight -> Rng.oneof(0d)))),
     ("I1: Baseline + Polarized", 1, randomize(
       baseSettings
@@ -52,52 +51,48 @@ object Evaluation extends App {
           polarizedTypes = true))
         .modQuery(_.copy(
           views = false,
-          termSpecificity = false)),
+          fractions = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
-        specificityWeight -> Rng.oneof(1d),
         distanceBoostWeight -> Rng.oneof(0d),
-        docBoost -> Rng.oneof(0.4d),
+        docBoost -> Rng.oneof(0.05d),
         typeFrequencyWeight -> Rng.oneof(0d)))),
-    ("I2: Frequencies", 100, randomize(
+    ("I2: Weighted", 20, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = false))
         .modQuery(_.copy(
           views = false,
-          termSpecificity = false)),
+          fractions = true)),
       baseRngs ++ Map(
-        penaltyWeight -> Rng.choosedouble(0, 0.5),
-        specificityWeight -> Rng.oneof(1d),
-        distanceBoostWeight -> Rng.oneof(1d),
-        docBoost -> Rng.oneof(0.4d),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("I3: Frequencies + Polarized", 100, randomize(
+        penaltyWeight -> Rng.choosedouble(0, 0.3),
+        distanceBoostWeight -> Rng.oneof(0d),
+        docBoost -> Rng.oneof(0.05d),
+        typeFrequencyWeight -> Rng.oneof(math.E)))),
+    ("I3: Weighted + Polarized", 20, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = true))
         .modQuery(_.copy(
           views = false,
-          termSpecificity = false)),
+          fractions = true)),
       baseRngs ++ Map(
-        penaltyWeight -> Rng.choosedouble(0, 0.5),
-        specificityWeight -> Rng.oneof(1d),
-        distanceBoostWeight -> Rng.oneof(1d),
-        docBoost -> Rng.oneof(0.4d),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))),
-    ("I4: FEM", 300, randomize(
+        penaltyWeight -> Rng.choosedouble(0, 0.3),
+        distanceBoostWeight -> Rng.oneof(0d),
+        docBoost -> Rng.oneof(0.05d),
+        typeFrequencyWeight -> Rng.oneof(math.E)))),
+    ("I4: FEM", 100, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = true))
         .modQuery(_.copy(
           views = true,
-          termSpecificity = false)),
+          fractions = true)),
       baseRngs ++ Map(
-        penaltyWeight -> Rng.choosedouble(0, 0.5),
-        specificityWeight -> Rng.oneof(1d),
-        distanceBoostWeight -> Rng.choosedouble(0, 2),
-        docBoost -> Rng.oneof(0.4d),
-        typeFrequencyWeight -> Rng.choosedouble(0, 2)))))
+        penaltyWeight -> Rng.choosedouble(0, 0.3),
+        distanceBoostWeight -> Rng.choosedouble(0, 1),
+        docBoost -> Rng.oneof(0.05d),
+        typeFrequencyWeight -> Rng.oneof(math.E)))))
 
   val (trainingQueries, testQueries) =
     new Random(seed).shuffle(evaluationSettings.queries).splitAt((evaluationSettings.queries.length * 0.5).toInt)
@@ -109,9 +104,8 @@ object Evaluation extends App {
     "run",
     "polarized-types",
     QuerySettings.views,
-    QuerySettings.termSpecificity,
+    QuerySettings.fractions,
     QuerySettings.penaltyWeight,
-    QuerySettings.specificityWeight,
     QuerySettings.distanceBoostWeight,
     QuerySettings.depthBoostWeight,
     QuerySettings.typeFrequencyWeight,
@@ -148,9 +142,8 @@ object Evaluation extends App {
               runName,
               settings.index.polarizedTypes,
               settings.query.views,
-              settings.query.termSpecificity,
+              settings.query.fractions,
               settings.query.penaltyWeight,
-              settings.query.specificityWeight,
               settings.query.distanceBoostWeight,
               settings.query.depthBoostWeight,
               settings.query.typeFrequencyWeight,
@@ -228,14 +221,12 @@ object Evaluation extends App {
   def randomize(settings: QuerySettings, rngs: Map[String, Rng[Double]]): Rng[QuerySettings] =
     for {
       pw <- rngs(penaltyWeight)
-      spec <- rngs(specificityWeight)
       dist <- rngs(distanceBoostWeight)
       depth <- rngs(depthBoostWeight)
       tf <- rngs(typeFrequencyWeight)
       db <- rngs(docBoost)
     } yield settings.copy(
       penaltyWeight = pw,
-      specificityWeight = spec,
       distanceBoostWeight = dist,
       depthBoostWeight = depth,
       typeFrequencyWeight = tf,

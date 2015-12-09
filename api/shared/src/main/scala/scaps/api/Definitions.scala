@@ -126,7 +126,7 @@ case class TypeParameter(
   }
 }
 
-case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String, module: Module = Module.Unknown)
+case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String = "", module: Module = Module.Unknown)
     extends Definition {
   def name = s"$definingEntityName:$fromKey:$toKey"
 
@@ -147,6 +147,18 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
       from.args.zip(t.args).flatMap {
         case (f, t) => findParamMap(f, t)
       }
+
+  lazy val retainedInformation: Double = {
+    if (from.isTypeParam) {
+      1d
+    } else {
+      val fromParts = from.toList
+      val toParts = to.toList
+      val fromParams = fromParts.filter(_.isTypeParam)
+      val droppedParams = fromParams.count(p => !toParts.exists(_.name == p.name))
+      (fromParts.size - droppedParams).toDouble / fromParts.size
+    }
+  }
 }
 
 object ViewDef {

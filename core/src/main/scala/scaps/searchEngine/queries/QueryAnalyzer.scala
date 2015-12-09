@@ -19,6 +19,7 @@ import scaps.api.Variance
 import scaps.utils._
 import scaps.searchEngine.MaximumClauseCountExceededException
 import scaps.api.FingerprintTerm
+import scaps.api.ViewDef
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -115,13 +116,13 @@ private[queries] object ExpandedQuery {
  * Analyzes parsed queries.
  *
  * Instances require access to the class and view index which can be injected via
- * `findTypeDefsBySuffix` and `findAlternativesWithDistance`
+ * `findTypeDefsBySuffix` and `findViews`
  */
 class QueryAnalyzer private[searchEngine] (
     polarizedTypes: Boolean,
     settings: QuerySettings,
     findTypeDefsBySuffix: (String) => Seq[TypeDef],
-    findAlternativesWithDistance: (TypeRef) => Seq[(TypeRef, Float)]) {
+    findViews: (TypeRef) => Seq[ViewDef]) {
 
   /**
    * Transforms a parsed query into a query that can be passed to the values index.
@@ -208,41 +209,45 @@ class QueryAnalyzer private[searchEngine] (
         throw MaximumClauseCountExceededException
     }
 
-    def parts(tpe: TypeRef, depth: Int, dist: Float, outerTpes: Set[TypeRef], termSpecifity: TermSpecificity): Alternative = {
+    def parts(tpe: TypeRef, depth: Int, dist: Float, outerTpes: Set[TypeRef], fraction: Double): Alternative = {
       increaseCount()
 
       tpe match {
         case TypeRef.Ignored(args, v) =>
           Sum(args.map { arg =>
-            alternatives(arg, depth, outerTpes, termSpecifity.crop(arg))
+            val partF = fraction / args.length
+            alternatives(arg, depth, outerTpes, partF)
           })
         case tpe =>
           val partArgs = tpe.args
             .filterNot(_.isTypeParam)
 
+          val partF = fraction / (1 + partArgs.length)
+
           val parts = partArgs.map { arg =>
-            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, termSpecifity(arg.term), depth + 1, 1)
-            else alternatives(arg, depth + 1, outerTpes, termSpecifity.crop(arg))
+            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partF, depth + 1, 1)
+            else alternatives(arg, depth + 1, outerTpes, partF)
           }
 
-          Sum(Leaf(tpe.withArgsAsParams, termSpecifity(tpe.term), depth, dist) :: parts)
+          Sum(Leaf(tpe.withArgsAsParams, partF, depth, dist) :: parts)
       }
     }
 
-    def alternatives(tpe: TypeRef, depth: Int, outerTpes: Set[TypeRef], termSpecifity: TermSpecificity): Part = {
+    def alternatives(tpe: TypeRef, depth: Int, outerTpes: Set[TypeRef], fraction: Double): Part = {
       increaseCount()
 
       val alternativesWithDistance =
-        if (settings.views) findAlternativesWithDistance(tpe).toList
-        else Nil
+        (if (settings.views) findViews(tpe).toList else Nil)
+          .flatMap(v => v(tpe).map((_, v.distance, v.retainedInformation)))
+          .distinct
 
       val outerTpesAndAlts = outerTpes + tpe ++ alternativesWithDistance.map(_._1)
 
-      val originalTypeParts = parts(tpe, depth, 1, outerTpesAndAlts, termSpecifity)
+      val originalTypeParts = parts(tpe, depth, 1, outerTpesAndAlts, fraction)
       val alternativesParts =
         alternativesWithDistance.map {
-          case (alt, dist) =>
-            parts(alt, depth, dist, outerTpesAndAlts, termSpecifity.updateForAlternative(tpe, alt))
+          case (alt, dist, retainedInfo) =>
+            parts(alt, depth, dist, outerTpesAndAlts, fraction * retainedInfo)
         }
 
       Max(originalTypeParts :: alternativesParts)
@@ -250,53 +255,11 @@ class QueryAnalyzer private[searchEngine] (
 
     tpe match {
       case TypeRef.Ignored(_, _) =>
-        parts(tpe, 0, 0, Set(), TermSpecificity(tpe, 1))
+        parts(tpe, 0, 0, Set(), 1)
       case _ =>
         val itpe = TypeRef.Ignored(tpe :: Nil, Covariant)
-        parts(itpe, 0, 0, Set(), TermSpecificity(itpe, 1))
+        parts(itpe, 0, 0, Set(), 1)
     }
-  }
-
-  case class TermSpecificity(specifities: Map[FingerprintTerm, Double]) {
-    def apply(term: FingerprintTerm) = specifities(term)
-
-    def crop(part: TypeRef) = {
-      val fp = part.fingerprint
-      TermSpecificity(specifities.filterKeys { t => fp.contains(t) })
-    }
-
-    def updateForAlternative(orig: TypeRef, alt: TypeRef) = {
-      val innerTerms = orig.args.flatMap(_.fingerprint)
-      val newInnerTerms = alt.args.flatMap(_.fingerprint)
-
-      val underivedInnerTerms =
-        newInnerTerms.length < innerTerms.length || newInnerTerms.exists { t => !innerTerms.contains(t) }
-
-      if (underivedInnerTerms) {
-        TermSpecificity(alt, specifities.values.sum)
-      } else {
-        (TermSpecificity(specifities + (alt.term -> specifities(orig.term)))).crop(alt)
-      }
-    }
-  }
-
-  object TermSpecificity {
-    def apply(tpe: TypeRef, norm: Double): TermSpecificity = {
-      val fp = tpe.fingerprint
-
-      val itfs = tpe.fingerprint.map(t => (t, (1 - frequency(t))))
-      val sum = itfs.map(_._2).sum
-
-      TermSpecificity(itfs.map { case (t, itf) => (t, norm * itf / sum) }.toMap)
-    }
-
-    val frequency =
-      if (settings.termSpecificity)
-        // use frequency buckets to prohibit small specificity differences
-        // this allows for a more aggressive query rewriting
-        (t: FingerprintTerm) => math.floor(getFrequency(t) * 20) / 20
-      else
-        (_: FingerprintTerm) => 0d
   }
 
   private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {
@@ -313,11 +276,9 @@ class QueryAnalyzer private[searchEngine] (
   }
 
   private val boost: (ExpandedQuery.Leaf => Double) = { l =>
-    Statistic.weightedGeometricMean(
-      l.fraction -> settings.specificityWeight,
-      itf(l.tpe.term) -> settings.typeFrequencyWeight,
-      1d / (l.depth + 1) -> settings.depthBoostWeight,
-      l.dist.toDouble -> settings.distanceBoostWeight)
+    (if (settings.fractions) l.fraction else 1d) *
+      itf(l.tpe.term) *
+      math.pow(l.dist, settings.distanceBoostWeight)
   }
 
   /**
@@ -326,8 +287,13 @@ class QueryAnalyzer private[searchEngine] (
    * (see TypeFrequencies).
    */
   private def itf(t: FingerprintTerm): Double = {
-    val freq = getFrequency(t)
-    math.log10(10 / (freq * 10 + (1 - freq)))
+    val base = settings.typeFrequencyWeight
+    if (base == 0) {
+      1
+    } else {
+      val freq = getFrequency(t)
+      math.log(base / (freq * base + (1 - freq))) / math.log(base)
+    }
   }
 
   private def getFrequency(t: FingerprintTerm) =
