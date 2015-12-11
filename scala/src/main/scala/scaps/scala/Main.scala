@@ -12,6 +12,7 @@ import scaps.scala.featureExtraction.JarExtractor
 import scaps.scala.featureExtraction.CompilerUtils
 import scaps.scala.featureExtraction.ExtractionError
 import com.typesafe.scalalogging.StrictLogging
+import scaps.api.ValueDef
 
 object Main extends App with StrictLogging {
   val settings = ExtractionSettings.fromApplicationConf
@@ -29,6 +30,12 @@ object Main extends App with StrictLogging {
     ExtractionError.logErrors(extractor(new File(m.artifactPath)), logger.info(_))
       .distinct
       .map(_.withModule(m.module))
+      .map {
+        case v: ValueDef =>
+          val link = for { url <- m.docUrl; suffix <- v.docLink } yield url + suffix
+          v.copy(docLink = link)
+        case d => d
+      }
   }
 
   defs.grouped(settings.maxDefinitionsPerRequest).foreach { ds =>
