@@ -24,7 +24,7 @@ class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
             \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
         }
       }
-    })
+    }).distinct
   }
 
   private def findClasses(tree: Tree): List[Symbol] =

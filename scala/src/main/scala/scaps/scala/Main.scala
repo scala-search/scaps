@@ -30,7 +30,6 @@ object Main extends App with StrictLogging {
 
   def defs = settings.modules.toStream.flatMap { m =>
     ExtractionError.logErrors(extractor(new File(m.artifactPath)), logger.info(_))
-      .distinct
       .map(_.withModule(m.module))
       .map {
         case v: ValueDef =>
