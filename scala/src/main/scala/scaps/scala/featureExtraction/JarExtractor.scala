@@ -13,7 +13,7 @@ import scalaz._
 class JarExtractor(val compiler: ScaladocGlobal) {
   val scalaExtractor = new ScalaSourceExtractor(compiler)
 
-  def apply(file: File): List[ExtractionError \/ Definition] = {
+  def apply(file: File): Stream[ExtractionError \/ Definition] = {
     val jar = new JarFile(file)
 
     val files = jar.entries().toList.flatMap { entry =>

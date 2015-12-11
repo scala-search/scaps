@@ -63,7 +63,7 @@ object Common extends Logging {
           (project.url #> jar).!!
         }
 
-        val defs = ExtractionError.logErrors(extractor(jar), logger.info(_))
+        def defs = ExtractionError.logErrors(extractor(jar), logger.info(_))
 
         engine.index(defs)
       }

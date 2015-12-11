@@ -7,12 +7,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 import autowire._
 import scalaz.std.list.listInstance
+import scalaz.std.stream.streamInstance
 import scaps.api.ScapsControlApi
 import scaps.scala.featureExtraction.JarExtractor
 import scaps.scala.featureExtraction.CompilerUtils
 import scaps.scala.featureExtraction.ExtractionError
 import com.typesafe.scalalogging.StrictLogging
 import scaps.api.ValueDef
+import scala.concurrent.Future
 
 object Main extends App with StrictLogging {
   val settings = ExtractionSettings.fromApplicationConf
@@ -26,7 +28,7 @@ object Main extends App with StrictLogging {
 
   val indexName = Random.nextInt().toString()
 
-  val defs = settings.modules.flatMap { m =>
+  def defs = settings.modules.toStream.flatMap { m =>
     ExtractionError.logErrors(extractor(new File(m.artifactPath)), logger.info(_))
       .distinct
       .map(_.withModule(m.module))
@@ -38,9 +40,13 @@ object Main extends App with StrictLogging {
       }
   }
 
-  defs.grouped(settings.maxDefinitionsPerRequest).foreach { ds =>
-    Await.ready(scaps.index(indexName, ds).call(), settings.requestTimeout)
+  def indexRequests = defs.grouped(settings.maxDefinitionsPerRequest).map { ds =>
+    scaps.index(indexName, ds).call()
   }
+
+  val allIndexRequests = Future.sequence(indexRequests)
+
+  Await.ready(allIndexRequests, settings.requestTimeout)
 
   Await.ready(scaps.finalizeIndex(indexName).call(), settings.requestTimeout)
 

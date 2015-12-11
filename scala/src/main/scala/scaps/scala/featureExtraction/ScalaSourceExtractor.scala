@@ -9,11 +9,11 @@ import scaps.api._
 class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
   import compiler.{ TypeRef => _, _ }
 
-  def apply(sources: List[SourceFile]): List[ExtractionError \/ Definition] = {
+  def apply(sources: List[SourceFile]): Stream[ExtractionError \/ Definition] = {
     val r = new Run()
     r.compileSources(sources)
 
-    (Scala.builtinDefinitions.map(\/.right) ++ r.units.flatMap { cu =>
+    (Scala.builtinDefinitions.map(\/.right).toStream ++ r.units.toStream.flatMap { cu =>
       val classes = findClasses(cu.body)
 
       classes.flatMap { cls =>
@@ -24,7 +24,7 @@ class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
             \/.left(ExtractionError(qualifiedName(cls, true), t)) :: Nil
         }
       }
-    }).distinct
+    })
   }
 
   private def findClasses(tree: Tree): List[Symbol] =
