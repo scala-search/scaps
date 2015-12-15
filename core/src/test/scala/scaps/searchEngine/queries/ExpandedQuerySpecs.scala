@@ -74,4 +74,12 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
 
     ExpandedQuery.minimize(q) should be(q)
   }
+
+  it should "handle common subqueries" in {
+    // (Ax & A & A) | (Bx & A & A)
+    val q = Max(Sum(Ax, A, A), Sum(Bx, A, A))
+
+    ExpandedQuery.minimize(q) should be(
+      Max(Sum(Max(Sum(Max(Ax, Bx), A)), A)))
+  }
 }

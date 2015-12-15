@@ -98,7 +98,7 @@ private[queries] object ExpandedQuery {
     }
 
     val altsMinusPart = altsWithPart.map {
-      case Sum(ps) => Sum(ps.filter(_ != part))
+      case Sum(ps) => Sum(ps diff List(part))
       case _       => ???
     }
 
