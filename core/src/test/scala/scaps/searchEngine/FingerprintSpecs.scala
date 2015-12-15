@@ -177,12 +177,14 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       trait Tr[A]
 
       object O {
-        def m[M[X] <: Tr[X]](x: M[Int]): M[String] = ???
+        def m[M[X]](x: M[Int]): M[String] = ???
       }
       """)(
       ("p.O.m", _.typeFingerprint.toString should (
-        include("-p.Tr")
-        and include("+scala.Nothing")
+        include("-<top1>")
+        and not include ("-Any")
+        and include("+<bottom1>")
+        and not include ("+Nothing")
         and include("java.lang.String"))))
   }
 
@@ -198,6 +200,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       """)(
       ("p.O.m", _.typeFingerprint.toString should (
         include("-p.Tr")
+        and include("+<bottom1>")
+        and not include ("+Nothing")
         and include("-scala.Int")
         and include("+scala.Float"))))
   }

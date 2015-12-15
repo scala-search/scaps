@@ -57,11 +57,20 @@ class ScalaSourceExtractor(val compiler: ScaladocGlobal) extends EntityFactory {
 }
 
 object Scala {
+  val parametrizedTopAndBottomTypes =
+    (1 to 22).flatMap { n =>
+      val params = (1 to n).map(m => TypeParameter(s"X$m", Invariant)).toList
+      List(
+        TypeDef(TypeRef.Top.name(n), params),
+        TypeDef(TypeRef.Bottom.name(n), params))
+    }
+
   val builtinTypes =
     List(
       TypeDef(TypeRef.Nothing.name, Nil),
       TypeDef(TypeRef.Unknown.name, Nil),
-      TypeDef(TypeRef.Repeated.name, List(TypeParameter("X", Covariant))))
+      TypeDef(TypeRef.Repeated.name, List(TypeParameter("X", Covariant)))) ++
+      parametrizedTopAndBottomTypes
 
   val subtypingDistance = 0.5f
   val implicitConversionDistance = 0.7f

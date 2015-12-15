@@ -286,24 +286,42 @@ trait EntityFactory extends StrictLogging {
       .filter(tpe => isTypeOfInterest(tpe.typeSymbol))
       .map(tpe => createTypeRef(tpe, Covariant))
 
+    val clsType = cls.toType
+
     val toRepeated = {
       // create implicit conversions from Seq and subtypes thereof to repeated args
       if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
-        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), cls.toType, Scala.implicitConversionDistance, "")
+        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), clsType, Scala.implicitConversionDistance, "")
       } else {
         baseTypes.flatMap {
           case TypeRef.Seq(t, _) =>
-            ViewDef.bidirectional(TypeRef.Repeated(t), cls.toType, Scala.implicitConversionDistance, "")
+            ViewDef.bidirectional(TypeRef.Repeated(t), clsType, Scala.implicitConversionDistance, "")
           case _ =>
             Nil
         }
       }
     }
 
+    val toParametrizedTopAndBottom = {
+      val noParams = cls.typeParameters.length
+      if (noParams > 0)
+        List(
+          ViewDef(
+            clsType,
+            clsType.copy(name = TypeRef.Bottom.name(noParams)),
+            Scala.subtypingDistance),
+          ViewDef(
+            clsType.withVariance(Contravariant),
+            clsType.withVariance(Contravariant).copy(name = TypeRef.Top.name(noParams)),
+            Scala.subtypingDistance))
+      else
+        Nil
+    }
+
     baseTypes.flatMap { baseCls =>
       ViewDef.bidirectional(baseCls, cls.toType, Scala.subtypingDistance, cls.name)
-    } ++ toRepeated
+    } ++ toRepeated ++ toParametrizedTopAndBottom
   }
 
   private def createViewFromValue(v: ValueDef): List[ViewDef] = {

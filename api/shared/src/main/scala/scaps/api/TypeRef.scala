@@ -124,6 +124,17 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
           }
       }
 
+    def parametrizedTopAndBottom(tpe: TypeRef): TypeRef = {
+      val mappedArgs = tpe.args.map(parametrizedTopAndBottom)
+      tpe match {
+        case TypeRef(Any.name, Contravariant, as, false) if as.length > 0 =>
+          Top(mappedArgs, Contravariant)
+        case TypeRef(Nothing.name, Covariant, as, false) if as.length > 0 =>
+          Bottom(mappedArgs, Covariant)
+        case t => t.copy(args = mappedArgs)
+      }
+    }
+
     def paramsAndReturnTpes(tpe: TypeRef): List[TypeRef] = tpe match {
       case Function(args, res, v) =>
         args ++ paramsAndReturnTpes(res)
@@ -131,7 +142,7 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
     }
 
     // outermost function applications are ignored
-    Ignored((loop _ andThen paramsAndReturnTpes)(this))
+    Ignored((loop _ andThen parametrizedTopAndBottom andThen paramsAndReturnTpes)(this))
   }
 
   def withoutImplicitParams: TypeRef = this match {
@@ -241,11 +252,14 @@ object TypeRef {
   object Tuple extends VariantType("scala.Tuple")
   object Refinement extends VariantType("<refinement", ">")
 
+  object Top extends VariantType("<top", ">")
+  object Bottom extends VariantType("<bottom", ">")
+
   class VariantType(val tpePrefix: String, val tpeSuffix: String = "") {
     def name(n: Int) = s"$tpePrefix$n$tpeSuffix"
 
     def apply(args: List[TypeRef], variance: Variance = Covariant) =
-      TypeRef(name(args.size), variance, args.map(pt => pt.copy(variance = variance)))
+      TypeRef(name(args.size), variance, args)
 
     def unapply(tpe: TypeRef): Option[(List[TypeRef], Variance)] =
       if (!tpe.args.isEmpty && tpe.name == name(tpe.args.size))

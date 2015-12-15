@@ -661,4 +661,22 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       contain(":-p.S[-_]:-scala.<repeated>[-_]") and
       contain(":+scala.<repeated>[+_]:+p.S[+_]"))
   }
+
+  it should "create views from parametrized types to parametrized top and bottom types" in {
+    val views = extractAllViews("""
+      package p
+
+      trait A[+T]
+      trait B[-T, +U]
+      trait C[T, U, V]
+      """)
+
+    views.map(_.name) should (
+      contain(":-p.A[-_]:-<top1>[-_]") and
+      contain(":-p.B[+_, -_]:-<top2>[+_, -_]") and
+      contain(":-p.C[_, _, _]:-<top3>[_, _, _]") and
+      contain(":+p.A[+_]:+<bottom1>[+_]") and
+      contain(":+p.B[-_, +_]:+<bottom2>[-_, +_]") and
+      contain(":+p.C[_, _, _]:+<bottom3>[_, _, _]"))
+  }
 }
