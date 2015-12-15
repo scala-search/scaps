@@ -182,8 +182,8 @@ class QueryAnalyzer private[searchEngine] (
           val tpeArgs = cls.typeParameters.zip(args).map {
             case (tpeParam, ResolvedQuery.Wildcard) =>
               (variance * tpeParam.variance) match {
-                case Covariant     => TypeRef(tpeParam.lowerBound, Covariant, Nil)
-                case Contravariant => TypeRef(tpeParam.upperBound, Contravariant, Nil)
+                case Covariant     => tpeParam.lowerBound
+                case Contravariant => tpeParam.upperBound
                 case Invariant     => TypeRef.Unknown(Invariant)
               }
             case (tpeParam, arg) =>

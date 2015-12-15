@@ -197,7 +197,8 @@ class TypeFingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
       }
       """)(
       ("p.O.m", _.typeFingerprint.toString should (
-        include("-scala.Int")
+        include("-p.Tr")
+        and include("-scala.Int")
         and include("+scala.Float"))))
   }
 

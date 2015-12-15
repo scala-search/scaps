@@ -181,7 +181,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       }
       """)(
       ("q.O.m", m => {
-        m.typeParameters should be(List(TypeParameter("T", Invariant, lowerBound = "scala.Nothing", upperBound = "q.Up")))
+        m.typeParameters should be(List(
+          TypeParameter("T", Invariant, lowerBound = TypeRef.Nothing(Covariant), upperBound = TypeRef("q.Up", Contravariant, Nil))))
         m.tpe.toString should be("+<methodInvocation1>[-T, +T]")
         m.tpe.args.foreach(_.isTypeParam should be(true))
       }))

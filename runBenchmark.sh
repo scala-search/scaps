@@ -1,1 +1,1 @@
-sbt 'evaluation/run-main scaps.evaluation.Benchmark'
+sbt -mem 4000 'evaluation/run-main scaps.evaluation.Benchmark'

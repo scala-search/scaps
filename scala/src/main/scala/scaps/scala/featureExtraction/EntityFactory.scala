@@ -278,8 +278,8 @@ trait EntityFactory extends StrictLogging {
       else if (typeSym.variance.isContravariant)
         Contravariant
       else Invariant,
-      qualifiedName(typeSym.tpe.bounds.lo.typeSymbol, true),
-      qualifiedName(typeSym.tpe.bounds.hi.typeSymbol, true))
+      createTypeRef(typeSym.tpe.bounds.lo, Covariant),
+      createTypeRef(typeSym.tpe.bounds.hi, Contravariant))
 
   private def createViewFromTypeDef(cls: TypeDef, clsSym: Symbol): List[ViewDef] = {
     val baseTypes = clsSym.tpe.baseTypeSeq.toList.tail

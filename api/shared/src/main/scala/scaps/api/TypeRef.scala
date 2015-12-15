@@ -116,9 +116,9 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
             tpe.copy(args = normalizedArgs)
           } { param =>
             if (tpe.variance == Contravariant)
-              tpe.copy(name = param.upperBound, args = normalizedArgs)
+              param.upperBound.copy(args = normalizedArgs)
             else if (tpe.variance == Covariant)
-              tpe.copy(name = param.lowerBound, args = normalizedArgs)
+              param.lowerBound.copy(args = normalizedArgs)
             else
               Unknown(tpe.variance)
           }

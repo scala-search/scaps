@@ -1,4 +1,4 @@
-enablePlugins(ScalaJSPlugin)
+//enablePlugins(ScalaJSPlugin)
 
 name := "scaps-demo-project"
 
@@ -14,11 +14,11 @@ autoAPIMappings := true
 
 //libraryDependencies += "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2"
 
-libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
+//libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
 
 //libraryDependencies += "org.spire-math" %% "spire" % "0.10.1"
 
-libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.8.0"
+//libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.8.0"
 
 //libraryDependencies += "com.typesafe.akka" % "akka-actor_2.11" % "2.3.10"
 

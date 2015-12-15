@@ -108,19 +108,22 @@ object ValueDef {
 case class TypeParameter(
     name: String,
     variance: Variance,
-    lowerBound: String = TypeRef.Nothing.name,
-    upperBound: String = TypeRef.Any.name) {
+    lowerBound: TypeRef = TypeRef.Nothing(Covariant),
+    upperBound: TypeRef = TypeRef.Any(Contravariant)) {
 
   import TypeRef._
 
+  assert(lowerBound.variance == Covariant)
+  assert(upperBound.variance == Contravariant)
+
   override def toString() = {
     val lbound =
-      if (lowerBound == Nothing.name) ""
-      else s" >: $lowerBound"
+      if (lowerBound == Nothing(Covariant)) ""
+      else s" >: ${lowerBound.withVariance(Invariant)}"
 
     val ubound =
-      if (upperBound == Any.name) ""
-      else s" <: $upperBound"
+      if (upperBound == Any(Contravariant)) ""
+      else s" <: ${upperBound.withVariance(Invariant)}"
 
     s"$name$lbound$ubound"
   }
