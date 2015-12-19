@@ -85,9 +85,9 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   it should "not penalize unmatched optional terms" in {
     val scorer = FingerprintScorer(tpe("A", 1))
 
-    scorer.score(Fingerprint("!+A ?+A ?+B")).pair should be((1f, 0))
-    scorer.score(Fingerprint("?+A ?+B")).pair should be((1f, 0))
-    scorer.score(Fingerprint("?+B")).pair should be((0f, 1))
+    scorer.score(Fingerprint("!+A ?+A ?+B")).pair should be((1f, 0.2f))
+    scorer.score(Fingerprint("?+A ?+B")).pair should be((1f, 0.1f))
+    scorer.score(Fingerprint("?+B")).pair should be((0f, 1.1f))
   }
 
   // not relevant because up to now such expression trees do not exists
