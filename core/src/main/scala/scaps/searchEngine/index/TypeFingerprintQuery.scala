@@ -168,13 +168,15 @@ object TypeFingerprintQuery extends Logging {
                 ((fp, isOpt, x) :: acc, termScores + (fp -> rest))
               case Nil => ???
             }
-        }._1.sortBy(-_._3).map(t => (t._1, t._2))
+        }._1
+          .sortBy { case (_, _, maxScore) => -maxScore }
+          .map(t => (t._1, t._2))
 
       val (score, unmatchedTerms, scorer, scorePerValue) =
-        termsByMaxPotentialScore.foldLeft((0f, 0, this, List[(String, Float)]())) {
+        termsByMaxPotentialScore.foldLeft((0f, 0f, this, List[(String, Float)]())) {
           case ((score, unmatchedTerms, scorer, scorePerValue), (fpt, isOpt)) =>
             scorer.score(fpt).fold {
-              val unmatched = unmatchedTerms + (if (isOpt) 0 else 1)
+              val unmatched = unmatchedTerms + (if (isOpt) 0.1f else 1f)
               (score, unmatched, scorer, scorePerValue)
             } {
               case (newScore, newScorer) =>
