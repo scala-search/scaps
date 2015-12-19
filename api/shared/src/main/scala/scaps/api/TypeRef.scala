@@ -53,15 +53,6 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
 
   def term: FingerprintTerm = FingerprintTerm(variance, name)
 
-  def fingerprint: List[FingerprintTerm] = this.toList
-    .filter {
-      case TypeRef.Ignored(_, _) => false
-      case _                     => true
-    }
-    .map(_.term)
-
-  def fingerprintStrings: List[String] = fingerprint.map(_.toString).sorted
-
   def toList: List[TypeRef] = this :: args.flatMap(_.toList)
 
   def withVariance(v: Variance): TypeRef =
@@ -107,8 +98,6 @@ case class TypeRef(name: String, variance: Variance, args: List[TypeRef], isType
             case args       => Refinement(args, v)
           }
         case ByName(arg, _) =>
-          loop(arg)
-        case Implicit(arg, _) =>
           loop(arg)
         case tpe: TypeRef =>
           val normalizedArgs = tpe.args.map(loop)

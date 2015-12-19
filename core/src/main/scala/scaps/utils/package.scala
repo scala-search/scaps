@@ -4,6 +4,13 @@ import _root_.scala.collection.mutable.ListBuffer
 import _root_.scala.util.Random
 
 package object utils {
+  object dump {
+    def apply[T](t: T, desc: String = ""): T = {
+      println(desc + ": " + t)
+      t
+    }
+  }
+
   implicit class SampleSeqOps[T](s: Seq[T]) {
     def sample(n: Int, r: Random = Random): Seq[T] = {
       assert(n >= 0)

@@ -68,7 +68,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 
   override val analyzer =
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
-      fields.fingerprint -> new WhitespaceAnalyzer,
+      fields.fingerprintTerms -> new WhitespaceAnalyzer,
       fields.moduleId -> new KeywordAnalyzer,
       fields.name -> nameAnalyzer,
       fields.doc -> docAnalyzer).asJava)
@@ -125,7 +125,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
       val keysAndTypes = query.tpe.fold[Query] {
         keys
       } { tpeQuery =>
-        new TypeFingerprintQuery(fields.fingerprint, tpeQuery, keys, settings.query)
+        new TypeFingerprintQuery(fields.fingerprintTerms, fields.fingerprint, tpeQuery, keys, settings.query)
       }
 
       val q = new BooleanQuery
@@ -149,13 +149,12 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     doc.add(new TextField(fields.doc, (entity.name + "\n").multiply(2) + entity.comment.indexableContent, Store.NO))
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
 
-    val fp =
-      if (settings.index.polarizedTypes) entity.typeFingerprint
-      else entity.tpe.normalize(entity.typeParameters).withVariance(Invariant).fingerprintStrings
-
-    fp.foreach { term =>
-      doc.add(new TextField(fields.fingerprint, term, Store.YES))
+    val fingerprint = Fingerprint(entity)
+    fingerprint.terms.foreach {
+      case (term, _) =>
+        doc.add(new TextField(fields.fingerprintTerms, term, Store.NO))
     }
+    doc.add(new TextField(fields.fingerprint, fingerprint.toString(), Store.YES))
 
     doc.add(new StoredField(fields.entity, upickle.write(entity)))
 
@@ -172,6 +171,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 object ValueIndex {
   object fields {
     val name = "name"
+    val fingerprintTerms = "fingerprintTerms"
     val fingerprint = "fingerprint"
     val doc = "doc"
     val entity = "entity"

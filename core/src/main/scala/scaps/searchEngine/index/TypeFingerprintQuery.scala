@@ -22,9 +22,9 @@ import scaps.settings.QuerySettings
 /**
  * A Lucene query that scores type fingerprints in a field against a type query.
  */
-class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Query, settings: QuerySettings)
+class TypeFingerprintQuery(termsField: String, fingerprintField: String, apiQuery: ApiTypeQuery, subQuery: Query, settings: QuerySettings)
     extends CustomScoreQuery(
-      TypeFingerprintQuery.matcherQuery(field, apiQuery, subQuery, settings.fingerprintFrequencyCutoff)) {
+      TypeFingerprintQuery.matcherQuery(termsField, apiQuery, subQuery, settings.fingerprintFrequencyCutoff)) {
 
   val scorer = TypeFingerprintQuery.FingerprintScorer(apiQuery)
 
@@ -45,7 +45,8 @@ class TypeFingerprintQuery(field: String, apiQuery: ApiTypeQuery, subQuery: Quer
       def score(doc: Int) = {
         // There is probably a faster way to access the field value for every matched document.
         // Though, accessing the fingerprint through value vectors resulted in slightly worse performance.
-        val fingerprint = reader.document(doc).getValues(field)
+        val fingerprintStr = reader.document(doc).getValues(fingerprintField)(0)
+        val fingerprint = Fingerprint(fingerprintStr)
 
         val (fpScore, penalty, exp) = scorer.score(fingerprint)
         val penalized = (1f / (settings.penaltyWeight.toFloat * penalty + 1f)) * fpScore
@@ -142,7 +143,7 @@ object TypeFingerprintQuery extends Logging {
 
   sealed trait FingerprintScorer {
 
-    def score(fingerprint: Seq[String]): (Float, Float, List[(String, Float)]) = {
+    def score(fingerprint: Fingerprint): (Float, Float, List[(String, Float)]) = {
       /*
        * This is just an heuristic that generally yields accurate results but
        * may not return the maximum score for a fingerprint (see ignored test cases).
@@ -158,7 +159,7 @@ object TypeFingerprintQuery extends Logging {
        * the fingerprint as a whole.
        */
       val termsByMaxPotentialScore =
-        fingerprint.foldLeft((List[(String, Float)](), termScores)) {
+        fingerprint.terms.map(_._1).foldLeft((List[(String, Float)](), termScores)) {
           case ((acc, termScores), fp) =>
             termScores.getOrElse(fp, List(0f)) match {
               case x :: Nil =>
