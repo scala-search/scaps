@@ -34,7 +34,7 @@ class FingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         val i = (1, 2, 3)
       }
       """)(
-      ("p.O.i", _.terms.count(_ == (("+scala.Int", false))) should be(3)))
+      ("p.O.i", _.termsWithIsOpt.count(_ == (("+scala.Int", false))) should be(3)))
   }
 
   it should "normalize member access" in {
@@ -249,7 +249,7 @@ class FingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
       object O extends T
       """)(
-      ("p.O", _.terms should be(List(("+p.T", false)))))
+      ("p.O", _.termsWithIsOpt should be(List(("+p.T", false)))))
   }
 
   it should "ignore byName types" in {

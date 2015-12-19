@@ -3,7 +3,7 @@ package scaps.searchEngine.index
 import scaps.api.ValueDef
 import scaps.api.TypeRef
 
-case class Fingerprint(terms: List[(String, Boolean)]) extends AnyVal {
+case class Fingerprint(termsWithIsOpt: List[(String, Boolean)]) extends AnyVal {
   override def toString =
     termStrings.mkString(" ")
 
@@ -11,7 +11,7 @@ case class Fingerprint(terms: List[(String, Boolean)]) extends AnyVal {
     def termStr(term: (String, Boolean)) =
       (if (term._2) "?" else "!") + term._1
 
-    terms.map(termStr)
+    termsWithIsOpt.map(termStr)
   }
 }
 
@@ -31,20 +31,20 @@ object Fingerprint {
 
   def termsFromString(s: String): List[(String, Boolean)] = {
     var newTerm = true
-    var requiredTerm = false
+    var optionalTerm = false
     var currName = new StringBuilder
     var buff = List.newBuilder[(String, Boolean)]
     s.foreach { c =>
       if (newTerm) {
         c match {
-          case '!' => requiredTerm = true
-          case '?' => requiredTerm = false
+          case '!' => optionalTerm = false
+          case '?' => optionalTerm = true
         }
         newTerm = false
       } else {
         c match {
           case ' ' =>
-            buff += ((currName.result(), requiredTerm))
+            buff += ((currName.result(), optionalTerm))
             currName.clear()
             newTerm = true
           case c =>
@@ -52,7 +52,7 @@ object Fingerprint {
         }
       }
     }
-    buff += ((currName.result(), requiredTerm))
+    buff += ((currName.result(), optionalTerm))
     buff.result()
   }
 }

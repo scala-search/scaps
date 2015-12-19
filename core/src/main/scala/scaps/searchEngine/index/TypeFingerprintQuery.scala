@@ -158,23 +158,24 @@ object TypeFingerprintQuery extends Logging {
        * achievable score of each individual term and uses this order to score
        * the fingerprint as a whole.
        */
-      val termsByMaxPotentialScore =
-        fingerprint.terms.map(_._1).foldLeft((List[(String, Float)](), termScores)) {
-          case ((acc, termScores), fp) =>
+      val termsByMaxPotentialScore: List[(String, Boolean)] =
+        fingerprint.termsWithIsOpt.foldLeft((List[(String, Boolean, Float)](), termScores)) {
+          case ((acc, termScores), (fp, isOpt)) =>
             termScores.getOrElse(fp, List(0f)) match {
               case x :: Nil =>
-                ((fp -> x) :: acc, termScores - fp)
+                ((fp, isOpt, x) :: acc, termScores - fp)
               case x :: rest =>
-                ((fp -> x) :: acc, termScores + (fp -> rest))
+                ((fp, isOpt, x) :: acc, termScores + (fp -> rest))
               case Nil => ???
             }
-        }._1.sortBy(-_._2).map(_._1)
+        }._1.sortBy(-_._3).map(t => (t._1, t._2))
 
       val (score, unmatchedTerms, scorer, scorePerValue) =
         termsByMaxPotentialScore.foldLeft((0f, 0, this, List[(String, Float)]())) {
-          case ((score, unmatchedTerms, scorer, scorePerValue), fpt) =>
+          case ((score, unmatchedTerms, scorer, scorePerValue), (fpt, isOpt)) =>
             scorer.score(fpt).fold {
-              (score, unmatchedTerms + 1, scorer, scorePerValue)
+              val unmatched = unmatchedTerms + (if (isOpt) 0 else 1)
+              (score, unmatched, scorer, scorePerValue)
             } {
               case (newScore, newScorer) =>
                 (score + newScore, unmatchedTerms, newScorer, scorePerValue :+ (fpt -> newScore))

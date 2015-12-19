@@ -150,7 +150,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
 
     val fingerprint = Fingerprint(entity)
-    fingerprint.terms.foreach {
+    fingerprint.termsWithIsOpt.foreach {
       case (term, _) =>
         doc.add(new TextField(fields.fingerprintTerms, term, Store.NO))
     }
