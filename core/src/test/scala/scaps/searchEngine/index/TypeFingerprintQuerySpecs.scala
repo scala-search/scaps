@@ -9,6 +9,8 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   import scaps.searchEngine.index.TypeFingerprintQuery.FingerprintScorer
 
   def tpe(name: String, boost: Double, freq: Float = 1) = Type(Covariant, name, boost, freq)
+  def p(unmatched: Int = 0, unmatchedOpt: Int = 0, unevaluated: Float = 0) =
+    unmatched * 1f + unmatchedOpt * 0.1f + unevaluated
 
   implicit class TupleOps[A, B, C](x: (A, B, C)) {
     def pair = (x._1, x._2)
@@ -17,9 +19,9 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
   "a fingerprint scorer" should "score a simple type query" in {
     val scorer = FingerprintScorer(tpe("A", 1))
 
-    scorer.score(Fingerprint("!+A")).pair should be((1, 0))
-    scorer.score(Fingerprint("!+A !+B")).pair should be((1, 1))
-    scorer.score(Fingerprint("!+B")).pair should be((0, 2))
+    scorer.score(Fingerprint("!+A")).pair should be((1, p()))
+    scorer.score(Fingerprint("!+A !+B")).pair should be((1, p(unmatched = 1)))
+    scorer.score(Fingerprint("!+B")).pair should be((0, p(unmatched = 1, unevaluated = 1)))
   }
 
   it should "score sum queries" in {
@@ -28,8 +30,8 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
         tpe("A", 1),
         tpe("B", 2)))
 
-    scorer.score(Fingerprint("!+A")).pair should be((1, 1))
-    scorer.score(Fingerprint("!+A !+B")).pair should be((3, 0))
+    scorer.score(Fingerprint("!+A")).pair should be((1, p(unevaluated = 1)))
+    scorer.score(Fingerprint("!+A !+B")).pair should be((3, p()))
   }
 
   it should "score max queries" in {
@@ -38,10 +40,10 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
         tpe("A", 1),
         tpe("B", 2)))
 
-    scorer.score(Fingerprint("!+A")).pair should be((1, 0))
-    scorer.score(Fingerprint("!+B")).pair should be((2, 0))
-    scorer.score(Fingerprint("!+A !+B")).pair should be((2, 1))
-    scorer.score(Fingerprint("!+B !+A")).pair should be((2, 1))
+    scorer.score(Fingerprint("!+A")).pair should be((1, p()))
+    scorer.score(Fingerprint("!+B")).pair should be((2, p()))
+    scorer.score(Fingerprint("!+A !+B")).pair should be((2, p(unmatched = 1)))
+    scorer.score(Fingerprint("!+B !+A")).pair should be((2, p(unmatched = 1)))
   }
 
   it should "allow multiple matches on sum queries that are part of a max query" in {
@@ -52,7 +54,7 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
           tpe("B", 2),
           tpe("C", 0.5))))
 
-    scorer.score(Fingerprint("!+A !+B !+C")).pair should be((2.5f, 1))
+    scorer.score(Fingerprint("!+A !+B !+C")).pair should be((2.5f, p(unmatched = 1)))
   }
 
   it should "score repeated types" in {
@@ -64,10 +66,10 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
         tpe("A", 1),
         tpe("A", 1)))
 
-    scorer.score(Fingerprint("!+A !+A")).pair should be((2f, 1))
-    scorer.score(Fingerprint("!+A !+B")).pair should be((1.5f, 1))
-    scorer.score(Fingerprint("!+A !+A !+A")).pair should be((2.9f, 0))
-    scorer.score(Fingerprint("!+B !+A !+A")).pair should be((2.5f, 0))
+    scorer.score(Fingerprint("!+A !+A")).pair should be((2f, p(unevaluated = 1)))
+    scorer.score(Fingerprint("!+A !+B")).pair should be((1.5f, p(unevaluated = 1)))
+    scorer.score(Fingerprint("!+A !+A !+A")).pair should be((2.9f, p()))
+    scorer.score(Fingerprint("!+B !+A !+A")).pair should be((2.5f, p()))
   }
 
   it should "score repeated types with varying values" in {
@@ -78,16 +80,16 @@ class TypeFingerprintQuerySpecs extends FlatSpec with Matchers {
           tpe("B", 0.5)),
         tpe("A", 1)))
 
-    scorer.score(Fingerprint("!+A !+B")).pair should be((1.5f, 0))
-    scorer.score(Fingerprint("!+A !+A !+B")).pair should be((1.5f, 1))
+    scorer.score(Fingerprint("!+A !+B")).pair should be((1.5f, p()))
+    scorer.score(Fingerprint("!+A !+A !+B")).pair should be((1.5f, p(unmatched = 1)))
   }
 
   it should "not penalize unmatched optional terms" in {
     val scorer = FingerprintScorer(tpe("A", 1))
 
-    scorer.score(Fingerprint("!+A ?+A ?+B")).pair should be((1f, 0.2f))
-    scorer.score(Fingerprint("?+A ?+B")).pair should be((1f, 0.1f))
-    scorer.score(Fingerprint("?+B")).pair should be((0f, 1.1f))
+    scorer.score(Fingerprint("!+A ?+A ?+B")).pair should be((1f, p(unmatchedOpt = 2)))
+    scorer.score(Fingerprint("?+A ?+B")).pair should be((1f, p(unmatchedOpt = 1)))
+    scorer.score(Fingerprint("?+B")).pair should be((0f, p(unmatchedOpt = 1, unevaluated = 1)))
   }
 
   // not relevant because up to now such expression trees do not exists

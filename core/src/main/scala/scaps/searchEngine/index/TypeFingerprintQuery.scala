@@ -58,10 +58,11 @@ class TypeFingerprintQuery(termsField: String, fingerprintField: String, apiQuer
         val (queryScore, penalty, scoresPerTerm) = score(doc)
 
         val docScore = normDocScore(subQueryExpl.getValue)
+        val fingerprint = reader.document(doc).getValues(fingerprintField)(0)
         val expl = new Explanation(
           (queryScore) + docScore,
           s"type fingerprint score, typeFingerprint + $docScore of:")
-        expl.addDetail(new Explanation(queryScore, s"type fingerprint ${scoresPerTerm.mkString(", ")}, penalty: $penalty"))
+        expl.addDetail(new Explanation(queryScore, s"type fingerprint: $fingerprint, matched: ${scoresPerTerm.mkString(", ")}, penalty: $penalty"))
         expl.addDetail(subQueryExpl)
         expl
       }
