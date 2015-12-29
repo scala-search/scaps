@@ -154,7 +154,7 @@ class Searcher(searchEngine: SearchEngine) extends Actor {
             s"Type ${name} is ambiguous. Possible candidates: ${candidates.map(_.name).mkString(", ")}"
           case UnexpectedNumberOfTypeArgs(raw, n) =>
             s"$raw has wrong number of arguments ($n expected)"
-          case TooUnspecific() =>
+          case TooUnspecific =>
             s"Query too unspecific consider using wildcards '_' instead of 'Any' types"
         }
         sender ! res

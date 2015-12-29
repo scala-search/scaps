@@ -15,6 +15,7 @@ import scaps.api.TypeDef
 import scaps.api.TypeRef
 import scaps.api.ViewDef
 import scaps.api.Module
+import java.util.regex.Pattern
 
 class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
 
@@ -180,8 +181,10 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
     res.swap.getOrElse(???)
   }
 
-  val settings =
-    Settings.fromApplicationConf.query.copy(typeFrequencyWeight = 0)
+  val settings = {
+    val s = Settings.fromApplicationConf
+    s.copy(query = s.query.copy(typeFrequencyWeight = 0))
+  }
 
   val analyzer = {
     val entities = extractAll(env)
@@ -199,13 +202,13 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
     val findTypeDefsBySuffix = toMultiMap(for {
       cls <- classEntities
       suffix <- cls.name.split("\\.").toList.tails.filterNot(_ == Nil).map(_.mkString("."))
-    } yield (suffix, cls)) andThen (SearchEngine.favorScalaStdLib _)
+    } yield (suffix, cls))
 
     val viewsIndex = new ViewIndex(new RAMDirectory)
     viewsIndex.addEntities(views)
 
-    new QueryAnalyzer(
-      Settings.fromApplicationConf.index.polarizedTypes,
-      settings, findTypeDefsBySuffix, viewsIndex.findViews(_, Set()).get)
+    new QueryAnalyzer(settings, findTypeDefsBySuffix, viewsIndex.findViews(_, Set()).get)
+      .favorTypesMatching(Pattern.compile("""scala\..*"""))
+      .favorTypesMatching(Pattern.compile("""(scala\.([^\.#]+))|java\.lang\.String"""))
   }
 }

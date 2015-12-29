@@ -133,8 +133,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       viewIndex.addEntities(views)
 
       val analyzer = new QueryAnalyzer(
-        settings.index.polarizedTypes,
-        settings.query,
+        settings,
         _ => Nil,
         viewIndex.findViews(_, Set()).get)
 

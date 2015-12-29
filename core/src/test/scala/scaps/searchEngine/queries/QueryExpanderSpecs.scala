@@ -20,7 +20,7 @@ import scaps.scala.featureExtraction.Scala
 import scaps.api.Module
 import scaps.api.Invariant
 
-class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
+class QueryExpanderSpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
 
   /*
@@ -275,14 +275,13 @@ class QueryAnalyzerExpansionSpecs extends FlatSpec with Matchers {
     index
   }
 
-  val analyzer = new QueryAnalyzer(
-    Settings.fromApplicationConf.index.polarizedTypes,
+  val expander = new QueryExpander(
     Settings.fromApplicationConf.query,
     _ => Nil,
     viewIndex.findViews(_, Set()).get.filter(_.to != TypeRef.Nothing))
 
   def expand(q: TypeRef) =
-    unified(analyzer.expandQuery(q))
+    unified(expander.expandQuery(q))
 
   implicit val ordering: Ordering[ExpandedQuery] = Ordering[(Int, Int)].on {
     case l: Leaf => (1, l.hashCode())

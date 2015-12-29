@@ -31,6 +31,7 @@ import scaps.api.TypeParameter
 import scaps.api.Variance
 import scaps.api.ViewDef
 import scaps.api.Result
+import java.util.regex.Pattern
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -54,25 +55,6 @@ object SearchEngine {
     val views = new ViewIndex(new RAMDirectory)
 
     new SearchEngine(settings, values, typeDefs, modules, views)
-  }
-
-  /**
-   * Names from the `scala` root package are favored over other names and all names in
-   * the `scala` namespace have a higher priority. This allows queries like `List => Future`.
-   */
-  private[searchEngine] def favorScalaStdLib(candidates: Seq[TypeDef]) = {
-    // typeDefs in root `scala` namespace and java.lang.String are always favored
-    val firstPrioPattern = """(scala\.([^\.#]+))|java\.lang\.String"""
-    // unambiguous names from the `scala` namespace are also priotized over names from other namespaces
-    val secondPrioPattern = """scala\..*"""
-
-    candidates.filter(_.name.matches(firstPrioPattern)) match {
-      case Seq(fav) => Seq(fav)
-      case _ => candidates.filter(_.name.matches(secondPrioPattern)) match {
-        case Seq(fav) => Seq(fav)
-        case _        => candidates
-      }
-    }
   }
 }
 
@@ -106,11 +88,11 @@ class SearchEngine private[searchEngine] (
 
   def finalizeIndex(): Try[Unit] =
     Try {
-      analyzers = Map()
+      resetAnalyzers()
 
       updateTypeFrequencies().get
 
-      analyzers = Map()
+      resetAnalyzers()
     }
 
   private def updateTypeFrequencies(): Try[Unit] =
@@ -144,9 +126,10 @@ class SearchEngine private[searchEngine] (
    * (particularly `indexEntities`) may result in an exception.
    */
   def search(query: String, moduleIds: Set[String] = Set()): Try[QueryError \/ Seq[Result[ValueDef]]] = Try {
+    val moduleAnalyzer = analyzer(moduleIds)
+
     for {
-      parsed <- QueryParser(query)
-      analyzed <- analyzeQuery(moduleIds, parsed).get
+      analyzed <- moduleAnalyzer(query)
       results <- valueIndex.find(analyzed, moduleIds).get
     } yield {
       logger.debug(s"""query "${query}" expanded to:\n"${analyzed.prettyPrint}" """)
@@ -163,37 +146,22 @@ class SearchEngine private[searchEngine] (
     } index.resetIndex().get
   }
 
-  private var analyzers: Map[Set[String], QueryAnalyzer] = Map()
+  private var analyzer: Set[String] => QueryAnalyzer = null
 
-  private def analyzer(moduleIds: Set[String]): QueryAnalyzer =
-    analyzers.get(moduleIds).fold {
-      def findClassBySuffix(suffix: String) =
-        typeIndex.findTypeDefsBySuffix(suffix, moduleIds).get
+  private def resetAnalyzers() = {
+    analyzer = Memo.mutableHashMapMemo {
+      (moduleIds: Set[String]) =>
+        def findClassBySuffix(suffix: String) =
+          typeIndex.findTypeDefsBySuffix(suffix, moduleIds).get
 
-      val analyzer = new QueryAnalyzer(
-        settings.index.polarizedTypes,
-        settings.query,
-        Memo.mutableHashMapMemo((findClassBySuffix _) andThen (SearchEngine.favorScalaStdLib _)),
-        Memo.mutableHashMapMemo(viewIndex.findViews(_, moduleIds).get))
-
-      analyzers += (moduleIds -> analyzer)
-
-      analyzer
-    } { identity }
-
-  private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
-    val moduleAnalyzer = analyzer(moduleIds)
-
-    moduleAnalyzer(raw).swapped(_.flatMap {
-      case e: NameNotFound =>
-        raw match {
-          case RawQuery.Full("", tpe) if tpe.args.length == 0 =>
-            moduleAnalyzer(RawQuery.Keywords(tpe.name)).swap
-          case _ =>
-            \/.right(e)
-        }
-      case e =>
-        \/.right(e)
-    })
+        new QueryAnalyzer(
+          settings,
+          Memo.mutableHashMapMemo((findClassBySuffix _)),
+          Memo.mutableHashMapMemo(viewIndex.findViews(_, moduleIds).get))
+          .favorTypesMatching(Pattern.compile("""scala\..*"""))
+          .favorTypesMatching(Pattern.compile("""(scala\.([^\.#]+))|java\.lang\.String"""))
+    }
   }
+
+  resetAnalyzers()
 }

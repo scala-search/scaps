@@ -134,7 +134,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 
       q.right
     } catch {
-      case _: BooleanQuery.TooManyClauses => TooUnspecific().left
+      case _: BooleanQuery.TooManyClauses => TooUnspecific.left
     }
   }
 
