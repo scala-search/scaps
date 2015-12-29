@@ -8,6 +8,7 @@ import scaps.api.ValueDef
 import scaps.api.TypeRef
 import scaps.api.ViewDef
 import scaps.api.Module
+import scaps.searchEngine.queries.QueryAnalyzer
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
   "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {
@@ -131,7 +132,13 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     withViewIndex { viewIndex =>
       viewIndex.addEntities(views)
 
-      (TypeFrequencies(viewIndex.findAlternativesWithDistance(_).get.map(_._1), values, Int.MaxValue, true),
+      val analyzer = new QueryAnalyzer(
+        settings.index.polarizedTypes,
+        settings.query,
+        _ => Nil,
+        viewIndex.findViews(_, Set()).get)
+
+      (TypeFrequencies(analyzer.apply _, values, Int.MaxValue),
         values.filter(!_.isOverride).length)
     }
   }

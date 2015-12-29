@@ -20,6 +20,7 @@ import scaps.utils._
 import scaps.searchEngine.MaximumClauseCountExceededException
 import scaps.api.FingerprintTerm
 import scaps.api.ViewDef
+import scaps.api.ValueDef
 
 private[queries] sealed trait ResolvedQuery
 private[queries] object ResolvedQuery {
@@ -135,13 +136,20 @@ class QueryAnalyzer private[searchEngine] (
         for {
           resolved <- resolveNames(tpe)
           normalized = toType(resolved).normalize(Nil)
-          polarized = if (polarizedTypes) normalized else normalized.withVariance(Invariant)
-          expanded = ExpandedQuery.minimize(expandQuery(polarized))
-          typeQuery = toApiTypeQuery(expanded)
+          typeQuery = apply(normalized)
         } yield {
           ApiQuery(keys, Some(typeQuery))
         }
     }
+
+  def apply(v: ValueDef): ApiTypeQuery =
+    apply(v.tpe.normalize(v.typeParameters))
+
+  def apply(t: TypeRef): ApiTypeQuery = {
+    val polarized = if (polarizedTypes) t else t.withVariance(Invariant)
+    val expanded = ExpandedQuery.minimize(expandQuery(t))
+    toApiTypeQuery(expanded)
+  }
 
   /**
    * Resolves all type names in the query and assigns the according class entities.

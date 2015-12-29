@@ -109,17 +109,20 @@ class SearchEngine private[searchEngine] (
       analyzers = Map()
 
       updateTypeFrequencies().get
+
+      analyzers = Map()
     }
 
   private def updateTypeFrequencies(): Try[Unit] =
     Try {
       logger.info(s"Start updating type frequencies for modules ${moduleIndex.allEntities().get}")
 
+      val allModulesAnalyzer = analyzer(indexedModules().get.map(_.moduleId).toSet)
+
       val tfs = TypeFrequencies(
-        viewIndex.findAlternativesWithDistance(_, Set()).get.map(_._1),
+        allModulesAnalyzer.apply,
         valueIndex.allEntities().get,
-        settings.index.typeFrequenciesSampleSize,
-        settings.index.polarizedTypes)
+        settings.index.typeFrequenciesSampleSize)
 
       typeIndex.updateTypeFrequencies(tfs)
 
@@ -162,8 +165,8 @@ class SearchEngine private[searchEngine] (
 
   private var analyzers: Map[Set[String], QueryAnalyzer] = Map()
 
-  private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
-    val analyzer = analyzers.get(moduleIds).fold {
+  private def analyzer(moduleIds: Set[String]): QueryAnalyzer =
+    analyzers.get(moduleIds).fold {
       def findClassBySuffix(suffix: String) =
         typeIndex.findTypeDefsBySuffix(suffix, moduleIds).get
 
@@ -178,11 +181,14 @@ class SearchEngine private[searchEngine] (
       analyzer
     } { identity }
 
-    analyzer(raw).swapped(_.flatMap {
+  private def analyzeQuery(moduleIds: Set[String], raw: RawQuery) = Try {
+    val moduleAnalyzer = analyzer(moduleIds)
+
+    moduleAnalyzer(raw).swapped(_.flatMap {
       case e: NameNotFound =>
         raw match {
           case RawQuery.Full("", tpe) if tpe.args.length == 0 =>
-            analyzer(RawQuery.Keywords(tpe.name)).swap
+            moduleAnalyzer(RawQuery.Keywords(tpe.name)).swap
           case _ =>
             \/.right(e)
         }
