@@ -58,16 +58,16 @@ class QueryAnalyzer private[searchEngine] (
         for {
           resolved <- resolver(tpe)
           normalized = resolved.normalize(Nil)
-          typeQuery = apply(normalized)
+          typeQuery <- apply(normalized)
         } yield {
           ApiQuery(keys, Some(typeQuery))
         }
     }
 
-  def apply(v: ValueDef): ApiTypeQuery =
+  def apply(v: ValueDef): SemanticError \/ ApiTypeQuery =
     apply(v.tpe.normalize(v.typeParameters))
 
-  def apply(t: TypeRef): ApiTypeQuery = {
+  def apply(t: TypeRef): SemanticError \/ ApiTypeQuery = {
     val polarized = if (settings.index.polarizedTypes) t else t.withVariance(Invariant)
     expander(polarized)
   }

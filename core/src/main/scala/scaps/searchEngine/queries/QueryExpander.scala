@@ -6,9 +6,12 @@ import scaps.api.TypeDef
 import scaps.api.TypeRef
 import scaps.api.ViewDef
 import scaps.searchEngine.ApiTypeQuery
-import scaps.searchEngine.MaximumClauseCountExceededException
+import scaps.searchEngine.MaximumClauseCountExceeded
 import scaps.settings.QuerySettings
 import scaps.utils.TraversableOps
+import scala.util.Try
+import scalaz.\/
+import scaps.searchEngine.SemanticError
 
 private[queries] sealed trait ExpandedQuery {
   import ExpandedQuery._
@@ -103,10 +106,17 @@ class QueryExpander(
     findTypeDefsBySuffix: (String) => Seq[TypeDef],
     findViews: (TypeRef) => Seq[ViewDef]) {
 
-  def apply(tpe: TypeRef): ApiTypeQuery = {
-    val expanded = expandQuery(tpe)
-    val compacted = ExpandedQuery.minimize(expanded)
-    toApiTypeQuery(compacted)
+  case object MaximumClauseCountExceededException extends Exception
+
+  def apply(tpe: TypeRef): SemanticError \/ ApiTypeQuery = {
+    try {
+      val expanded = expandQuery(tpe)
+      val compacted = ExpandedQuery.minimize(expanded)
+      \/.right(toApiTypeQuery(compacted))
+    } catch {
+      case MaximumClauseCountExceededException =>
+        \/.left(MaximumClauseCountExceeded)
+    }
   }
 
   private[queries] def expandQuery(tpe: TypeRef): ExpandedQuery.Alternative = {

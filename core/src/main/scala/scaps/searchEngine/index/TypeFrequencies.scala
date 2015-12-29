@@ -5,22 +5,18 @@ import scaps.api._
 import scala.util.Random
 import scaps.utils._
 import scaps.searchEngine.ApiTypeQuery
-import scaps.searchEngine.MaximumClauseCountExceededException
+import scaps.searchEngine.SemanticError
 
 object TypeFrequencies {
-  def apply(analyzeValue: ValueDef => ApiTypeQuery,
+  def apply(analyzeValue: ValueDef => SemanticError \/ ApiTypeQuery,
             values: Seq[ValueDef],
             maxSampleSize: Int): Map[(Variance, String), Float] = {
     def typesReferencedFromValue(value: ValueDef): Seq[(Variance, String)] = {
-      val typesInValue = try {
-        analyzeValue(value).allTypes
-      } catch {
-        case MaximumClauseCountExceededException =>
-          Nil
-      }
-      typesInValue
-        .map(tpe => (tpe.variance, tpe.typeName))
-        .distinct
+      analyzeValue(value).map { analyzed =>
+        analyzed.allTypes
+          .map(tpe => (tpe.variance, tpe.typeName))
+          .distinct
+      }.getOrElse(Nil)
     }
 
     val sampledValues = values
