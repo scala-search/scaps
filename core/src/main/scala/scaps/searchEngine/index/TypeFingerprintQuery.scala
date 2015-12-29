@@ -106,7 +106,7 @@ object TypeFingerprintQuery extends Logging {
       .map(t => (t.fingerprint, t.typeFrequency))
       .distinct
 
-    val (values, _) = rankedTermsWithFreq.foldLeft((List[String](), 0f)) {
+    val (values, _) = rankedTermsWithFreq.foldLeft((List[String](), 0d)) {
       case (acc @ (accTerms, accFreq), (value, freq)) =>
         if (accFreq + freq < frequencyCutoff)
           (value :: accTerms, accFreq + freq)

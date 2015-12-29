@@ -23,6 +23,7 @@ import scaps.api.Variance
 import org.apache.lucene.search.DocIdSetIterator
 import scaps.api.Contravariant
 import scaps.api.Invariant
+import scaps.api.FingerprintTerm
 
 /**
  * Persists class entities and provides lookup for typeDefs by name.
@@ -47,6 +48,15 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
     withWriter { writer =>
       writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
+
+  def termFrequency(term: FingerprintTerm, moduleIds: Set[String]): Try[Double] = Try {
+    findTypeDef(term.tpe).get
+      .flatMap { tpe =>
+        tpe.typeFrequency.get(term.variance)
+      }
+      .map(_.toDouble)
+      .getOrElse(0d)
+  }
 
   /**
    * Searches for class entities whose last parts of the full qualified name are `suffix`

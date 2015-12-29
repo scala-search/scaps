@@ -16,6 +16,7 @@ import scaps.searchEngine.QueryError
 import scaps.settings.Settings
 import scala.util.matching.Regex
 import java.util.regex.Pattern
+import scaps.api.FingerprintTerm
 
 /**
  * Analyzes queries from various representations.
@@ -26,10 +27,11 @@ import java.util.regex.Pattern
 class QueryAnalyzer private[searchEngine] (
     settings: Settings,
     findTypeDefsBySuffix: (String) => Seq[TypeDef],
+    getTypeFrequency: FingerprintTerm => Double,
     findViews: (TypeRef) => Seq[ViewDef]) {
 
   val resolver = new QueryResolver(findTypeDefsBySuffix)
-  val expander = new QueryExpander(settings.query, findTypeDefsBySuffix, findViews)
+  val expander = new QueryExpander(settings.query, getTypeFrequency, findViews)
 
   def apply(query: String): QueryError \/ ApiQuery = {
     QueryParser(query).flatMap { parsed =>
@@ -79,6 +81,6 @@ class QueryAnalyzer private[searchEngine] (
         case _                     => candidates
       }
     }
-    new QueryAnalyzer(settings, findTypeDefs, findViews)
+    new QueryAnalyzer(settings, findTypeDefs, getTypeFrequency, findViews)
   }
 }

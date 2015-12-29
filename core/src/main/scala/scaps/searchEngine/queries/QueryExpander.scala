@@ -103,10 +103,10 @@ private[queries] object ExpandedQuery {
  */
 class QueryExpander(
     settings: QuerySettings,
-    findTypeDefsBySuffix: (String) => Seq[TypeDef],
+    getTypeFrequency: FingerprintTerm => Double,
     findViews: (TypeRef) => Seq[ViewDef]) {
 
-  case object MaximumClauseCountExceededException extends Exception
+  private case object MaximumClauseCountExceededException extends Exception
 
   def apply(tpe: TypeRef): SemanticError \/ ApiTypeQuery = {
     try {
@@ -199,13 +199,10 @@ class QueryExpander(
     if (base == 0) {
       1
     } else {
-      val freq = getFrequency(t)
+      val freq = getTypeFrequency(t)
       math.log(base / (freq * base + (1 - freq))) / math.log(base)
     }
   }
-
-  private def getFrequency(t: FingerprintTerm) =
-    findTypeDefsBySuffix(t.tpe).headOption.map(_.frequency(t.variance)).getOrElse(0f)
 
   private def toApiTypeQuery(q: ExpandedQuery): ApiTypeQuery = q match {
     case ExpandedQuery.Sum(parts) =>
@@ -217,6 +214,6 @@ class QueryExpander(
         l.tpe.variance,
         l.tpe.name,
         boost(l),
-        getFrequency(l.tpe.term))
+        getTypeFrequency(l.tpe.term))
   }
 }

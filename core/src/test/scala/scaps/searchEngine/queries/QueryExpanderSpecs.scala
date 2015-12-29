@@ -277,7 +277,7 @@ class QueryExpanderSpecs extends FlatSpec with Matchers {
 
   val expander = new QueryExpander(
     Settings.fromApplicationConf.query,
-    _ => Nil,
+    _ => 0d,
     viewIndex.findViews(_, Set()).get.filter(_.to != TypeRef.Nothing))
 
   def expand(q: TypeRef) =

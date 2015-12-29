@@ -32,6 +32,7 @@ import scaps.api.Variance
 import scaps.api.ViewDef
 import scaps.api.Result
 import java.util.regex.Pattern
+import scaps.api.FingerprintTerm
 
 object SearchEngine {
   def apply(settings: Settings): Try[SearchEngine] = Try {
@@ -157,6 +158,7 @@ class SearchEngine private[searchEngine] (
         new QueryAnalyzer(
           settings,
           Memo.mutableHashMapMemo((findClassBySuffix _)),
+          Memo.mutableHashMapMemo(typeIndex.termFrequency(_, moduleIds).get),
           Memo.mutableHashMapMemo(viewIndex.findViews(_, moduleIds).get))
           .favorTypesMatching(Pattern.compile("""scala\..*"""))
           .favorTypesMatching(Pattern.compile("""(scala\.([^\.#]+))|java\.lang\.String"""))

@@ -58,7 +58,7 @@ object ApiTypeQuery {
     def apply(alternatives: ApiTypeQuery*): Max = Max(alternatives.toList)
   }
 
-  case class Type(variance: Variance, typeName: String, boost: Double, typeFrequency: Float) extends ApiTypeQuery {
+  case class Type(variance: Variance, typeName: String, boost: Double, typeFrequency: Double) extends ApiTypeQuery {
     def children = Nil
 
     val fingerprint = s"${variance.prefix}${typeName}"
