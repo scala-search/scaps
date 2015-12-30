@@ -11,7 +11,7 @@ import scaps.api.Module
 import scaps.searchEngine.queries.QueryAnalyzer
 
 class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
-  "the type frequency accumulator" should "calculate type frequencies at covariant positions" in {
+  it should "calculate type frequencies at covariant positions" in {
     val (tfs, maxFreq) = typeFrequenciesWithMaxAbsoluteFrequency("""
       package p
 
@@ -91,13 +91,14 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
       }
       """)
 
-    val tfA = tfs((Invariant, "p.A"))
-    val tfB = tfs((Invariant, "p.B"))
-    val tfC = tfs((Invariant, "p.C"))
+    tfs((Invariant, "p.A")) should be >= (tfs((Covariant, "p.A")))
+    tfs((Invariant, "p.A")) should be >= (tfs((Contravariant, "p.A")))
 
-    tfA should be(0f)
-    tfB should be(2f / maxFreq) // new B, m1
-    tfC should be(1f / maxFreq) // new C
+    tfs((Invariant, "p.B")) should be > (tfs((Covariant, "p.B")))
+    tfs((Invariant, "p.B")) should be > (tfs((Contravariant, "p.B")))
+
+    tfs((Invariant, "p.C")) should be >= (tfs((Covariant, "p.C")))
+    tfs((Invariant, "p.C")) should be >= (tfs((Contravariant, "p.C")))
   }
 
   it should "calculate type frequencies of generic types" in {
@@ -139,7 +140,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
         viewIndex.findViews(_, Set()).get)
 
       (TypeFrequencies(analyzer.apply _, values, Int.MaxValue),
-        values.filter(!_.isOverride).length)
+        values.length)
     }
   }
 }

@@ -14,13 +14,17 @@ object TypeFrequencies {
     def typesReferencedFromValue(value: ValueDef): Seq[(Variance, String)] = {
       analyzeValue(value).map { analyzed =>
         analyzed.allTypes
-          .map(tpe => (tpe.variance, tpe.typeName))
+          .flatMap {
+            case ApiTypeQuery.Type(Invariant, tpeName, _, _) =>
+              List((Invariant, tpeName))
+            case ApiTypeQuery.Type(v, tpeName, _, _) =>
+              List((Invariant, tpeName), (v, tpeName))
+          }
           .distinct
       }.getOrElse(Nil)
     }
 
     val sampledValues = values
-      .filter(!_.isOverride)
       .sample(maxSampleSize)
 
     val maxFrequency = sampledValues.length
