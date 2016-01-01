@@ -311,4 +311,16 @@ class FingerprintSpecs extends FlatSpec with Matchers with ExtractionUtils {
         include("!-scala.Any") and
         include("!+scala.Nothing"))))
   }
+
+  it should "mark repeated types as optional" in {
+    extractFingerprints("""
+      package p
+
+      object O {
+        def b(is: Int*): Int = ???
+      }
+      """)(
+      ("p.O.b", _.toString should (
+        include("?-scala.<repeated>"))))
+  }
 }

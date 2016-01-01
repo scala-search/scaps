@@ -319,9 +319,16 @@ trait EntityFactory extends StrictLogging {
         Nil
     }
 
-    baseTypes.flatMap { baseCls =>
-      ViewDef.bidirectional(baseCls, cls.toType, Scala.subtypingDistance, cls.name)
-    } ++ toRepeated ++ toParametrizedTopAndBottom
+    def replaceCovNothingWithParam(tpe: TypeRef): TypeRef = tpe match {
+      case TypeRef.Nothing(Covariant) => TypeRef("_", Covariant, Nil, isTypeParam = true)
+      case t                          => t.copy(args = t.args.map(replaceCovNothingWithParam))
+    }
+
+    baseTypes
+      .map(replaceCovNothingWithParam)
+      .flatMap { baseCls =>
+        ViewDef.bidirectional(baseCls, cls.toType, Scala.subtypingDistance, cls.name)
+      } ++ toRepeated ++ toParametrizedTopAndBottom
   }
 
   private def createViewFromValue(v: ValueDef): List[ViewDef] = {

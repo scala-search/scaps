@@ -20,10 +20,17 @@ object Fingerprint {
     Fingerprint(terms(v.tpe.normalize(v.typeParameters)).sortBy(_._1))
   }
 
+  private val optionalTypes = List(
+    TypeRef.ByName.unapply _,
+    TypeRef.Repeated.unapply _,
+    TypeRef.Refinement.unapply _)
+
   def terms(t: TypeRef, inImplicit: Boolean = false): List[(String, Boolean)] = t match {
-    case TypeRef.Ignored(args, _)         => args.flatMap(terms(_, inImplicit))
-    case TypeRef.Implicit(arg, _)         => terms(arg, true)
-    case TypeRef(name, variance, args, _) => (variance.prefix + name, inImplicit) :: args.flatMap(terms(_, inImplicit))
+    case TypeRef.Ignored(args, _) => args.flatMap(terms(_, inImplicit))
+    case TypeRef.Implicit(arg, _) => terms(arg, true)
+    case TypeRef(name, v, args, _) =>
+      val optional = inImplicit || optionalTypes.exists(_.apply(t).isDefined)
+      (v.prefix + name, optional) :: args.flatMap(terms(_, inImplicit))
   }
 
   def apply(s: String): Fingerprint =

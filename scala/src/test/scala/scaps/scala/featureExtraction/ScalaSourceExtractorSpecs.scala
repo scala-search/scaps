@@ -679,4 +679,17 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       contain(":+p.B[-_, +_]:+<bottom2>[-_, +_]") and
       contain(":+p.C[_, _, _]:+<bottom3>[_, _, _]"))
   }
+
+  it should "transform views to a type with argument Nothing to views to a parametrized type" in {
+    val views = extractAllViews("""
+      package p
+
+      trait Box[+T]
+      object Empty extends Box[Nothing]
+      """)
+
+    views.map(_.name) should (
+      contain("p.Empty$:+p.Box[+_]:+p.Empty$") and
+      contain("p.Empty$:-p.Empty$:-p.Box[-_]"))
+  }
 }
