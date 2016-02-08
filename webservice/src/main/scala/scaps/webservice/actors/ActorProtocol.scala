@@ -3,7 +3,6 @@ package scaps.webservice.actors
 import scalaz.\/
 import scaps.api.ValueDef
 import scaps.api.Module
-import scaps.api.IndexJob
 import scaps.searchEngine.SearchEngine
 import scaps.api.Definition
 import scaps.api.Result

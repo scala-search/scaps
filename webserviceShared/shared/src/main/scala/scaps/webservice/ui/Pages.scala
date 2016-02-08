@@ -11,7 +11,7 @@ import scaps.api.TypeRef
 import scaps.api.TypeRef.MemberAccess
 import scaps.api.TypeParameter
 import scaps.api.ScapsApi
-import scaps.api.BuildInfo
+import scaps.buildInfo.BuildInfo
 import scaps.api.Result
 
 abstract class Pages[Builder, Output <: FragT, FragT](val bundle: Bundle[Builder, Output, FragT])

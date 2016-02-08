@@ -19,8 +19,6 @@ case class IndexBusy(indexedModules: Seq[Module], indexErrors: Seq[String]) exte
   val isReady = false
 }
 
-case class IndexJob(module: Module, artifactPath: String, docUrlPrefix: Option[String])
-
 case class Result[E](entity: E, score: Float, explanation: Option[String])
 
 /**

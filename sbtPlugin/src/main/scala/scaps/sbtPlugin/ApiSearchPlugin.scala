@@ -1,21 +1,11 @@
 package scaps.sbtPlugin
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import autowire._
 import sbt.{ url => sbtUrl, _ }
 import sbt.Keys._
-import sbt.complete.DefaultParsers.spaceDelimited
 import sbt.APIMappings
-import scaps.api.Module
-import scaps.api.ScapsApi
-import scaps.api.ScapsControlApi
-import org.slf4j.impl.StaticLoggerBinder
-import sbt.complete.Parser
-import scaps.api.IndexJob
-import scaps.api.BuildInfo
+import scaps.buildInfo.BuildInfo
+
+case class IndexJob(organization: String, name: String, revision: String, artifactPath: String, docUrlPrefix: Option[String])
 
 object ApiSearchPlugin extends AutoPlugin {
   override def trigger = allRequirements
@@ -50,7 +40,7 @@ object ApiSearchPlugin extends AutoPlugin {
         }
 
         sourceFile.map(f => IndexJob(
-          Module(module.organization, module.name, module.revision),
+          module.organization, module.name, module.revision,
           f.getAbsolutePath(),
           mapping.map(_.toString + "#")))
       }.distinct
@@ -68,9 +58,9 @@ object ApiSearchPlugin extends AutoPlugin {
       val moduleArgs = scapsModules.value.zipWithIndex.flatMap {
         case (m, idx) =>
           Seq(
-            s"-Dscaps.extraction.modules.${idx}.organization=${m.module.organization}",
-            s"-Dscaps.extraction.modules.${idx}.name=${m.module.name}",
-            s"-Dscaps.extraction.modules.${idx}.revision=${m.module.revision}",
+            s"-Dscaps.extraction.modules.${idx}.organization=${m.organization}",
+            s"-Dscaps.extraction.modules.${idx}.name=${m.name}",
+            s"-Dscaps.extraction.modules.${idx}.revision=${m.revision}",
             s"-Dscaps.extraction.modules.${idx}.artifact=${m.artifactPath}",
             s"-Dscaps.extraction.modules.${idx}.doc-url=${m.docUrlPrefix.getOrElse("")}")
       }

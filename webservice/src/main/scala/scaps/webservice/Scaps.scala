@@ -18,7 +18,6 @@ import scaps.api.ScapsControlApi
 import scaps.api.ValueDef
 import scaps.webservice.actors.Director
 import scaps.webservice.actors.UserInteractionLogger
-import scaps.api.IndexJob
 import scaps.api.Definition
 import scaps.api.Result
 
