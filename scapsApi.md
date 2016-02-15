@@ -9,20 +9,25 @@ This document describes the targeted API of the core library for version 1.0. Th
 ## Initialize Scaps
 
 * `Scaps$.apply(language: LanguageModel, settings: Settings): Scaps`
+
     Initializes the search engine with the `language` and settings provided.
 
 ## Update Index
 
 * `Scaps.startIndexBatch(): Batch`
+    
     Returns a handle that allows modifications of the index. It is possible to start multiple concurrent batches, but the changes will only be committed after the last batch has been completed. Executing index modifications in batches is necessary to avoid redundant recalculations of type relations and statistics.
 
 * `Batch.addDefinitions(definitions: List[Definition]): Future[Unit]`
+    
     Adds `definitions` to the index.
 
 * `Batch.removeDefinitions(files: List[Path]): Future[Unit]`
+    
     Removes all definitions from the index whose `file` value is contained in `files`. By removing a 
 
 * `Batch.complete(): Future[List[NameNotFound]]`
+    
     Commits all modifications to the index and updates statistics if necessary. This operation may take up to several minutes.
 
     `complete` may return a list of FQN referring to types for which no `TypeDef` has been supplied but have been referenced in a value or type definition. If this list is non-empty, the index is inconsistent and wont continue finalization. In this case, clients must create another batch and provide the missing `TypeDef`s.
@@ -30,6 +35,7 @@ This document describes the targeted API of the core library for version 1.0. Th
 ## Search
 
 * `Scaps.search(query: Query): Future[QueryError \/ ResultSet]`
+    
     Returns a result set with FQNs of values matching the query.
 
 ## Data
@@ -137,6 +143,8 @@ QueryError:
   NameNotFound(name: FQN, noTypeParameters: Int)
 ```
 
+## Examples
+
 ### Objects
 
 An object definition may or may not produce an according type definition. If the object extends only one type T, it is sufficient to produce a ValueDef with `tpe = T`. If there are more than one supertypes, it is recommended to produce both a ValueDef and a TypeDef. Refinement types should be avoided.
@@ -154,18 +162,18 @@ Expected definitions:
 ```
 ValueDef(
   name = "scala.math.Numeric$",
-  tpe = SimpleType("scala.Any"))
+  tpe = TypeRef("scala.Any"))
 
 ValueDef(
   name = "scala.math.Numeric$.CharIsIntegral",
-  tpe = SimpleType("scala.math.Numeric$.CharIsIntegral$"),
+  tpe = TypeRef("scala.math.Numeric$.CharIsIntegral$"),
   isImplicit = true)
 
 TypeDef(
   name = "scala.math.Numeric$.CharIsIntegral$",
   extends = List(
-    SimpleType("scala.math.Numeric$.CharIsIntegral$"),
-    SimpleType("scala.math.Ordering$.CharOrdering")))
+    TypeRef("scala.math.Numeric$.CharIsIntegral$"),
+    TypeRef("scala.math.Ordering$.CharOrdering")))
 ```
 
 ### Values and Methods
@@ -181,16 +189,16 @@ Expected definitions:
 ```
 ValueDef(
   name = "a",
-  tpe = SimpleType("scala.Int"))
+  tpe = TypeRef("scala.Int"))
 
 ValueDef(
   name = "f(Int)(Char)",
   tpe = MethodInvocation(
-    SimpleType("scala.Int"),
-    ImplicitMethodInvocation(
-      SimpleType("scala.Char"),
-      SimpleType("java.lang.String"))),
-  isImplicit = true)
+    TypeRef("scala.Int"),
+    MethodInvocation(
+      TypeRef("scala.Char"),
+      TypeRef("java.lang.String"),
+      isImplicit = true)))
 ```
 
 ### Classes and Class Members
