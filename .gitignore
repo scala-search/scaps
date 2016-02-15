@@ -7,3 +7,5 @@
 target*
 bin
 *.log
+.ensime
+.ensime_cache

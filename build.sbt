@@ -1,5 +1,7 @@
 // Common Settings
 
+scalaVersion := Commons.targetedScalaVersion
+
 lazy val utestFramework = new TestFramework("utest.runner.Framework")
 
 lazy val commonSettings = Seq(
