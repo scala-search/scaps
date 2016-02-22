@@ -6,18 +6,7 @@ Scaps is a search engine for discovering functionality in Scala libraries. You c
 
 ## License
 
-Scaps is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Scaps is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with Scaps.  If not, see http://www.gnu.org/licenses/.
+Scaps is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with Scaps, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 ## Development
 
@@ -35,7 +24,7 @@ The SBT plug-in has to be published to a maven repository before it can be used 
 
 The plug-in can now be used by creating a new SBT project on **the same machine that also hosts the web service** and including the following line in the `project/plugins.sbt` file:
 
-> `addSbtPlugin("org.scala-search" % "scaps-sbt" % "0.1-SNAPSHOT")`
+> `addSbtPlugin("org.scala-search" % "scaps-sbt" % <scapsVersion>)`
 
 Additionally, the libraries to index have to be included in the project's `build.sbt` file as a library dependency. For example, to index scalaz, add
 
@@ -43,19 +32,15 @@ Additionally, the libraries to index have to be included in the project's `build
 
 The Scala Standard Library is a library dependency per default and does not need to be added in order to be indexed.
 
-If the Scaps service is not exposed at the default ports, the correct hostname can bet set by using
+If the Scaps control API is not exposed at the default ports, the correct hostname can bet set by using
 
-> `scapsHost := "localhost:80"`
-
-to set the location of the User API and
-
-> `scapsControlHost := "localhost:9000"`
+> `scapsControlHost in Scaps := "localhost:9000"`
 
 to set the location of the Control API.
 
 Finally, an index job can be started by running
 
-> `sbt scapsIndex`
+> `sbt scaps:run`
 
 An example project, that demonstrates the required project structure is also given in the `demoEnvironment` directory.
 

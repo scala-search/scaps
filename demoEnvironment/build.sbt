@@ -8,9 +8,7 @@ scalaVersion := "2.11.6"
 
 autoAPIMappings := true
 
-// scapsHost := "localhost:80"
-
-// scapsControlHost := "localhost:9000"
+// scapsControlHost in Scaps := "localhost:9000"
 
 //libraryDependencies += "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2"
 
