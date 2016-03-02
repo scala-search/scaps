@@ -38,7 +38,7 @@ releaseProcess := Seq[ReleaseStep](
 // Root Project
 
 lazy val root = (project in file("."))
-  .aggregate(buildInfo_2_10, buildInfo_2_11, buildInfo_JS, api_2_11, apiJS, core, evaluation, webservice, webserviceUI, scalaClient, sbtPlug)
+  .aggregate(nucleus, buildInfo_2_10, buildInfo_2_11, buildInfo_JS, api_2_11, apiJS, core, evaluation, webservice, webserviceUI, scalaClient, sbtPlug)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false)
@@ -74,6 +74,14 @@ lazy val buildInfo_2_11_cross = (crossProject in file("buildInfo"))
 
 lazy val buildInfo_2_11 = buildInfo_2_11_cross.jvm
 lazy val buildInfo_JS = buildInfo_2_11_cross.js
+
+// Nucleus
+
+lazy val nucleus = (project in file("nucleus"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "scaps-nucleus",
+    libraryDependencies ++= Dependencies.nucleusDependencies)
 
 // API
 

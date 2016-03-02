@@ -45,6 +45,10 @@ object Dependencies {
   val dispatch = "net.databinder.dispatch" %% "dispatch-core" % "0.11.2"
   val sbtSlf4j = "com.github.eirslett" %% "sbt-slf4j" % "0.1"
 
+  val nucleusDependencies = Seq(
+    upickle,
+    scalatest)
+
   val coreDependencies = Seq(
     upickle,
     scalatest,
