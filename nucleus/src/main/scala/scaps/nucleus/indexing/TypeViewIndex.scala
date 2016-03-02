@@ -3,7 +3,6 @@ package scaps.nucleus.indexing
 import scaps.nucleus.Definition
 import scaps.nucleus.Document
 import scaps.nucleus.MetaDoc
-import upickle._
 import scaps.nucleus.TypeRef
 import scaps.nucleus.IndexAccess
 import scaps.nucleus.TypeParam
@@ -12,14 +11,14 @@ private[nucleus] object TypeViewIndex {
   val viewKey = "<v>"
 
   def typeViewToDoc(source: String, v: TypeView): Document = {
-    val data = write(v).getBytes
+    val data = upickle.default.write(v).getBytes
 
     MetaDoc(List(viewKey, s"${v.from}"), data, source)
   }
 
   def docToTypeView(doc: Document): Option[TypeView] = {
     if (doc.keys.contains(viewKey))
-      Some(read[TypeView](new String(doc.data)))
+      Some(upickle.default.read[TypeView](new String(doc.data)))
     else
       None
   }

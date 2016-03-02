@@ -11,14 +11,14 @@ private[nucleus] object InternalTypes {
   }
 
   def toInternal(v: ValueDef, language: LanguageSettings): ValueDef = {
-    val (tps, tpe) = toInternal(v.typeParameters, v.tpe, language)
-    v.copy(typeParameters = tps, tpe = tpe)
+    val (params, ref) = toInternal(v.tpe.params, v.tpe.ref, language)
+    v.copy(tpe = Type(params = params, ref = ref))
   }
 
   def toInternal(td: TypeDef, language: LanguageSettings): TypeDef = {
-    val (tps, tpe) = toInternal(td.typeParameters, td.tpe, language)
-    val supers = td.supertypes.map(sup => toInternal(td.typeParameters, sup, language)._2)
-    td.copy(typeParameters = tps, tpe = tpe, supertypes = supers)
+    val (tps, tpe) = toInternal(td.tpe.params, td.tpe.ref, language)
+    val supers = td.supertypes.map(sup => toInternal(td.tpe.params, sup, language)._2)
+    td.copy(tpe = Type(params = tps, ref = tpe), supertypes = supers)
   }
 
   def toInternal(tpe: TypeRef, language: LanguageSettings): TypeRef =

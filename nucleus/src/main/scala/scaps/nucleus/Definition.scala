@@ -1,26 +1,23 @@
 package scaps.nucleus
 
 sealed trait Definition {
-  def typeParameters: List[TypeParam]
-  def tpe: TypeRef
+  def tpe: Type
   def source: String
 }
 
 case class ValueDef(
     name: String,
-    typeParameters: List[TypeParam],
-    tpe: TypeRef,
+    tpe: Type,
     isImplicit: Boolean,
     source: String) extends Definition {
-  assert(tpe.variance == Covariant)
+  assert(tpe.ref.variance == Covariant)
 }
 
 case class TypeDef(
-    typeParameters: List[TypeParam],
-    tpe: TypeRef,
+    tpe: Type,
     supertypes: List[TypeRef],
     source: String) extends Definition {
-  assert(tpe.variance == Covariant)
+  assert(tpe.ref.variance == Covariant)
   assert(supertypes.forall(_.variance == Covariant))
 }
 

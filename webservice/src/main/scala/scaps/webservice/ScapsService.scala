@@ -40,7 +40,7 @@ trait ScapsService extends HttpService {
         extract(_.request.entity.asString) { e =>
           complete {
             Router.route[ScapsApi](apiImpl)(
-              autowire.Core.Request(path, upickle.read[Map[String, String]](e)))
+              autowire.Core.Request(path, upickle.default.read[Map[String, String]](e)))
           }
         }
       } ~
@@ -49,7 +49,7 @@ trait ScapsService extends HttpService {
             parameters('data) { data =>
               complete {
                 Router.route[ScapsApi](apiImpl)(
-                  autowire.Core.Request(path, upickle.read[Map[String, String]](data)))
+                  autowire.Core.Request(path, upickle.default.read[Map[String, String]](data)))
               }
             }
           }
@@ -140,7 +140,7 @@ object HtmlPages extends Pages(scalatags.Text) {
   override val analyticsScript = Some(WebserviceSettings.fromApplicationConf.analyticsScript)
 }
 
-object Router extends autowire.Server[String, upickle.Reader, upickle.Writer] {
-  def read[Result: upickle.Reader](p: String) = upickle.read[Result](p)
-  def write[Result: upickle.Writer](r: Result) = upickle.write(r)
+object Router extends autowire.Server[String, upickle.default.Reader, upickle.default.Writer] {
+  def read[Result: upickle.default.Reader](p: String) = upickle.default.read[Result](p)
+  def write[Result: upickle.default.Writer](r: Result) = upickle.default.write(r)
 }

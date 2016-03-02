@@ -123,7 +123,7 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
       doc.add(new TextField(fields.suffix, suffix, Field.Store.NO))
     }
 
-    doc.add(new StoredField(fields.entity, upickle.write(entity)))
+    doc.add(new StoredField(fields.entity, upickle.default.write(entity)))
 
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Field.Store.YES))
 
@@ -145,7 +145,7 @@ class TypeIndex(val dir: Directory, settings: Settings) extends Index[TypeDef] {
   override def toEntity(doc: Document): TypeDef = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[TypeDef](json)
+    upickle.default.read[TypeDef](json)
   }
 }
 

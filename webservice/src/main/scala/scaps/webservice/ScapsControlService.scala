@@ -25,7 +25,7 @@ trait ScapsControlService extends HttpService {
         extract(_.request.entity.asString) { e =>
           complete {
             Router.route[ScapsControlApi](apiImpl)(
-              autowire.Core.Request(path, upickle.read[Map[String, String]](e)))
+              autowire.Core.Request(path, upickle.default.read[Map[String, String]](e)))
           }
         }
       }

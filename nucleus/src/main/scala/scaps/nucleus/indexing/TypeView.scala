@@ -71,10 +71,10 @@ private[nucleus] object TypeView {
   }
 
   def typeViews(subDef: TypeDef): List[TypeView] = {
-    val sub = clean(subDef.typeParameters, subDef.tpe)
+    val sub = clean(subDef.tpe.params, subDef.tpe.ref)
 
     subDef.supertypes.flatMap { superType =>
-      val supr = clean(subDef.typeParameters, superType)
+      val supr = clean(subDef.tpe.params, superType)
 
       if (supr == +I.Top())
         Nil
@@ -88,7 +88,7 @@ private[nucleus] object TypeView {
 
   def typeViews(valDef: ValueDef): List[TypeView] = {
     if (valDef.isImplicit) {
-      clean(valDef.typeParameters, valDef.tpe) match {
+      clean(valDef.tpe.params, valDef.tpe.ref) match {
         case I.Fn(v, _, res) if res == +I.Top() =>
           Nil
         case I.Fn(v, List(arg), res) =>

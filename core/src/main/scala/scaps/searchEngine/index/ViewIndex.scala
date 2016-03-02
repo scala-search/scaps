@@ -75,7 +75,7 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
     doc.add(new TextField(fields.name, v.name, Store.YES))
     doc.add(new TextField(fields.from, v.fromKey, Store.YES))
     doc.add(new TextField(fields.moduleId, v.module.moduleId, Store.YES))
-    doc.add(new StoredField(fields.entity, upickle.write(v)))
+    doc.add(new StoredField(fields.entity, upickle.default.write(v)))
     doc
   }
 
@@ -85,7 +85,7 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
   override def toEntity(doc: Document): ViewDef = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[ViewDef](json)
+    upickle.default.read[ViewDef](json)
   }
 }
 

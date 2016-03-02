@@ -4,7 +4,7 @@
 
 package scaps.searchEngine.index
 
-import upickle._
+import upickle.default._
 import org.apache.lucene.store.Directory
 import scaps.api.Module
 import org.apache.lucene.document.Document
@@ -38,7 +38,7 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
     val doc = new Document
 
     doc.add(new TextField(fields.moduleId, entity.moduleId, Store.YES))
-    doc.add(new StoredField(fields.entity, upickle.write(entity)))
+    doc.add(new StoredField(fields.entity, upickle.default.write(entity)))
 
     doc
   }
@@ -46,7 +46,7 @@ class ModuleIndex(val dir: Directory) extends Index[Module] {
   override def toEntity(doc: Document): Module = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[Module](json)
+    upickle.default.read[Module](json)
   }
 }
 

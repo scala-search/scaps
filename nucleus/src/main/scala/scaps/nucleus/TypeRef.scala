@@ -2,6 +2,11 @@ package scaps.nucleus
 
 import scaps.nucleus.indexing.InternalTypes;
 
+case class Type(params: List[TypeParam], ref: TypeRef) {
+  def isTypeParam(tr: TypeRef) =
+    params.exists(_.name == tr.name)
+}
+
 case class TypeRef(variance: Variance, name: String, args: List[TypeRef]) {
   def unary_+ = copy(variance = Covariant)
   def unary_- = copy(variance = Contravariant)

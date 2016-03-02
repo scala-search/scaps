@@ -160,7 +160,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     }
     doc.add(new TextField(fields.fingerprint, fingerprint.toString(), Store.YES))
 
-    doc.add(new StoredField(fields.entity, upickle.write(entity)))
+    doc.add(new StoredField(fields.entity, upickle.default.write(entity)))
 
     doc
   }
@@ -168,7 +168,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
   override def toEntity(doc: Document): ValueDef = {
     val json = doc.getValues(fields.entity)(0)
 
-    upickle.read[ValueDef](json)
+    upickle.default.read[ValueDef](json)
   }
 }
 

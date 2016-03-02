@@ -6,7 +6,6 @@ import scaps.nucleus.ValueDef
 import scaps.nucleus.MetaDoc
 import scaps.nucleus.ValueDoc
 import scaps.nucleus.TypeDef
-import upickle._
 import scaps.nucleus.TypeRef
 
 private[nucleus] object Indexer {
@@ -25,19 +24,19 @@ private[nucleus] object Indexer {
   }
 
   def mkValueDoc(v: ValueDef, fp: List[FingerprintTerm]): Document = {
-    val data = write(fp).getBytes
+    val data = upickle.default.write(fp).getBytes
 
     ValueDoc(v.name, fp.map(_.key), data, v.source)
   }
 
   def mkTypeDoc(s: TypeDef): Document = {
-    val data = write(s).getBytes
+    val data = upickle.default.write(s).getBytes
 
     MetaDoc(List("<t>"), data, s.source)
   }
 
   def mkViewDoc(d: Definition, v: TypeView): Document = {
-    val data = write(v).getBytes
+    val data = upickle.default.write(v).getBytes
 
     MetaDoc(List("<v>", s"<v>:${v.from}"), data, d.source)
   }

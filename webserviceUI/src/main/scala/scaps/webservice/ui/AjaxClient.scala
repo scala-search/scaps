@@ -8,10 +8,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 import org.scalajs.dom
 
-class AjaxClient(apiPath: String) extends autowire.Client[String, upickle.Reader, upickle.Writer] {
+class AjaxClient(apiPath: String) extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer] {
   override def doCall(req: Request) = {
     val path = s"/$apiPath/${req.path.mkString("/")}"
-    val pickled = upickle.write(req.args)
+    val pickled = upickle.default.write(req.args)
     val xmlReq =
       if (req.path.last == "search") {
         val encoded = js.Dynamic.global.encodeURIComponent(pickled).asInstanceOf[String]
@@ -26,6 +26,6 @@ class AjaxClient(apiPath: String) extends autowire.Client[String, upickle.Reader
     xmlReq.map(_.responseText)
   }
 
-  def read[Result: upickle.Reader](p: String) = upickle.read[Result](p)
-  def write[Result: upickle.Writer](r: Result) = upickle.write(r)
+  def read[Result: upickle.default.Reader](p: String) = upickle.default.read[Result](p)
+  def write[Result: upickle.default.Writer](r: Result) = upickle.default.write(r)
 }

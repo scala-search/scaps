@@ -31,7 +31,7 @@ object Dependencies {
   val sprayCan = "io.spray" %% "spray-can" % sprayVersion
   val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
 
-  val upickleVersion = "0.2.6"
+  val upickleVersion = "0.3.8"
   val upickle = "com.lihaoyi" %% "upickle" % upickleVersion
   val autowireVersion = "0.2.5"
   val autowire = "com.lihaoyi" %% "autowire" % autowireVersion

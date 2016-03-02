@@ -7,7 +7,7 @@ package scaps.scala
 import dispatch._
 import dispatch.Defaults._
 
-class DispatchClient(hostName: String, apiPath: String) extends autowire.Client[String, upickle.Reader, upickle.Writer] {
+class DispatchClient(hostName: String, apiPath: String) extends autowire.Client[String, upickle.default.Reader, upickle.default.Writer] {
   val h = new Http
 
   override def doCall(req: Request): Future[String] = {
@@ -17,11 +17,11 @@ class DispatchClient(hostName: String, apiPath: String) extends autowire.Client[
 
     val request = path.POST
       .setContentType("application/json", "UTF-8")
-      .<<(upickle.write(req.args))
+      .<<(upickle.default.write(req.args))
 
     h(request).map(_.getResponseBody)
   }
 
-  def read[Result: upickle.Reader](p: String) = upickle.read[Result](p)
-  def write[Result: upickle.Writer](r: Result) = upickle.write(r)
+  def read[Result: upickle.default.Reader](p: String) = upickle.default.read[Result](p)
+  def write[Result: upickle.default.Writer](r: Result) = upickle.default.write(r)
 }
