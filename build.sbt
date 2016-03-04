@@ -6,6 +6,8 @@ lazy val utestFramework = new TestFramework("utest.runner.Framework")
 
 lazy val commonSettings = Seq(
     organization := "org.scala-search",
+    licenses := Seq("MPL 2.0" -> url("https://www.mozilla.org/en-US/MPL/2.0/")),
+    homepage := Some(url("http://scala-search.org")),
     scalaVersion := Commons.targetedScalaVersion,
     resolvers += Opts.resolver.mavenLocalFile,
     testFrameworks += utestFramework,
@@ -17,11 +19,34 @@ lazy val commonSettings = Seq(
       "-Ywarn-value-discard",
       "-Xfatal-warnings"),
     testModules := Seq(),
-    resourceGenerators in Test <+= createTestModules)
+    resourceGenerators in Test <+= createTestModules,
+    publishMavenStyle := true,
+    publishArtifact := false,
+    publishArtifact in Test := false,
+    pomExtra := (
+      <scm>
+        <url>https://github.com/scala-search/scaps</url>
+        <connection>scm:git@github.com:scala-search/scaps.git</connection>
+      </scm>
+      <developers>
+        <developer>
+          <id>luegg</id>
+          <name>Lukas Wegmann</name>
+        </developer>
+      </developers>),
+    publishTo := {
+      val nexus = "https://oss.sonatype.org/"
+      if (isSnapshot.value)
+        Some("snapshots" at nexus + "content/repositories/snapshots")
+      else
+        Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+    })
 
 // Release
 
 import ReleaseTransformations._
+
+releasePublishArtifactsAction := PgpKeys.publishSigned.value
 
 releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
@@ -31,6 +56,7 @@ releaseProcess := Seq[ReleaseStep](
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
+    publishArtifacts,
     setNextVersion,
     commitNextVersion,
     pushChanges)
@@ -50,6 +76,7 @@ lazy val root = (project in file("."))
 def buildInfoSettings =
   commonSettings ++ Seq(
     name := "scaps-build",
+    publishArtifact := true,
     target := baseDirectory.value / s"target-${scalaVersion.value}",
     buildInfoKeys := Seq[BuildInfoKey](
       version, 
@@ -81,6 +108,7 @@ lazy val nucleus = (project in file("nucleus"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-nucleus",
+    publishArtifact := true,
     libraryDependencies ++= Dependencies.nucleusDependencies)
 
 // API
@@ -90,6 +118,7 @@ lazy val api_2_11_cross = (crossProject in file("api"))
   .settings(
     scalaVersion := Commons.targetedScalaVersion,
     name := "scaps-api",
+    publishArtifact := true,
     libraryDependencies ++= Dependencies.apiDependencies ++ 
       Seq("com.lihaoyi" %%% "utest" % Dependencies.utestVersion % "test"),
     target := baseDirectory.value / s"target-${scalaVersion.value}")
@@ -106,6 +135,7 @@ lazy val scalaClient = (project in file("scala"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-scala",
+    publishArtifact := true,
     libraryDependencies ++= Dependencies.scalaClientDependencies,
     testModules += "jarExtractorTests")
 
@@ -116,6 +146,7 @@ lazy val core = (project in file("core"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-core",
+    publishArtifact := true,
     libraryDependencies ++= Dependencies.coreDependencies)
 
 // Evaluation
@@ -125,7 +156,6 @@ lazy val evaluation = (project in file("evaluation"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-evaluation",
-    publishArtifact := false,
     libraryDependencies ++= Dependencies.evaluationDependencies)
 
 // Webservice
@@ -135,7 +165,6 @@ lazy val webserviceShared_cross = (crossProject in file("webserviceShared"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-webservice-shared",
-    publishArtifact := true,
     libraryDependencies ++= Seq(
       "com.lihaoyi" %%% "scalatags" % Dependencies.scalatagsVersion))
   .jsSettings(
@@ -181,7 +210,6 @@ lazy val webserviceUI = (project in file("webserviceUI"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-webservice-ui",
-    publishArtifact := false,
     // disable fatal warnings in this project because there are some unavoidable warnings
     scalacOptions := scalacOptions.value.filter(_ != "-Xfatal-warnings"),
     libraryDependencies ++= Seq(
@@ -199,6 +227,8 @@ lazy val sbtPlug = (project in file("sbtPlugin"))
   .settings(commonSettings: _*)
   .settings(
     name := "scaps-sbt",
+    publishArtifact := true,
+    publishMavenStyle := false,
     scalaVersion := Commons.sbtPluginScalaVersion,
     sbtPlugin := true,
     libraryDependencies ++= Dependencies.sbtPluginDependencies)
