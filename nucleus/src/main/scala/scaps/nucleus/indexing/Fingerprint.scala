@@ -21,14 +21,15 @@ private[nucleus] case class FingerprintTerm(variance: Variance, tpeName: String,
 private[nucleus] object Fingerprint {
 
   def apply(v: ValueDef): List[FingerprintTerm] = {
-    val withoutTypeParams = TypeNormalization.substituteTypeParams(v.tpe.params, v.tpe.ref)
+    val withoutTypeParams = TypeNormalization.substituteTypeParams(v.tpe)
     val normalized = TypeNormalization.normalize(withoutTypeParams)
 
-    val withOutermostFunctionAppIgnored = normalized match {
-      case InternalTypes.Fn(v, args, res) =>
-        InternalTypes.Ignored(v, args :+ res)
-      case t => t
-    }
+    val withOutermostFunctionAppIgnored =
+      normalized match {
+        case InternalTypes.Fn(v, args, res) =>
+          InternalTypes.Ignored(v, args :+ res)
+        case t => t
+      }
 
     apply(withOutermostFunctionAppIgnored)
   }

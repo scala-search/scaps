@@ -2,14 +2,13 @@ package scaps.nucleus.indexing
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scaps.nucleus.DefBuilder._
-import scaps.nucleus.TestLanguage._
 import scaps.nucleus.TypeDef
 import scaps.nucleus.TypeRef
 import scaps.nucleus.IndexSettings
 import scaps.nucleus.Definition
 
 private[nucleus] class TypeViewSpecs extends FlatSpec with Matchers {
+  import scaps.nucleus.TestLanguage._
   import scaps.nucleus.indexing.{ InternalTypes => I }
 
   def typeViews(d: Definition) =
@@ -21,7 +20,6 @@ private[nucleus] class TypeViewSpecs extends FlatSpec with Matchers {
   def assertViews(defsWithExpectedViews: (Definition, List[TypeView])*) = {
     defsWithExpectedViews.foreach {
       case (d, views) =>
-        println(I.toInternal(d, testModel))
         typeViews(d) should contain theSameElementsAs (views)
     }
   }

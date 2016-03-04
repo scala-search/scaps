@@ -2,12 +2,12 @@ package scaps.nucleus.indexing
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scaps.nucleus.TestLanguage._
-import scaps.nucleus.DefBuilder._
 import scaps.nucleus.ValueDef
 import scala.language.implicitConversions
 
-class FingerprintBuilderSpecs extends FlatSpec with Matchers {
+class FingerprintSpecs extends FlatSpec with Matchers {
+
+  import scaps.nucleus.TestLanguage._
 
   def fingerprint(v: ValueDef): List[String] = {
     val internal = InternalTypes.toInternal(v, testModel)

@@ -12,16 +12,18 @@ object TestLanguage {
     repeatedType = None,
     functionTypePattern = Pattern.compile("""(Fn[0-9]+)|((<memberAccess|<methodInvocation)[0-9]+>)"""))
 
-  object A extends InternalTypes.Type("A")
+  object A extends InternalTypes.ProperType("A")
+  object B extends InternalTypes.ProperType("B")
 
   object T {
-    object Any extends InternalTypes.Type("Any")
-    object Nothing extends InternalTypes.Type("Nothing")
+    object Any extends InternalTypes.ProperType("Any")
+    object Nothing extends InternalTypes.ProperType("Nothing")
 
-    object Int extends InternalTypes.Type("Int")
-    object Long extends InternalTypes.Type("Long")
-    object String extends InternalTypes.Type("String")
-    object Unit extends InternalTypes.Type("Unit")
+    object Char extends InternalTypes.ProperType("Char")
+    object Int extends InternalTypes.ProperType("Int")
+    object Long extends InternalTypes.ProperType("Long")
+    object String extends InternalTypes.ProperType("String")
+    object Unit extends InternalTypes.ProperType("Unit")
 
     object Seq extends InternalTypes.UnaryType("Seq")
     object List extends InternalTypes.UnaryType("List")
@@ -33,4 +35,19 @@ object TestLanguage {
     object MethodInvocation extends InternalTypes.FunctionLikeType("<methodInvocation")
     object Repeated extends InternalTypes.UnaryType("<repeated>")
   }
+
+  def vall(tpe: TypeRef, isImplicit: Boolean = false) =
+    ValueDef("", Type(Nil, tpe), isImplicit, "")
+
+  def deff(args: TypeRef*)(res: TypeRef, isImplicit: Boolean = false) =
+    ValueDef("", Type(Nil, T.MethodInvocation(Covariant, args.toList, res)), isImplicit, "")
+
+  def extendss(tpe: TypeRef, base: TypeRef*) =
+    TypeDef(Type(Nil, tpe), base.toList, "")
+
+  def tp(name: String) =
+    TypeParam(name, None, None, None)
+
+  def extendss(params: TypeParam*)(tpe: TypeRef, base: TypeRef*) =
+    TypeDef(Type(params.toList, tpe), base.toList, "")
 }

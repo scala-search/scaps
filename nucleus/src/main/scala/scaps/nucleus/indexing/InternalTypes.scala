@@ -11,20 +11,19 @@ private[nucleus] object InternalTypes {
   }
 
   def toInternal(v: ValueDef, language: LanguageSettings): ValueDef = {
-    val (params, ref) = toInternal(v.tpe.params, v.tpe.ref, language)
-    v.copy(tpe = Type(params = params, ref = ref))
+    v.copy(tpe = toInternal(v.tpe, language))
   }
 
   def toInternal(td: TypeDef, language: LanguageSettings): TypeDef = {
-    val (tps, tpe) = toInternal(td.tpe.params, td.tpe.ref, language)
-    val supers = td.supertypes.map(sup => toInternal(td.tpe.params, sup, language)._2)
-    td.copy(tpe = Type(params = tps, ref = tpe), supertypes = supers)
+    val tpe = toInternal(td.tpe, language)
+    val supers = td.supertypes.map(sup => toInternal(Type(td.tpe.params, sup), language).ref)
+    td.copy(tpe = tpe, supertypes = supers)
   }
 
   def toInternal(tpe: TypeRef, language: LanguageSettings): TypeRef =
-    toInternal(Nil, tpe, language)._2
+    toInternal(Type(Nil, tpe), language).ref
 
-  def toInternal(params: List[TypeParam], tpe: TypeRef, language: LanguageSettings): (List[TypeParam], TypeRef) = {
+  def toInternal(tpe: Type, language: LanguageSettings): Type = {
     class RegexTypeExtractor(p: Pattern) {
       def unapply(t: TypeRef): Option[(Variance, List[TypeRef])] = t match {
         case TypeRef(v, name, args) if p.matcher(name).matches() =>
@@ -67,17 +66,17 @@ private[nucleus] object InternalTypes {
       normalized.copy(args = normalized.args.map(unifyTopDown))
     }
 
-    val internalParams = params.map(tp =>
+    val internalParams = tpe.params.map(tp =>
       tp.copy(
         lowerBound = tp.lowerBound.map(unifyTopDown),
         upperBound = tp.upperBound.map(unifyTopDown)))
 
-    val internalTpe = unifyTopDown(tpe)
+    val internalTpe = unifyTopDown(tpe.ref)
 
-    (internalParams, internalTpe)
+    Type(internalParams, internalTpe)
   }
 
-  class Type(name: String) extends TypeRef(Invariant, name, Nil) {
+  class ProperType(name: String) extends TypeRef(Invariant, name, Nil) {
     def apply(v: Variance): TypeRef =
       TypeRef(v, name, Nil)
 

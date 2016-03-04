@@ -9,6 +9,7 @@ import scaps.nucleus.TypeParam
 import scaps.nucleus.Contravariant
 import scaps.nucleus.Covariant
 import scaps.nucleus.Invariant
+import scaps.nucleus.Type
 
 private[nucleus] case class TypeView(from: TypeRef, to: TypeRef) {
 
@@ -18,10 +19,13 @@ private[nucleus] case class TypeView(from: TypeRef, to: TypeRef) {
     s"$from |> $to"
 
   def apply(t: TypeRef): Option[TypeRef] = {
-    val paramMap = findParamMap(from, t)
-    Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
-      t(paramWithArg._1, paramWithArg._2)
-    })
+    if (from.variance == t.variance) {
+      val paramMap = findParamMap(from, t)
+      Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
+        t(paramWithArg._1, paramWithArg._2)
+      })
+    } else
+      None
   }
 
   def findParamMap(from: TypeRef, t: TypeRef): List[(String, TypeRef)] =
@@ -62,19 +66,19 @@ private[nucleus] object TypeView {
     case vd: ValueDef => typeViews(vd)
   }
 
-  private[this] def clean(typeParams: List[TypeParam], tpe: TypeRef) = {
-    val paramsWithNewName = typeParams.map((_, I.__().name))
+  private[this] def clean(tpe: Type): TypeRef = {
+    val paramsWithNewName = tpe.params.map((_, I.__().name))
     val clean = (TypeNormalization.normalize _) andThen
       (t => TypeNormalization.renameTypeParams(paramsWithNewName, t))
 
-    clean(tpe)
+    clean(tpe.ref)
   }
 
-  def typeViews(subDef: TypeDef): List[TypeView] = {
-    val sub = clean(subDef.tpe.params, subDef.tpe.ref)
+  def typeViews(td: TypeDef): List[TypeView] = {
+    val sub = clean(td.tpe)
 
-    subDef.supertypes.flatMap { superType =>
-      val supr = clean(subDef.tpe.params, superType)
+    td.supertypes.flatMap { superType =>
+      val supr = clean(Type(td.tpe.params, superType))
 
       if (supr == +I.Top())
         Nil
@@ -88,7 +92,7 @@ private[nucleus] object TypeView {
 
   def typeViews(valDef: ValueDef): List[TypeView] = {
     if (valDef.isImplicit) {
-      clean(valDef.tpe.params, valDef.tpe.ref) match {
+      clean(valDef.tpe) match {
         case I.Fn(v, _, res) if res == +I.Top() =>
           Nil
         case I.Fn(v, List(arg), res) =>
@@ -101,40 +105,37 @@ private[nucleus] object TypeView {
       Nil
   }
 
-  def elementaryTypeViews(params: List[TypeParam], tpe: TypeRef): List[TypeView] = {
-
-    val cleaned = clean(params, tpe)
+  def elementaryTypeViews(td: TypeDef): List[TypeView] = {
+    val cleaned = clean(td.tpe)
     val cov = cleaned.atPosition(Covariant)
     val conv = cleaned.atPosition(Contravariant)
     val inv = cleaned.atPosition(Invariant)
 
-    val reflective = List(
-      TypeView(cov, cov),
-      TypeView(conv, conv),
-      TypeView(inv, inv))
-
-    val extremal = List(
-      TypeView(cov, I.Bottom(Covariant, Nil)),
-      TypeView(conv, I.Top(Contravariant, Nil)),
-      TypeView(inv, I.Unknown(Invariant, Nil)),
-      TypeView(cov, I.Unknown(Invariant, Nil)),
-      TypeView(conv, I.Unknown(Invariant, Nil)))
-
-    val dropVariance = List(
-      TypeView(cov, inv),
-      TypeView(conv, inv))
-
-    // -List[-_] |> -Top[-_], -Map[\_, +_] |> -Top[\_, +_]
-    val extremalWithArgs =
-      if (tpe.args.isEmpty)
-        Nil
-      else {
-        List(
-          TypeView(cov, I.Bottom(Covariant, cov.args)),
-          TypeView(conv, I.Bottom(Contravariant, conv.args)),
-          TypeView(inv, I.Bottom(Invariant, cov.args)))
-      }
-
-    reflective ::: extremal ::: dropVariance ::: extremalWithArgs
+    elementaryAlternatives(cov).map(TypeView(cov, _)) ++
+      elementaryAlternatives(conv).map(TypeView(conv, _)) ++
+      elementaryAlternatives(inv).map(TypeView(inv, _))
   }
+
+  def elementaryAlternatives(tr: TypeRef): List[TypeRef] =
+    (tr.variance match {
+      case Covariant =>
+        List(
+          tr,
+          I.Bottom(Covariant, Nil),
+          I.Unknown(Invariant, Nil),
+          tr.atPosition(Invariant),
+          I.Bottom(Covariant, tr.args))
+      case Contravariant =>
+        List(
+          tr,
+          I.Top(Contravariant, Nil),
+          I.Unknown(Invariant, Nil),
+          tr.atPosition(Invariant),
+          I.Top(Contravariant, tr.args))
+      case Invariant =>
+        List(
+          tr,
+          I.Unknown(Invariant, Nil),
+          I.Unknown(Invariant, tr.args))
+    }).distinct
 }

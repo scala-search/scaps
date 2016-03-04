@@ -1,8 +1,8 @@
 package scaps.nucleus
 
 import scaps.nucleus.indexing.Indexer
-import scaps.nucleus.statistics.FrequencyAggregator
 import scaps.nucleus.indexing.InternalTypes
+import scaps.nucleus.indexing.TypeFrequencyIndex
 
 trait IndexAccess {
   def getByKeys(keys: Seq[String]): Seq[Document]
@@ -16,21 +16,17 @@ class Scaps(settings: Settings) {
   def startBatch(): Batch = new Batch(settings)
 
   def createTermQuery(
-    query: TypeQuery,
+    query: Type,
     index: IndexAccess): TermQuery = ???
 }
 
 class Batch private[nucleus] (settings: Settings) {
 
-  def indexFile(source: String, definitions: Stream[Definition]): (Batch, Stream[Document]) = {
-    (this, definitions
-      .map(InternalTypes.toInternal(_, settings.language))
-      .flatMap(d => Indexer.defToDocs(d)))
-  }
+  def indexFile(source: String, definitions: Stream[Definition]): (Batch, Stream[Document]) =
+    (this, definitions.flatMap(Indexer.defToDocs(_, settings.language)))
 
   def finalize(index: IndexAccess): (Scaps, TraversableOnce[Document]) = {
-    val aggregator = new FrequencyAggregator(settings.language, index)
-    (new Scaps(settings), aggregator.typeFrequencyDocs())
+    (new Scaps(settings), TypeFrequencyIndex.typeFrequencyDocs(index))
   }
 }
 

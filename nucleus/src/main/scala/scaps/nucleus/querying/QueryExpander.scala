@@ -1,6 +1,6 @@
 package scaps.nucleus.querying
 
-import scaps.nucleus.TypeQuery
+import scaps.nucleus.Type
 import scaps.nucleus.TypeRef
 import scaps.nucleus.TypeParam
 import scaps.nucleus.Covariant
@@ -10,7 +10,7 @@ class QueryExpander(findViews: TypeRef => List[TypeView]) {
 
   import scaps.nucleus.indexing.{ InternalTypes => I }
 
-  def expandQuery(query: TypeQuery): ExpandedQuery = {
+  def expandQuery(query: Type): ExpandedQuery = {
     ???
   }
 

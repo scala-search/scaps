@@ -1,26 +1,22 @@
-package scaps.nucleus.statistics
+package scaps.nucleus.indexing
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
-import scaps.nucleus.DefBuilder._
-import scaps.nucleus.TestLanguage._
-import scaps.nucleus.indexing.Indexer
-import scaps.nucleus.IndexSettings
-import scaps.nucleus.IndexAccess
-import scaps.nucleus.Document
-import scaps.nucleus.indexing.TypeNormalization
 import scaps.nucleus.Definition
+import scaps.nucleus.IndexAccess
 
-class FrequencyAggregatorSpecs extends FlatSpec with Matchers {
+class TypeFrequencyIndexSpecs extends FlatSpec with Matchers {
+  import scaps.nucleus.TestLanguage._
+
   def tf(defs: List[Definition]) = {
 
-    val docs = defs.flatMap(Indexer.defToDocs)
+    val docs = defs.flatMap(Indexer.defToDocs(_, testModel))
 
-    val aggregator = new FrequencyAggregator(testModel, new IndexAccess {
+    val index = new IndexAccess {
       override def getByKeys(keys: Seq[String]) = docs.filter(d => keys.forall(d.keys.contains(_)))
-    })
+    }
 
-    val tfs = aggregator.typeFrequencies()
+    val tfs = TypeFrequencyIndex.typeFrequencies(index)
 
     assertElementaryRules(tfs)
 

@@ -1,7 +1,6 @@
 package scaps.nucleus.indexing
 
 import java.util.regex.Pattern
-
 import scaps.nucleus.Contravariant
 import scaps.nucleus.Covariant
 import scaps.nucleus.Invariant
@@ -9,15 +8,16 @@ import scaps.nucleus.LanguageSettings
 import scaps.nucleus.TypeParam
 import scaps.nucleus.TypeRef
 import scaps.nucleus.Variance
+import scaps.nucleus.Type
 
 private[nucleus] object TypeNormalization {
   import scaps.nucleus.indexing.{ InternalTypes => I }
 
-  def substituteTypeParams(typeParams: List[TypeParam], tpe: TypeRef): TypeRef = {
-    def loop(tpe: TypeRef): TypeRef =
-      tpe match {
+  def substituteTypeParams(tpe: Type): TypeRef = {
+    def loop(tr: TypeRef): TypeRef =
+      tr match {
         case t @ TypeRef(v, name, args) =>
-          typeParams.find(_.name == name)
+          tpe.params.find(_.name == name)
             .map { tp =>
               v match {
                 case Covariant =>
@@ -34,7 +34,7 @@ private[nucleus] object TypeNormalization {
         case t => t.copy(args = t.args.map(loop))
       }
 
-    loop(tpe)
+    loop(tpe.ref)
   }
 
   def normalize(tpe: TypeRef): TypeRef = {
