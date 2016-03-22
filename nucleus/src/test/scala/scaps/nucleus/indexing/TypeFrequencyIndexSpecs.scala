@@ -1,20 +1,20 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus.indexing
 
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import scaps.nucleus.Definition
 import scaps.nucleus.IndexAccess
+import scaps.nucleus.TestIndexAccess
 
 class TypeFrequencyIndexSpecs extends FlatSpec with Matchers {
   import scaps.nucleus.TestLanguage._
 
   def tf(defs: List[Definition]) = {
-
-    val docs = defs.flatMap(Indexer.defToDocs(_, testModel))
-
-    val index = new IndexAccess {
-      override def getByKeys(keys: Seq[String]) = docs.filter(d => keys.forall(d.keys.contains(_)))
-    }
+    val index = new TestIndexAccess(defs)
 
     val tfs = TypeFrequencyIndex.typeFrequencies(index)
 

@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus.indexing
 
 import java.util.regex.Pattern
@@ -11,11 +15,25 @@ import scaps.nucleus.TypeRef
 import scaps.nucleus.ValueDef
 import scaps.nucleus.Variance
 
-private[nucleus] case class FingerprintTerm(variance: Variance, tpeName: String, isOptional: Boolean) {
-  def key: String = s"${variance.prefix}$tpeName"
+private[nucleus] case class FingerprintTerm(term: String, isOptional: Boolean) {
+  def key: String = s"$term"
 
   override def toString =
-    s"${variance.prefix}$tpeName"
+    key
+}
+
+private[nucleus] object FingerprintTerm {
+  def apply(v: Variance, tpeName: String, isOptional: Boolean = false): FingerprintTerm = {
+    FingerprintTerm(v.prefix + tpeName, isOptional)
+  }
+
+  def apply(term: String): FingerprintTerm = {
+    val isOpt = term(0) match {
+      case '!' => false
+      case '?' => true
+    }
+    FingerprintTerm(term.drop(1), isOpt)
+  }
 }
 
 private[nucleus] object Fingerprint {

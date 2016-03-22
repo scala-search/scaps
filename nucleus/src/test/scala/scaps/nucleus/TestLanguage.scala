@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus
 
 import scaps.nucleus.indexing.InternalTypes;
@@ -28,6 +32,9 @@ object TestLanguage {
     object Seq extends InternalTypes.UnaryType("Seq")
     object List extends InternalTypes.UnaryType("List")
     object Array extends InternalTypes.UnaryType("Array")
+
+    object Set extends InternalTypes.UnaryType("Set")
+    object BitSet extends InternalTypes.ProperType("BitSet")
 
     object Fn extends InternalTypes.FunctionLikeType("Fn", "")
 

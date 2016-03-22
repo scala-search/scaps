@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus
 
 import scaps.nucleus.indexing.InternalTypes;
@@ -28,7 +32,7 @@ case class TypeRef(variance: Variance, name: String, args: List[TypeRef]) {
 
   def apply(paramName: String, arg: TypeRef): TypeRef = {
     if (name == paramName)
-      arg.atPosition(variance).copy(args = args.map(_.apply(paramName, arg)))
+      arg.atPosition(variance).copy(args = arg.args.map(_.apply(paramName, arg)))
     else
       copy(args = args.map(_.apply(paramName, arg)))
   }

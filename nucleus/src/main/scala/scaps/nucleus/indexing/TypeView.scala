@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus.indexing
 
 import scaps.nucleus.TypeRef
@@ -11,49 +15,46 @@ import scaps.nucleus.Covariant
 import scaps.nucleus.Invariant
 import scaps.nucleus.Type
 
-private[nucleus] case class TypeView(from: TypeRef, to: TypeRef) {
+private[nucleus] case class TypeView(params: List[TypeParam], from: TypeRef, to: TypeRef) {
 
   import scaps.nucleus.indexing.{ InternalTypes => I }
 
   override def toString =
-    s"$from |> $to"
+    s"[${params.mkString(", ")}] $from |> $to"
 
-  def apply(t: TypeRef): Option[TypeRef] = {
-    if (from.variance == t.variance) {
-      val paramMap = findParamMap(from, t)
-      Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
+  def apply(t: TypeRef): Option[TypeRef] =
+    findParamMap(from, t).map { paramMap =>
+      paramMap.foldLeft(to) { (t, paramWithArg) =>
         t(paramWithArg._1, paramWithArg._2)
-      })
-    } else
-      None
-  }
+      }
+    }
 
-  def findParamMap(from: TypeRef, t: TypeRef): List[(String, TypeRef)] =
+  private def findParamMap(from: TypeRef, t: TypeRef): Option[List[(String, TypeRef)]] =
     from match {
-      case I.__(_, _) =>
-        List((from.name -> t))
-      case _ =>
-        from.args.zip(t.args).flatMap {
+      case _ if params.exists(_.name == from.name) =>
+        Some(List((from.name -> t)))
+      case _ if from.name == t.name && from.variance == t.variance =>
+        val argMaps = from.args.zip(t.args).map {
           case (f, t) => findParamMap(f, t)
         }
+        argMaps.foldLeft(Option(List[(String, TypeRef)]())) { (acc, argMap) =>
+          acc.flatMap { prevMap =>
+            argMap.map(prevMap ++ _)
+          }
+        }
+      case _ =>
+        None
     }
 
   lazy val distance: Float =
-    if (from == to) 0 else 1
+    if (from.name == to.name && from.variance == to.variance) 0 else 1
 
   lazy val retainedInformation: Float = {
-    from match {
-      case I.__(_, _) => 1f
-      case _ =>
-        val fromParts = from.toList
-        val toParts = to.toList
-        val fromParams = fromParts.filter {
-          case I.__(_, _) => true
-          case _          => false
-        }
-        val droppedParams = fromParams.count(p => !toParts.exists(_.name == p.name))
-        (fromParts.size - droppedParams).toFloat / fromParts.size
-    }
+    val fromParts = from.toList
+    val toParts = to.toList
+    val fromParams = fromParts.filter { part => params.exists(_.name == part.name) }
+    val droppedParams = fromParams.count(p => !toParts.exists(_.name == p.name))
+    (fromParts.size - droppedParams).toFloat / fromParts.size
   }
 }
 
@@ -67,9 +68,7 @@ private[nucleus] object TypeView {
   }
 
   private[this] def clean(tpe: Type): TypeRef = {
-    val paramsWithNewName = tpe.params.map((_, I.__().name))
-    val clean = (TypeNormalization.normalize _) andThen
-      (t => TypeNormalization.renameTypeParams(paramsWithNewName, t))
+    val clean = (TypeNormalization.normalize _)
 
     clean(tpe.ref)
   }
@@ -84,8 +83,8 @@ private[nucleus] object TypeView {
         Nil
       else
         List(
-          TypeView(supr, sub),
-          TypeView(sub.atPosition(Contravariant), supr.atPosition(Contravariant)))
+          TypeView(td.tpe.params, supr, sub),
+          TypeView(td.tpe.params, sub.atPosition(Contravariant), supr.atPosition(Contravariant)))
     }
 
   }
@@ -97,23 +96,23 @@ private[nucleus] object TypeView {
           Nil
         case I.Fn(v, List(arg), res) =>
           List(
-            TypeView(res, arg.atPosition(Covariant)),
-            TypeView(arg, res.atPosition(Contravariant)))
+            TypeView(valDef.tpe.params, res, arg.atPosition(Covariant)),
+            TypeView(valDef.tpe.params, arg, res.atPosition(Contravariant)))
         case _ => Nil
       }
     } else
       Nil
   }
 
-  def elementaryTypeViews(td: TypeDef): List[TypeView] = {
-    val cleaned = clean(td.tpe)
+  def elementaryTypeViews(tpe: Type): List[TypeView] = {
+    val cleaned = clean(tpe)
     val cov = cleaned.atPosition(Covariant)
     val conv = cleaned.atPosition(Contravariant)
     val inv = cleaned.atPosition(Invariant)
 
-    elementaryAlternatives(cov).map(TypeView(cov, _)) ++
-      elementaryAlternatives(conv).map(TypeView(conv, _)) ++
-      elementaryAlternatives(inv).map(TypeView(inv, _))
+    elementaryAlternatives(cov).map(TypeView(tpe.params, cov, _)) ++
+      elementaryAlternatives(conv).map(TypeView(tpe.params, conv, _)) ++
+      elementaryAlternatives(inv).map(TypeView(tpe.params, inv, _))
   }
 
   def elementaryAlternatives(tr: TypeRef): List[TypeRef] =

@@ -1,8 +1,13 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus
 
 import scaps.nucleus.indexing.Indexer
 import scaps.nucleus.indexing.InternalTypes
 import scaps.nucleus.indexing.TypeFrequencyIndex
+import scaps.nucleus.querying.QueryExpansion
 
 trait IndexAccess {
   def getByKeys(keys: Seq[String]): Seq[Document]
@@ -17,7 +22,9 @@ class Scaps(settings: Settings) {
 
   def createTermQuery(
     query: Type,
-    index: IndexAccess): TermQuery = ???
+    index: IndexAccess): TermQuery = {
+    ???
+  }
 }
 
 class Batch private[nucleus] (settings: Settings) {

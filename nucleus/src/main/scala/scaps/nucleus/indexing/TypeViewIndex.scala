@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus.indexing
 
 import scaps.nucleus.Definition
@@ -35,27 +39,18 @@ private[nucleus] object TypeViewIndex {
   }
 
   private def key(tr: TypeRef): String =
-    s"$viewKey:$tr"
-
-  private def matchingTypeKeys(tpe: Type): Seq[String] = {
-    val normedParams = TypeNormalization.renameTypeParams(tpe.params.map(p => (p, I.__().name)), tpe.ref)
-    //-List[-_]
-    //-List[-Int]
-    //-List[(-Int, -Int)], -List[(-_, -_)]
-    //-Int
-    // TODO
-    Seq(key(normedParams))
-  }
+    s"$viewKey:${tr.variance.prefix}${tr.name}"
 
   def allViews(index: IndexAccess): Seq[TypeView] =
     index.getByKeys(Seq(viewKey)).flatMap(docToTypeView)
 
   private def findViewsFrom(tpe: Type, index: IndexAccess): Seq[TypeView] = {
-    val keyss = matchingTypeKeys(tpe).map(key => Seq(viewKey, key))
-
-    val docs = index.getManyByKeys(keyss)
+    val docs = index.getByKeys(Seq(viewKey, key(tpe.ref)))
     docs.flatMap(docToTypeView)
   }
+
+  def viewsFrom(tpe: Type, index: IndexAccess): Seq[TypeView] =
+    TypeView.elementaryTypeViews(tpe) ++ findViewsFrom(tpe, index)
 
   def typesViewableFrom(tpe: Type, index: IndexAccess): Seq[TypeRef] =
     TypeView.elementaryAlternatives(tpe.ref) ++
