@@ -35,26 +35,28 @@ object IndexSettings {
 }
 
 case class QuerySettings(
-    maxClauseCount: Int,
-    maxResults: Int,
-    views: Boolean,
-    fractions: Boolean,
     penaltyWeight: Double,
     depthBoostWeight: Double,
     distanceBoostWeight: Double,
     typeFrequencyWeight: Double,
-    docBoost: Double,
     fingerprintFrequencyCutoff: Double,
     explainScores: Boolean) {
 
   import Settings._
 
-  assertPositive(maxClauseCount)
-  assertPositive(maxResults)
   assertPositive(penaltyWeight)
   assertPositive(depthBoostWeight)
   assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
-  assertPositive(docBoost)
   assertPositive(fingerprintFrequencyCutoff)
+}
+
+object QuerySettings {
+  val default = QuerySettings(
+    penaltyWeight = 0.05,
+    depthBoostWeight = 0,
+    distanceBoostWeight = 0.05,
+    typeFrequencyWeight = 2,
+    fingerprintFrequencyCutoff = 5,
+    explainScores = false)
 }

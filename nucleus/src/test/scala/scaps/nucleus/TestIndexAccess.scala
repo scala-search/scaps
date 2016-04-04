@@ -9,6 +9,8 @@ import scaps.nucleus.indexing.Indexer
 class TestIndexAccess(defs: Seq[Definition], language: LanguageSettings = TestLanguage.testModel) extends IndexAccess {
   val docs = defs.flatMap(Indexer.defToDocs(_, language))
 
+  override def add(docs: TraversableOnce[Document]) = ()
+
   override def getByKeys(keys: Seq[String]) = {
     docs.filter(d => keys.forall(d.keys.contains(_)))
   }

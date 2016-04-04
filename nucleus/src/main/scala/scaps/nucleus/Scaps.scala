@@ -8,37 +8,53 @@ import scaps.nucleus.indexing.Indexer
 import scaps.nucleus.indexing.InternalTypes
 import scaps.nucleus.indexing.TypeFrequencyIndex
 import scaps.nucleus.querying.QueryExpansion
+import scaps.nucleus.indexing.TypeViewIndex
+import scaps.nucleus.querying.QueryScorer
+import scaps.nucleus.querying.QueryExpression
+import scaps.nucleus.indexing.ValueIndex
+import scaps.nucleus.indexing.Fingerprint
 
 trait IndexAccess {
+  def add(docs: TraversableOnce[Document]): Unit
+
   def getByKeys(keys: Seq[String]): Seq[Document]
 
-  def getManyByKeys(keyss: Seq[Seq[String]]): Seq[Document] = keyss.flatMap(getByKeys)
+  def getManyByKeys(keyss: Iterable[Seq[String]]): Seq[Document] = keyss.flatMap(getByKeys).toSeq
 
   def countByKeys(keys: Seq[String]) = getByKeys(keys).size
 }
 
-class Scaps(settings: Settings) {
-  def startBatch(): Batch = new Batch(settings)
+class Scaps(settings: Settings, index: IndexAccess) {
+  def startBatch(): Batch = new Batch(settings, index)
 
-  def createTermQuery(
-    query: Type,
-    index: IndexAccess): TermQuery = {
-    ???
+  def search(query: Type, additionalMatches: Seq[(ValueDoc, Float)] = Nil): Seq[(ValueDoc, Float)] = {
+    val queryExpression: QueryExpression = {
+      val expanded = QueryExpansion.expandQuery(query, tpe => TypeViewIndex.viewsFrom(tpe, index))
+      val getTf = TypeFrequencyIndex.relativeTermFrequency(index)_
+      val scorer = new QueryScorer(settings.query, getTf)
+      scorer.scoreQuery(expanded)
+    }
+
+    val keys = queryExpression.termsBelowCutoff(settings.query.fingerprintFrequencyCutoff)
+      .map(term => Seq(term))
+
+    (index.getManyByKeys(keys) ++ additionalMatches).collect {
+      case v: ValueDoc =>
+        v
+    }.map { v =>
+      val valueDef = ValueIndex.docToValue(v)
+      (v, queryExpression.score(Fingerprint(valueDef))._1)
+    }.sortBy(-_._2)
   }
 }
 
-class Batch private[nucleus] (settings: Settings) {
+class Batch private[nucleus] (settings: Settings, index: IndexAccess) {
 
-  def indexFile(source: String, definitions: Stream[Definition]): (Batch, Stream[Document]) =
-    (this, definitions.flatMap(Indexer.defToDocs(_, settings.language)))
+  def indexFile(definitions: Stream[Definition]): Unit =
+    index.add(definitions.flatMap(Indexer.defToDocs(_, settings.language)))
 
-  def finalize(index: IndexAccess): (Scaps, TraversableOnce[Document]) = {
-    (new Scaps(settings), TypeFrequencyIndex.typeFrequencyDocs(index))
+  def finalizeBatch(): Scaps = {
+    index.add(TypeFrequencyIndex.typeFrequencyDocs(index))
+    new Scaps(settings, index)
   }
-}
-
-trait TermQuery {
-  def keys: Iterator[Seq[String]]
-
-  def score(doc: ValueDoc): Float
 }

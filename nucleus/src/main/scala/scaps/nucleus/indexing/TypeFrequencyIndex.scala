@@ -22,11 +22,11 @@ private[nucleus] object TypeFrequencyIndex {
     }
   }
 
-  def relativeTermFrequency(index: IndexAccess)(term: FingerprintTerm): Float = {
+  def relativeTermFrequency(index: IndexAccess)(term: FingerprintTerm): Double = {
     (for {
       maxTf <- typeFrequency(index)(maxTfTerm)
       tf <- typeFrequency(index)(term)
-    } yield (tf.toFloat / maxTf.toFloat)).getOrElse(Float.MinPositiveValue)
+    } yield (tf.toDouble / maxTf.toDouble)).getOrElse(Double.MinPositiveValue)
   }
 
   private def key(term: FingerprintTerm): String = {

@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 package scaps.nucleus.querying
 
 import scaps.nucleus.QuerySettings
@@ -9,14 +13,15 @@ private[nucleus] class QueryScorer(settings: QuerySettings, getTypeFrequency: Fi
       QueryExpression.Sum(cs.map(scoreQuery))
     case ExpandedQuery.Max(cs) =>
       QueryExpression.Max(cs.map(scoreQuery))
-    case ExpandedQuery.Leaf(v, name, fraction, depth, dist) =>
-      QueryExpression.Leaf(FingerprintTerm(v, name).key, 0, fraction.toFloat)
+    case l @ ExpandedQuery.Leaf(v, name, _, _, _) =>
+      val term = FingerprintTerm(v, name)
+      QueryExpression.Leaf(term.key, boost(l).toFloat, getTypeFrequency(term).toFloat)
   }
 
-  private def boost(settings: QuerySettings, l: ExpandedQuery.Leaf): Double = {
-    (if (settings.fractions) l.fraction else 1d) *
+  private def boost(l: ExpandedQuery.Leaf): Double = {
+    l.fraction *
       itf(FingerprintTerm(l.variance, l.name)) *
-      math.pow(l.dist, settings.distanceBoostWeight)
+      math.pow(1 - (0.1 * l.dist), settings.distanceBoostWeight)
   }
 
   /**
@@ -26,11 +31,7 @@ private[nucleus] class QueryScorer(settings: QuerySettings, getTypeFrequency: Fi
    */
   private def itf(t: FingerprintTerm): Double = {
     val base = settings.typeFrequencyWeight
-    if (base == 0) {
-      1
-    } else {
-      val freq = getTypeFrequency(t)
-      math.log(base / (freq * base + (1 - freq))) / math.log(base)
-    }
+    val freq = getTypeFrequency(t)
+    math.log(base / (freq * base + (1 - freq) * 1.1)) / math.log(base)
   }
 }

@@ -15,7 +15,7 @@ import scaps.nucleus.Type
 private[nucleus] object TypeViewIndex {
   import scaps.nucleus.indexing.{ InternalTypes => I }
 
-  val viewKey = "<v>"
+  private val viewKey = "<v>"
 
   def defToDocs(d: Definition): List[Document] =
     TypeView.typeViews(d).map(v => typeViewToDoc(d.source, v))

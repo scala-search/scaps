@@ -13,11 +13,11 @@ import scaps.nucleus.indexing.TypeViewIndex
 import scaps.nucleus.IndexAccess
 import scaps.nucleus.indexing.TypeNormalization
 
-object QueryExpansion {
+private[nucleus] object QueryExpansion {
 
   import scaps.nucleus.indexing.{ InternalTypes => I }
 
-  private[querying] def expandQuery(tpe: Type, viewsFrom: Type => Seq[TypeView]): ExpandedQuery = {
+  def expandQuery(tpe: Type, viewsFrom: Type => Seq[TypeView]): ExpandedQuery = {
     import ExpandedQuery._
 
     def parts(tr: TypeRef, depth: Int, dist: Float, outerTpes: Set[TypeRef], fraction: Double): Alternative = {

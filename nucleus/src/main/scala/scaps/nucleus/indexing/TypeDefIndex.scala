@@ -9,8 +9,8 @@ import scaps.nucleus.MetaDoc
 import scaps.nucleus.TypeDef
 import scaps.nucleus.IndexAccess
 
-object TypeDefIndex {
-  val typeDefKey = "<t>"
+private[nucleus] object TypeDefIndex {
+  private val typeDefKey = "<t>"
 
   def typeDefToDoc(td: TypeDef): Document =
     MetaDoc(
@@ -18,7 +18,7 @@ object TypeDefIndex {
       upickle.default.write(td).getBytes,
       td.source)
 
-  def docToTypeDef(doc: Document): Option[TypeDef] =
+  private def docToTypeDef(doc: Document): Option[TypeDef] =
     if (doc.keys.contains(typeDefKey))
       Some(upickle.default.read[TypeDef](new String(doc.data)))
     else

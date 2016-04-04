@@ -8,7 +8,10 @@ import scaps.nucleus.ValueDef
 import scaps.nucleus.Document
 import scaps.nucleus.ValueDoc
 
-object ValueIndex {
+private[nucleus] object ValueIndex {
+  def docToValue(d: Document): ValueDef =
+    upickle.default.read[ValueDef](new String(d.data))
+
   def valueToDoc(v: ValueDef): Document =
     ValueDoc(
       v.name,
