@@ -117,6 +117,11 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
       writer.deleteDocuments(new Term(fields.moduleId, module.moduleId))
     }
 
+  def deleteSourceArtifact(artifactPath: String): Try[Unit] =
+    withWriter { writer =>
+      writer.deleteDocuments(new Term(fields.sourceArtifact, artifactPath))
+    }
+
   private def toLuceneQuery(query: ApiQuery, moduleIds: Set[String]): ProcessingError \/ Query = {
     try {
       val keys = new BooleanQuery
@@ -152,6 +157,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
 
     doc.add(new TextField(fields.doc, (entity.name + "\n").multiply(2) + entity.comment.indexableContent, Store.NO))
     doc.add(new TextField(fields.moduleId, entity.module.moduleId, Store.NO))
+    doc.add(new TextField(fields.sourceArtifact, entity.source.artifactPath, Store.NO))
 
     val fingerprint = Fingerprint(entity)
     fingerprint.termsWithIsOpt.foreach {
@@ -180,5 +186,6 @@ object ValueIndex {
     val doc = "doc"
     val entity = "entity"
     val moduleId = "moduleId"
+    val sourceArtifact = "sourceArtifact"
   }
 }

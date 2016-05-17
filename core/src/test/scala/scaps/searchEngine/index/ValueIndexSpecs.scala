@@ -10,6 +10,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import scaps.api.DocComment
 import scaps.api.Module
+import scaps.api.UnknownSource
 
 class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   "the index" should "persist entities and retrieve them by name" in {
@@ -73,5 +74,5 @@ class ValueIndexSpecs extends FlatSpec with Matchers with IndexUtils {
   }
 
   def findByName(index: ValueIndex)(name: String) =
-    index.findValuesByName(name).get.map(_.copy(docLink = None))
+    index.findValuesByName(name).get.map(_.copy(docLink = None, source = UnknownSource))
 }

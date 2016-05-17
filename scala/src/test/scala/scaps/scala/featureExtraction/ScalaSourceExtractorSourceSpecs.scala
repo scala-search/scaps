@@ -22,7 +22,7 @@ class ScalaSourceExtractorSourceSpecs extends FlatSpec with Matchers with Extrac
   }
 
   def assertDefaultArtifact(v: ValueDef, fileId: Int) = {
-    v.source.artifactPath should be(Some(s"f$fileId.scala"))
+    v.source.artifactPath should be(s"f$fileId.scala")
   }
 
   it should "extract source locations" in {

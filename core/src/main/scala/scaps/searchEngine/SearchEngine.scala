@@ -116,6 +116,9 @@ class SearchEngine private[searchEngine] (
       logger.info(s"Type frequencies have been updated")
     }
 
+  def deleteSourceArtifact(artifactPath: String): Try[Unit] =
+    valueIndex.deleteSourceArtifact(artifactPath)
+
   def deleteModule(module: Module): Try[Unit] = Try {
     valueIndex.deleteEntitiesIn(module).get
     typeIndex.deleteEntitiesIn(module).get
