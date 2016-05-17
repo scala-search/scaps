@@ -123,8 +123,17 @@ trait EntityFactory extends StrictLogging {
         if (isImplicit) flags += ValueDef.Implicit
         if (isStatic(sym)) flags += ValueDef.Static
 
+        val source = (for {
+          pos <- Option(sym.pos).orElse(sym.overrides.headOption.map(_.pos))
+          if pos != NoPosition
+        } yield {
+          FileSource(pos.source.path, PosSource(pos.start, pos.end))
+        })
+          .getOrElse(FileSource(sym.sourceFile.path, UnknownSource))
+
         ValueDef(qualifiedName(sym, false), typeParams, tpe, comment,
           flags = flags.result,
+          source = source,
           docLink = link(sym))
       }.leftMap(ExtractionError(qualifiedName(sym, false), _)))
     else

@@ -25,16 +25,16 @@ trait ExtractionUtils extends Matchers {
     val extractor = new ScalaSourceExtractor(compiler)
 
     ExtractionError.handleErrors(extractor(files)) {
-      e => fail(e.entityName, e.error)
+      e => fail(e.toString, e.error)
     }
   }
 
-  def extractAllValues(source: String): Seq[ValueDef] = {
-    extractAll(source).collect { case t: ValueDef => t }
+  def extractAllValues(source: String*): Seq[ValueDef] = {
+    extractAll(source: _*).collect { case t: ValueDef => t }
   }
 
-  def extractValues(source: String)(entityHandlers: (String, ValueDef => Unit)*): Unit = {
-    val entities = extractAllValues(source)
+  def extractValues(source: String*)(entityHandlers: (String, ValueDef => Unit)*): Unit = {
+    val entities = extractAllValues(source: _*)
     val names = entities.map(_.name)
 
     entityHandlers.foreach { handler =>

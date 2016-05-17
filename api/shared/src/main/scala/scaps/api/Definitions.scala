@@ -50,6 +50,7 @@ case class ValueDef(
   tpe: TypeRef,
   comment: DocComment,
   flags: Set[ValueDef.Flag] = Set(),
+  source: Source = UnknownSource,
   module: Module = Module.Unknown,
   docLink: Option[String] = None)
     extends Definition {
@@ -80,7 +81,7 @@ case class ValueDef(
     s"$name$params: ${tpe.signature(withImplicits)}"
   }
 
-  lazy val group = ValueDef(EntityName.splitName(name).last, Nil, tpe.curried.structure, DocComment.empty, Set(), Module.Unknown, None)
+  lazy val group = ValueDef(EntityName.splitName(name).last, Nil, tpe.curried.structure, DocComment.empty, Set(), UnknownSource, Module.Unknown, None)
 
   def withoutComment = copy(comment = DocComment.empty)
 
