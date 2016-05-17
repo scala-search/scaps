@@ -6,10 +6,11 @@ package scaps.scala.featureExtraction
 
 import java.io.File
 import java.util.jar.JarFile
-
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.reflect.internal.util.BatchSourceFile
 import scaps.api.Definition
+import scaps.api.ValueDef
+import scaps.api.FileSource
 import scala.tools.nsc.doc.ScaladocGlobal
 import scala.io.Codec
 import scalaz._
@@ -29,6 +30,10 @@ class JarExtractor(val compiler: ScaladocGlobal) {
       }
     }
 
-    scalaExtractor(files)
+    scalaExtractor(files).map {
+      case \/-(v: ValueDef) =>
+        \/-(v.copy(source = FileSource(file.getPath, v.source)))
+      case r => r
+    }
   }
 }
