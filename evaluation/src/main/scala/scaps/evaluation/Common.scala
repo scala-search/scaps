@@ -77,7 +77,7 @@ object Common extends Logging {
   }
 
   def updateSearchEngine(engine: SearchEngine, newSettings: Settings) = {
-    if (engine.settings.index != newSettings.index) {
+    if (engine.settings.index != newSettings.index || engine.settings.query.views != newSettings.query.views) {
       println("Index time settings have changed!")
 
       val entities =

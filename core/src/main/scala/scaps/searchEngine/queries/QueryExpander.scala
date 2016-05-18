@@ -49,11 +49,11 @@ private[queries] object ExpandedQuery {
       Max(alts.toList)
   }
 
-  case class Leaf(tpe: TypeRef, fraction: Double, depth: Int, dist: Float) extends Part with Alternative {
+  case class Leaf(tpe: TypeRef, fraction: Double) extends Part with Alternative {
     val children = Nil
 
     override def toString =
-      s"$tpe^($fraction, $depth, $dist)"
+      s"$tpe^$fraction"
   }
 
   def minimize(p: Part): Part = p match {
@@ -134,14 +134,14 @@ class QueryExpander(
         throw MaximumClauseCountExceededException
     }
 
-    def parts(tpe: TypeRef, depth: Int, dist: Float, outerTpes: Set[TypeRef], fraction: Double): Alternative = {
+    def parts(tpe: TypeRef, outerTpes: Set[TypeRef], fraction: Double): Alternative = {
       increaseCount()
 
       tpe match {
         case TypeRef.Ignored(args, v) =>
           Sum(args.map { arg =>
             val partF = fraction / args.length
-            alternatives(arg, depth, outerTpes, partF)
+            alternatives(arg, outerTpes, partF)
           })
         case tpe =>
           val partArgs = tpe.args
@@ -150,29 +150,29 @@ class QueryExpander(
           val partF = fraction / (1 + partArgs.length)
 
           val parts = partArgs.map { arg =>
-            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partF, depth + 1, 1)
-            else alternatives(arg, depth + 1, outerTpes, partF)
+            if (outerTpes.contains(arg)) Leaf(arg.withArgsAsParams, partF)
+            else alternatives(arg, outerTpes, partF)
           }
 
-          Sum(Leaf(tpe.withArgsAsParams, partF, depth, dist) :: parts)
+          Sum(Leaf(tpe.withArgsAsParams, partF) :: parts)
       }
     }
 
-    def alternatives(tpe: TypeRef, depth: Int, outerTpes: Set[TypeRef], fraction: Double): Part = {
+    def alternatives(tpe: TypeRef, outerTpes: Set[TypeRef], fraction: Double): Part = {
       increaseCount()
 
       val alternativesWithDistance =
         (if (settings.views) findViews(tpe).toList else Nil)
-          .flatMap(v => v(tpe).map((_, v.distance, v.retainedInformation)))
+          .flatMap(v => v(tpe).map((_, v.retainedInformation)))
           .distinct
 
       val outerTpesAndAlts = outerTpes + tpe ++ alternativesWithDistance.map(_._1)
 
-      val originalTypeParts = parts(tpe, depth, 1, outerTpesAndAlts, fraction)
+      val originalTypeParts = parts(tpe, outerTpesAndAlts, fraction)
       val alternativesParts =
         alternativesWithDistance.map {
-          case (alt, dist, retainedInfo) =>
-            parts(alt, depth, dist, outerTpesAndAlts, fraction * retainedInfo)
+          case (alt, retainedInfo) =>
+            parts(alt, outerTpesAndAlts, fraction * retainedInfo)
         }
 
       Max(originalTypeParts :: alternativesParts)
@@ -180,17 +180,15 @@ class QueryExpander(
 
     tpe match {
       case TypeRef.Ignored(_, _) =>
-        parts(tpe, 0, 0, Set(), 1)
+        parts(tpe, Set(), 1)
       case _ =>
         val itpe = TypeRef.Ignored(tpe :: Nil, Covariant)
-        parts(itpe, 0, 0, Set(), 1)
+        parts(itpe, Set(), 1)
     }
   }
 
   private val boost: (ExpandedQuery.Leaf => Double) = { l =>
-    (if (settings.fractions) l.fraction else 1d) *
-      itf(l.tpe.term) *
-      math.pow(l.dist, settings.distanceBoostWeight)
+    (if (settings.fractions) l.fraction else 1d) * itf(l.tpe.term)
   }
 
   /**

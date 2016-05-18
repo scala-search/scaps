@@ -74,6 +74,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
     new PerFieldAnalyzerWrapper(new StandardAnalyzer(), Map(
       fields.fingerprintTerms -> new WhitespaceAnalyzer,
       fields.moduleId -> new KeywordAnalyzer,
+      fields.sourceArtifact -> new KeywordAnalyzer,
       fields.name -> nameAnalyzer,
       fields.doc -> docAnalyzer).asJava)
 
@@ -164,7 +165,7 @@ class ValueIndex(val dir: Directory, settings: Settings) extends Index[ValueDef]
       case (term, _) =>
         doc.add(new TextField(fields.fingerprintTerms, term, Store.NO))
     }
-    doc.add(new TextField(fields.fingerprint, fingerprint.toString(), Store.YES))
+    doc.add(new StoredField(fields.fingerprint, fingerprint.toString()))
 
     doc.add(new StoredField(fields.entity, upickle.default.write(entity)))
 

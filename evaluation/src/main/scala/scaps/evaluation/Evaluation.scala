@@ -31,9 +31,7 @@ object Evaluation extends App {
       views = false,
       fingerprintFrequencyCutoff = 0.8))
 
-  val baseRngs = Map[String, Rng[Double]](
-    depthBoostWeight -> Rng.oneof(0d))
-    .withDefaultValue(Rng.oneof(0d))
+  val baseRngs = Map[String, Rng[Double]]().withDefaultValue(Rng.oneof(0d))
 
   // (instance name, number of configurations tested, configuration generator)
   val runs: List[(String, Int, Rng[Settings])] = List(
@@ -46,7 +44,6 @@ object Evaluation extends App {
           fractions = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
-        distanceBoostWeight -> Rng.oneof(0d),
         docBoost -> Rng.oneof(0.05d),
         typeFrequencyWeight -> Rng.oneof(0d)))),
     ("I1: Baseline + Polarized", 1, randomize(
@@ -58,7 +55,6 @@ object Evaluation extends App {
           fractions = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
-        distanceBoostWeight -> Rng.oneof(0d),
         docBoost -> Rng.oneof(0.05d),
         typeFrequencyWeight -> Rng.oneof(0d)))),
     ("I2: Weighted", 20, randomize(
@@ -70,7 +66,6 @@ object Evaluation extends App {
           fractions = true)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.3),
-        distanceBoostWeight -> Rng.oneof(0d),
         docBoost -> Rng.oneof(0.05d),
         typeFrequencyWeight -> Rng.oneof(math.E)))),
     ("I3: Weighted + Polarized", 20, randomize(
@@ -82,10 +77,9 @@ object Evaluation extends App {
           fractions = true)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.3),
-        distanceBoostWeight -> Rng.oneof(0d),
         docBoost -> Rng.oneof(0.05d),
         typeFrequencyWeight -> Rng.oneof(math.E)))),
-    ("I4: FEM", 100, randomize(
+    ("I4: FEM", 20, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = true))
@@ -93,10 +87,9 @@ object Evaluation extends App {
           views = true,
           fractions = true)),
       baseRngs ++ Map(
-        penaltyWeight -> Rng.choosedouble(0, 0.3),
-        distanceBoostWeight -> Rng.choosedouble(0, 1),
-        docBoost -> Rng.oneof(0.05d),
-        typeFrequencyWeight -> Rng.oneof(math.E)))))
+        penaltyWeight -> Rng.choosedouble(0, 0.1),
+        docBoost -> Rng.oneof(0.1d),
+        typeFrequencyWeight -> Rng.oneof(Math.E)))))
 
   val (trainingQueries, testQueries) =
     new Random(seed).shuffle(evaluationSettings.queries).splitAt((evaluationSettings.queries.length * 0.5).toInt)
@@ -110,8 +103,6 @@ object Evaluation extends App {
     QuerySettings.views,
     QuerySettings.fractions,
     QuerySettings.penaltyWeight,
-    QuerySettings.distanceBoostWeight,
-    QuerySettings.depthBoostWeight,
     QuerySettings.typeFrequencyWeight,
     QuerySettings.docBoost,
     QuerySettings.fingerprintFrequencyCutoff,
@@ -148,8 +139,6 @@ object Evaluation extends App {
               settings.query.views,
               settings.query.fractions,
               settings.query.penaltyWeight,
-              settings.query.distanceBoostWeight,
-              settings.query.depthBoostWeight,
               settings.query.typeFrequencyWeight,
               settings.query.docBoost,
               settings.query.fingerprintFrequencyCutoff,
@@ -225,14 +214,10 @@ object Evaluation extends App {
   def randomize(settings: QuerySettings, rngs: Map[String, Rng[Double]]): Rng[QuerySettings] =
     for {
       pw <- rngs(penaltyWeight)
-      dist <- rngs(distanceBoostWeight)
-      depth <- rngs(depthBoostWeight)
       tf <- rngs(typeFrequencyWeight)
       db <- rngs(docBoost)
     } yield settings.copy(
       penaltyWeight = pw,
-      distanceBoostWeight = dist,
-      depthBoostWeight = depth,
       typeFrequencyWeight = tf,
       docBoost = db)
 

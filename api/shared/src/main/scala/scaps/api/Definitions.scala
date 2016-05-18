@@ -131,7 +131,7 @@ case class TypeParameter(
   }
 }
 
-case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String = "", module: Module = Module.Unknown)
+case class ViewDef(from: TypeRef, to: TypeRef, definingEntityName: String = "", module: Module = Module.Unknown)
     extends Definition {
   def name = s"$definingEntityName:$fromKey:$toKey"
 
@@ -139,19 +139,22 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
   def toKey = ViewDef.key(to)
 
   def apply(t: TypeRef): Option[TypeRef] = {
-    val paramMap = findParamMap(from, t)
-    Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
-      t(paramWithArg._1, paramWithArg._2)
-    })
+    findParamMap(from, t).flatMap { paramMap =>
+      Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
+        t(paramWithArg._1, paramWithArg._2)
+      })
+    }
   }
 
-  def findParamMap(from: TypeRef, t: TypeRef): List[(String, TypeRef)] =
+  def findParamMap(from: TypeRef, t: TypeRef): Option[List[(String, TypeRef)]] =
     if (from.isTypeParam)
-      List((from.name -> t))
+      Some(List((from.name -> t)))
+    else if (from.args.zip(t.args).forall { case (l, r) => l.isTypeParam || l == r })
+      Some(from.args.zip(t.args).flatMap {
+        case (f, t) => findParamMap(f, t).toSeq.flatten
+      })
     else
-      from.args.zip(t.args).flatMap {
-        case (f, t) => findParamMap(f, t)
-      }
+      None
 
   lazy val retainedInformation: Double = {
     if (from.isTypeParam) {
@@ -168,10 +171,10 @@ case class ViewDef(from: TypeRef, to: TypeRef, distance: Float, definingEntityNa
 
 object ViewDef {
   def key(tpe: TypeRef) =
-    tpe.renameTypeParams(_ => "_").annotatedSignature
+    tpe.withArgsAsParams.renameTypeParams(_ => "_").annotatedSignature
 
-  def bidirectional(from: TypeRef, to: TypeRef, distance: Float, definingEntityName: String) =
+  def bidirectional(from: TypeRef, to: TypeRef, definingEntityName: String) =
     List(
-      ViewDef(from, to, distance, definingEntityName),
-      ViewDef(to.withVariance(to.variance.flip), from.withVariance(from.variance.flip), distance, definingEntityName))
+      ViewDef(from, to, definingEntityName),
+      ViewDef(to.withVariance(to.variance.flip), from.withVariance(from.variance.flip), definingEntityName))
 }

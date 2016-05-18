@@ -602,8 +602,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
     views.map(_.name) should (
       contain("p.O.int2long:-scala.Int:-scala.Long") and
       contain("p.O.int2long:+scala.Long:+scala.Int") and
-      contain("p.O.int2fn:-scala.Int:-scala.Function1[+scala.Long, -java.lang.String]") and
-      contain("p.O.int2fn:+scala.Function1[-scala.Long, +java.lang.String]:+scala.Int"))
+      contain("p.O.int2fn:-scala.Int:-scala.Function1[+_, -_]") and
+      contain("p.O.int2fn:+scala.Function1[-_, +_]:+scala.Int"))
   }
 
   it should "extract views from implicit conversion functions" in {
@@ -619,8 +619,8 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
     views.map(_.name) should (
       contain("p.O.int2long:-scala.Int:-scala.Long") and
       contain("p.O.int2long:+scala.Long:+scala.Int") and
-      contain("p.O.int2fn:-scala.Int:-scala.Function1[+scala.Long, -java.lang.String]") and
-      contain("p.O.int2fn:+scala.Function1[-scala.Long, +java.lang.String]:+scala.Int"))
+      contain("p.O.int2fn:-scala.Int:-scala.Function1[+_, -_]") and
+      contain("p.O.int2fn:+scala.Function1[-_, +_]:+scala.Int"))
   }
 
   it should "extract views from implicit conversion classes" in {

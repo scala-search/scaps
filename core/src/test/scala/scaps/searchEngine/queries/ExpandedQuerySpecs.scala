@@ -12,7 +12,7 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
 
   def leaf(tpeName: String) =
-    Leaf(new TypeRef.PrimitiveType(tpeName)(Covariant), 1, 0, 0)
+    Leaf(new TypeRef.PrimitiveType(tpeName)(Covariant), 1)
 
   val A = leaf("A")
   val B = leaf("B")
@@ -65,11 +65,11 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
     ExpandedQuery.minimize(q) should be(
       Max(
         Sum(
-          Max(Ax, Bx),
-          A),
-        Sum(
           Max(Cx, Dx),
-          B)))
+          B),
+        Sum(
+          Max(Ax, Bx),
+          A)))
   }
 
   it should "handle repeated types correctly" in {

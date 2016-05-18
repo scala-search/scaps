@@ -47,21 +47,21 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   val Nothing = TypeRef.Nothing
 
   val views = {
-    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef, dist: Int) =
-      ViewDef.bidirectional(base(Covariant), cls(Covariant), dist, "")
+    def isSubTypeOf(cls: Variance => TypeRef, base: Variance => TypeRef) =
+      ViewDef.bidirectional(base(Covariant), cls(Covariant), "")
 
     List(
-      ViewDef(TypeRef("_", Covariant, Nil, true), TypeRef.Nothing(Covariant), 1, ""),
-      ViewDef(TypeRef("_", Invariant, Nil, true), TypeRef.Unknown(Invariant), 1, "")) ++
+      ViewDef(TypeRef("_", Covariant, Nil, true), TypeRef.Nothing(Covariant), ""),
+      ViewDef(TypeRef("_", Invariant, Nil, true), TypeRef.Unknown(Invariant), "")) ++
       List(
-        isSubTypeOf(B(_), A(_), 1),
-        isSubTypeOf(C(_), A(_), 1),
-        isSubTypeOf(D(_), C(_), 1),
-        isSubTypeOf(D(_), A(_), 2),
-        isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v), 1),
-        isSubTypeOf(CBox(_), v => Box(C(v), v), 1),
-        isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v), 1),
-        isSubTypeOf(v => InvarBox(T(Invariant), v), v => Box(T(v), v), 1)).flatten
+        isSubTypeOf(B(_), A(_)),
+        isSubTypeOf(C(_), A(_)),
+        isSubTypeOf(D(_), C(_)),
+        isSubTypeOf(D(_), A(_)),
+        isSubTypeOf(v => MyBox(T(v), v), v => Box(T(v), v)),
+        isSubTypeOf(CBox(_), v => Box(C(v), v)),
+        isSubTypeOf(v => Loop(T(v), v), v => Box(Loop(T(v), v), v)),
+        isSubTypeOf(v => InvarBox(T(Invariant), v), v => Box(T(v), v))).flatten
   }
 
   val viewIndex = {
@@ -75,10 +75,10 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     subtypesOfA should (
       have length (4) and
-      contain((B(Covariant), 1)) and
-      contain((C(Covariant), 1)) and
-      contain((D(Covariant), 2)) and
-      contain((Nothing(Covariant), 1)))
+      contain((B(Covariant))) and
+      contain((C(Covariant))) and
+      contain((D(Covariant))) and
+      contain((Nothing(Covariant))))
   }
 
   it should "retrieve basetypes of types at contravariant positions" in {
@@ -86,8 +86,8 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     basetypesOfD should (
       have length (2) and
-      contain((C(Contravariant), 1)) and
-      contain((A(Contravariant), 2)))
+      contain((C(Contravariant))) and
+      contain((A(Contravariant))))
   }
 
   it should "retrieve <unknown> as an alternative of types at invariant positions" in {
@@ -95,7 +95,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     alternatives should (
       have length (1) and
-      contain((TypeRef.Unknown(Invariant), 1)))
+      contain((TypeRef.Unknown(Invariant))))
   }
 
   it should "retrieve subtypes of parametric types" in {
@@ -103,10 +103,10 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     subtypesOfBox should (
       have length (3) and
-      contain((MyBox(U(Covariant), Covariant), 1)) and
-      contain((InvarBox(U(Invariant), Covariant), 1)) and
-      not contain ((CBox(Covariant), 1)) and
-      contain((Nothing(Covariant), 1)))
+      contain((MyBox(U(Covariant), Covariant))) and
+      contain((InvarBox(U(Invariant), Covariant))) and
+      not contain ((CBox(Covariant))) and
+      contain((Nothing(Covariant))))
   }
 
   it should "retrieve subtypes of parametric types with concrete arguments" in {
@@ -114,18 +114,18 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     subtypesOfBoxOfB should (
       have length (3) and
-      contain((MyBox(B(Covariant), Covariant), 1)) and
-      contain((InvarBox(B(Invariant), Covariant), 1)) and
-      contain((Nothing(Covariant), 1)))
+      contain((MyBox(B(Covariant), Covariant))) and
+      contain((InvarBox(B(Invariant), Covariant))) and
+      contain((Nothing(Covariant))))
 
     val subtypesOfBoxOfC = viewIndex.findAlternativesWithDistance(Box(C(Covariant), Covariant)).get
 
     subtypesOfBoxOfC should (
       have length (4) and
-      contain((MyBox(C(Covariant), Covariant), 1)) and
-      contain((CBox(Covariant), 1)) and
-      contain((InvarBox(C(Invariant), Covariant), 1)) and
-      contain((Nothing(Covariant), 1)))
+      contain((MyBox(C(Covariant), Covariant))) and
+      contain((CBox(Covariant))) and
+      contain((InvarBox(C(Invariant), Covariant))) and
+      contain((Nothing(Covariant))))
   }
 
   it should "retrieve parametric basetypes" in {
@@ -133,7 +133,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     basetypesOfCBox should (
       have length (1) and
-      contain((Box(C(Contravariant), Contravariant), 1)))
+      contain((Box(C(Contravariant), Contravariant))))
   }
 
   it should "retrieve basetypes of parametric types" in {
@@ -141,7 +141,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     basetypesOfMyBox should (
       have length (1) and
-      contain((Box(U(Contravariant), Contravariant), 1)))
+      contain((Box(U(Contravariant), Contravariant))))
   }
 
   it should "retrieve basetypes of parametric types with concrete arguments" in {
@@ -149,7 +149,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     basetypesOfMyBoxOfC should (
       have length (1) and
-      contain((Box(C(Contravariant), Contravariant), 1)))
+      contain((Box(C(Contravariant), Contravariant))))
   }
 
   it should "substitute type args in nested types" in {
@@ -157,6 +157,6 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
 
     baseTypesOfLoopOfA should (
       have length (1) and
-      contain((Box(Loop(A(Contravariant), Contravariant), Contravariant), 1)))
+      contain((Box(Loop(A(Contravariant), Contravariant), Contravariant))))
   }
 }

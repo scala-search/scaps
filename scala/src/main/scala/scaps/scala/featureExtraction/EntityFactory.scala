@@ -305,11 +305,11 @@ trait EntityFactory extends StrictLogging {
       // create implicit conversions from Seq and subtypes thereof to repeated args
       if (cls.name == TypeRef.Seq.name) {
         val p = cls.typeParameters(0)
-        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), clsType, Scala.implicitConversionDistance, "")
+        ViewDef.bidirectional(TypeRef.Repeated(TypeRef(p.name, Covariant, Nil, true)), clsType, "")
       } else {
         baseTypes.flatMap {
           case TypeRef.Seq(t, _) =>
-            ViewDef.bidirectional(TypeRef.Repeated(t), clsType, Scala.implicitConversionDistance, "")
+            ViewDef.bidirectional(TypeRef.Repeated(t), clsType, "")
           case _ =>
             Nil
         }
@@ -322,12 +322,10 @@ trait EntityFactory extends StrictLogging {
         List(
           ViewDef(
             clsType,
-            clsType.copy(name = TypeRef.Bottom.name(noParams)),
-            Scala.subtypingDistance),
+            clsType.copy(name = TypeRef.Bottom.name(noParams))),
           ViewDef(
             clsType.withVariance(Contravariant),
-            clsType.withVariance(Contravariant).copy(name = TypeRef.Top.name(noParams)),
-            Scala.subtypingDistance))
+            clsType.withVariance(Contravariant).copy(name = TypeRef.Top.name(noParams))))
       else
         Nil
     }
@@ -340,7 +338,7 @@ trait EntityFactory extends StrictLogging {
     baseTypes
       .map(replaceCovNothingWithParam)
       .flatMap { baseCls =>
-        ViewDef.bidirectional(baseCls, cls.toType, Scala.subtypingDistance, cls.name)
+        ViewDef.bidirectional(baseCls, cls.toType, cls.name)
       } ++ toRepeated ++ toParametrizedTopAndBottom
   }
 
@@ -351,7 +349,7 @@ trait EntityFactory extends StrictLogging {
     if (v.isImplicit && v.isStatic && !hasImplicitParam(v.tpe)) {
       v.tpe.etaExpanded match {
         case TypeRef.Function(from :: Nil, to, _) if !from.isTypeParam =>
-          ViewDef.bidirectional(from, to.withVariance(Contravariant), Scala.implicitConversionDistance, v.name)
+          ViewDef.bidirectional(from, to.withVariance(Contravariant), v.name)
         case _ =>
           Nil
       }

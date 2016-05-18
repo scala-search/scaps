@@ -76,25 +76,20 @@ object Scala {
       TypeDef(TypeRef.Repeated.name, List(TypeParameter("X", Covariant)))) ++
       parametrizedTopAndBottomTypes
 
-  val subtypingDistance = 0.5f
-  val implicitConversionDistance = 0.7f
-  val aliasDistance = 0.95f
-  val identityDistance = 1f
-
   val builtinViews =
     List(
       // +_ %> +Nothing
-      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef.Nothing(), subtypingDistance, ""),
+      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef.Nothing(), ""),
       // o_ %> o<unknown>
-      ViewDef(TypeRef("_", Invariant, Nil, isTypeParam = true), TypeRef.Unknown(Invariant), subtypingDistance, ""),
+      ViewDef(TypeRef("_", Invariant, Nil, isTypeParam = true), TypeRef.Unknown(Invariant), ""),
       // +_ %> o_
-      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef("_", Invariant, Nil, isTypeParam = true), subtypingDistance, ""),
+      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef("_", Invariant, Nil, isTypeParam = true), ""),
       // +_ %> oNothing
-      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef.Nothing(Invariant), subtypingDistance, ""),
+      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef.Nothing(Invariant), ""),
       // -_ %> o_
-      ViewDef(TypeRef("_", Contravariant, Nil, isTypeParam = true), TypeRef("_", Invariant, Nil, isTypeParam = true), subtypingDistance, ""),
+      ViewDef(TypeRef("_", Contravariant, Nil, isTypeParam = true), TypeRef("_", Invariant, Nil, isTypeParam = true), ""),
       // -_ %> oAny
-      ViewDef(TypeRef("_", Contravariant, Nil, isTypeParam = true), TypeRef.Any(Invariant), subtypingDistance, ""))
+      ViewDef(TypeRef("_", Contravariant, Nil, isTypeParam = true), TypeRef.Any(Invariant), ""))
 
   val builtinDefinitions: List[Definition] =
     builtinTypes ++ builtinViews

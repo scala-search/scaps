@@ -10,38 +10,52 @@ object ViewDefSpecs extends TestSuite {
       val B = TypeRef("B", Covariant, Nil, isTypeParam = true)
       'apply{
         'genericViewToConstantType{
-          val v = ViewDef(A, TypeRef.Unknown(Invariant), 1)
+          val v = ViewDef(A, TypeRef.Unknown(Invariant))
 
           val res = v(TypeRef.Char(Covariant))
           assert(res == Some(TypeRef.Unknown(Invariant)))
         }
 
         'genericViewToModifiedVariance{
-          val v = ViewDef(A, A.copy(variance = Invariant), 1)
+          val v = ViewDef(A, A.copy(variance = Invariant))
 
           val res = v(TypeRef.Char(Covariant))
           assert(res == Some(TypeRef.Char(Invariant)))
         }
 
         'viewWithParam{
-          val v = ViewDef(TypeRef.Option(A), TypeRef.Seq(A), 1)
+          val v = ViewDef(TypeRef.Option(A), TypeRef.Seq(A))
 
           val res = v(TypeRef.Option(TypeRef.Int()))
           assert(res == Some(TypeRef.Seq(TypeRef.Int())))
         }
 
         'viewWithModifiedParamVariance{
-          val v = ViewDef(TypeRef.Option(A), TypeRef.Seq(A.copy(variance = Invariant)), 1)
+          val v = ViewDef(TypeRef.Option(A), TypeRef.Seq(A.copy(variance = Invariant)))
 
           val res = v(TypeRef.Option(TypeRef.Int()))
           assert(res == Some(TypeRef.Seq(TypeRef.Int(Invariant))))
         }
 
         'viewWithMultipleParams{
-          val v = ViewDef(TypeRef.Function(A :: Nil, B), TypeRef.MemberAccess(A, B), 1)
+          val v = ViewDef(TypeRef.Function(A :: Nil, B), TypeRef.MemberAccess(A, B))
 
           val res = v(TypeRef.Function(TypeRef.Int(Contravariant) :: Nil, TypeRef.Char()))
           assert(res == Some(TypeRef.MemberAccess(TypeRef.Int(Contravariant), TypeRef.Char())))
+        }
+
+        'viewWithNonMatchingArgs{
+          val v = ViewDef(TypeRef.Option(TypeRef.Int()), TypeRef.Seq(TypeRef.Int()))
+
+          val res = v(TypeRef.Option(A))
+          assert(res == None)
+        }
+
+        'viewWithNonMatchingArgs2{
+          val v = ViewDef(TypeRef.Option(TypeRef.Int()), TypeRef.Seq(TypeRef.Int()))
+
+          val res = v(TypeRef.Option(TypeRef.Long()))
+          assert(res == None)
         }
       }
       'retainedInformation{
@@ -51,23 +65,23 @@ object ViewDefSpecs extends TestSuite {
         }
 
         'fromGenericToProper{
-          val v = ViewDef(A, TypeRef.Unknown(Invariant), 1)
+          val v = ViewDef(A, TypeRef.Unknown(Invariant))
           assertRI(v, 1)
         }
         'fromWithParamToProper{
-          val v = ViewDef(TypeRef.SList(A, Covariant), TypeRef.Unknown(Invariant), 1)
+          val v = ViewDef(TypeRef.SList(A, Covariant), TypeRef.Unknown(Invariant))
           assertRI(v, 1d / 2)
         }
         'fromProperToProper{
-          val v = ViewDef(TypeRef.SList(TypeRef.Int(Covariant), Covariant), TypeRef.Unknown(Invariant), 1)
+          val v = ViewDef(TypeRef.SList(TypeRef.Int(Covariant), Covariant), TypeRef.Unknown(Invariant))
           assertRI(v, 1)
         }
         'addedParam{
-          val v = ViewDef(TypeRef.SList(A), TypeRef.Function(TypeRef.Int(Contravariant) :: Nil, A), 1)
+          val v = ViewDef(TypeRef.SList(A), TypeRef.Function(TypeRef.Int(Contravariant) :: Nil, A))
           assertRI(v, 1)
         }
         'droppedParam{
-          val v = ViewDef(TypeRef.Function(A :: B :: Nil, A), TypeRef.SList(A), 1)
+          val v = ViewDef(TypeRef.Function(A :: B :: Nil, A), TypeRef.SList(A))
           assertRI(v, 3d / 4)
         }
       }

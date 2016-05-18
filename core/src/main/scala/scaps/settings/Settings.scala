@@ -70,8 +70,6 @@ case class QuerySettings(
     views: Boolean,
     fractions: Boolean,
     penaltyWeight: Double,
-    depthBoostWeight: Double,
-    distanceBoostWeight: Double,
     typeFrequencyWeight: Double,
     docBoost: Double,
     fingerprintFrequencyCutoff: Double,
@@ -82,8 +80,6 @@ case class QuerySettings(
   assertPositive(maxClauseCount)
   assertPositive(maxResults)
   assertPositive(penaltyWeight)
-  assertPositive(depthBoostWeight)
-  assertPositive(distanceBoostWeight)
   assertPositive(typeFrequencyWeight)
   assertPositive(docBoost)
   assertPositive(fingerprintFrequencyCutoff)
@@ -97,8 +93,6 @@ object QuerySettings {
       conf.getBoolean(views),
       conf.getBoolean(fractions),
       conf.getDouble(penaltyWeight),
-      conf.getDouble(depthBoostWeight),
-      conf.getDouble(distanceBoostWeight),
       conf.getDouble(typeFrequencyWeight),
       conf.getDouble(docBoost),
       conf.getDouble(fingerprintFrequencyCutoff),
@@ -109,10 +103,6 @@ object QuerySettings {
   val fractions = "fractions"
 
   val penaltyWeight = "penalty-weight"
-
-  val depthBoostWeight = "depth-boost-weight"
-
-  val distanceBoostWeight = "distance-boost-weight"
 
   val typeFrequencyWeight = "type-frequency-weight"
 
