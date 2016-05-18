@@ -17,37 +17,40 @@ object ApiSearchPlugin extends AutoPlugin {
   val scapsArtifact = "scaps-scala"
 
   object autoImport {
+    lazy val indexDependencies = SettingKey[Seq[ModuleID]]("indexDependencies", "Dependencies that will be indexed.")
     lazy val scapsControlHost = SettingKey[String]("scapsControlHost", "Hostname of the Scala API Search control service.")
     lazy val scapsModules = TaskKey[Seq[IndexJob]]("scapsModules", "Modules that will be indexed.")
 
-    lazy val Scaps = config("scaps").extend(Compile)
+    lazy val Scaps = config("scaps").extend(Runtime)
   }
 
   import autoImport._
 
   lazy val scapsSettings = Seq(
+    indexDependencies := Seq(),
     scapsControlHost := "localhost:8081",
     scapsModules := {
-      val deps = libraryDependencies.value.collect {
-        case ModuleID(_, name, _, _, _, _, _, _, _, _, _) if name != scapsArtifact => name
-      }
-
       val modules = updateClassifiers.value.configuration(Compile.name).get.modules
       val mappings = apiMappings.in(Compile, doc).value
+      val deps = indexDependencies.value.map(d =>
+        CrossVersion(scalaVersion.value, scalaBinaryVersion.value)(d))
 
-      modules.flatMap { m =>
-        val module = m.module
-        val as = m.artifacts
-        val mapping = as.flatMap { case (_, f) => mappings.get(f) }.headOption
-        val sourceFile = as.collectFirst {
-          case (Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) if deps.exists(name.startsWith(_)) => file
-        }
+      modules
+        .filter(m => deps.exists(
+          d => m.module.organization == d.organization && m.module.name == d.name && m.module.revision == d.revision))
+        .flatMap { m =>
+          val module = m.module
+          val as = m.artifacts
+          val mapping = as.flatMap { case (_, f) => mappings.get(f) }.headOption
+          val sourceFile = as.collectFirst {
+            case (Artifact(name, _, _, Some(Artifact.SourceClassifier), _, _, _), file) => file
+          }
 
-        sourceFile.map(f => IndexJob(
-          module.organization, module.name, module.revision,
-          f.getAbsolutePath(),
-          mapping.map(_.toString + "#")))
-      }.distinct
+          sourceFile.map(f => IndexJob(
+            module.organization, module.name, module.revision,
+            f.getAbsolutePath(),
+            mapping.map(_.toString + "#")))
+        }.distinct
     },
     javaOptions := {
       val classpath = (fullClasspath in Compile).value.map {
@@ -74,6 +77,6 @@ object ApiSearchPlugin extends AutoPlugin {
     fork := true,
     mainClass := Some("scaps.scala.Main"))
 
-  override lazy val projectSettings = inConfig(Scaps)(Defaults.compileSettings ++ scapsSettings) ++ Seq(
-    libraryDependencies += BuildInfo.organization %% scapsArtifact % BuildInfo.version)
+  override lazy val projectSettings = inConfig(Scaps)(Defaults.compileSettings ++ scapsSettings) ++
+    Seq(libraryDependencies += BuildInfo.organization %% scapsArtifact % BuildInfo.version)
 }
