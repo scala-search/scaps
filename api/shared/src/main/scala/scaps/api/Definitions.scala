@@ -139,22 +139,25 @@ case class ViewDef(from: TypeRef, to: TypeRef, definingEntityName: String = "", 
   def toKey = ViewDef.key(to)
 
   def apply(t: TypeRef): Option[TypeRef] = {
-    findParamMap(from, t).flatMap { paramMap =>
-      Some(paramMap.foldLeft(to) { (t, paramWithArg) =>
+    findParamMap(List(from), List(t)).map { paramMap =>
+      paramMap.foldLeft(to) { (t, paramWithArg) =>
         t(paramWithArg._1, paramWithArg._2)
-      })
+      }
     }
   }
 
-  def findParamMap(from: TypeRef, t: TypeRef): Option[List[(String, TypeRef)]] =
-    if (from.isTypeParam)
-      Some(List((from.name -> t)))
-    else if (from.args.zip(t.args).forall { case (l, r) => l.isTypeParam || l == r })
-      Some(from.args.zip(t.args).flatMap {
-        case (f, t) => findParamMap(f, t).toSeq.flatten
-      })
-    else
-      None
+  def findParamMap(from: List[TypeRef], t: List[TypeRef]): Option[List[(String, TypeRef)]] =
+    from.zip(t).foldLeft(Option(List[(String, TypeRef)]())) { (paramMapOpt, fromWithT) =>
+      paramMapOpt.flatMap { paramOpt =>
+        val (f, t) = fromWithT
+        if (f.isTypeParam)
+          Some((f.name -> t) :: paramOpt)
+        else if (f.name == t.name && f.variance == t.variance)
+          findParamMap(f.args, t.args).map(_ ::: paramOpt)
+        else
+          None
+      }
+    }
 
   lazy val retainedInformation: Double = {
     if (from.isTypeParam) {
