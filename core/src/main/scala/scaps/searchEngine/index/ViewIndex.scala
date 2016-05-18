@@ -42,6 +42,8 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
     findViews(tpe, moduleIds).get
       .flatMap { view =>
         view(tpe).map((_, view.distance))
+          .toSeq
+          .flatMap { case (tpe, _) => findAlternativesWithDistance(tpe, moduleIds).get }
       }
       .distinct
   }
