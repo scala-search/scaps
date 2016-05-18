@@ -48,15 +48,33 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
 
   def findViews(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =
     Try {
-      val query = new BooleanQuery()
-      query.add(new TermQuery(new Term(fields.from, ViewDef.key(tpe))), Occur.MUST);
-      query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
+      val processed = collection.mutable.Set[TypeRef]()
+
+      def loop(tpe: TypeRef): Seq[ViewDef] = {
+        if (!processed(tpe)) {
+          processed += tpe
+
+          val query = new BooleanQuery()
+          query.add(new TermQuery(new Term(fields.from, ViewDef.key(tpe))), Occur.MUST);
+          query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
+
+          val res = search(query).get.map(_.entity)
+
+          res ++ res.flatMap { v =>
+            v(tpe).toSeq.flatMap { tpe =>
+              loop(tpe).flatMap(rhs => v.compose(rhs))
+            }
+          }
+        } else {
+          Nil
+        }
+      }
 
       val genericQuery = new BooleanQuery()
       genericQuery.add(new TermQuery(new Term(fields.from, ViewDef.key(TypeRef("_", tpe.variance, Nil, true)))), Occur.MUST);
       genericQuery.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
 
-      search(query).get.map(_.entity) ++ search(genericQuery).get.map(_.entity)
+      loop(tpe) ++ search(genericQuery).get.map(_.entity)
     }
 
   def deleteEntitiesIn(module: Module): Try[Unit] =

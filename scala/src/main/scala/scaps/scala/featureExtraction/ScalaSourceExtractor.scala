@@ -82,6 +82,10 @@ object Scala {
       ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef.Nothing(), ""),
       // o_ %> o<unknown>
       ViewDef(TypeRef("_", Invariant, Nil, isTypeParam = true), TypeRef.Unknown(Invariant), ""),
+      // +_ %> o<unknown>
+      ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef.Unknown(Invariant), ""),
+      // -_ %> o<unknown>
+      ViewDef(TypeRef("_", Contravariant, Nil, isTypeParam = true), TypeRef.Unknown(Invariant), ""),
       // +_ %> o_
       ViewDef(TypeRef("_", Covariant, Nil, isTypeParam = true), TypeRef("_", Invariant, Nil, isTypeParam = true), ""),
       // +_ %> oNothing

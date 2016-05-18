@@ -85,6 +85,31 @@ object ViewDefSpecs extends TestSuite {
           assertRI(v, 3d / 4)
         }
       }
+
+      'compose{
+        val coFloat2coInt = ViewDef(TypeRef.Float(), TypeRef.Int())
+        val coInt2coChar = ViewDef(TypeRef.Int(), TypeRef.Char())
+
+        'simple{
+          val res = coFloat2coInt.compose(coInt2coChar)
+          assert(res == Some(ViewDef(TypeRef.Float(), TypeRef.Char())))
+        }
+
+        'invalid{
+          val res = coInt2coChar.compose(coFloat2coInt)
+          assert(res == None)
+        }
+
+        'withParam{
+          val res = ViewDef(TypeRef.Option(A), TypeRef.Seq(A)).compose(ViewDef(TypeRef.Seq(A), TypeRef.SList(A)))
+          assert(res == Some(ViewDef(TypeRef.Option(A), TypeRef.SList(A))))
+        }
+
+        'withRenamedParam{
+          val res = ViewDef(TypeRef.Option(A), TypeRef.Seq(A)).compose(ViewDef(TypeRef.Seq(B), TypeRef.SList(B)))
+          assert(res == Some(ViewDef(TypeRef.Option(A), TypeRef.SList(A))))
+        }
+      }
     }
   }
 }

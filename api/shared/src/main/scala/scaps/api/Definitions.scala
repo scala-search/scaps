@@ -139,12 +139,15 @@ case class ViewDef(from: TypeRef, to: TypeRef, definingEntityName: String = "", 
   def toKey = ViewDef.key(to)
 
   def apply(t: TypeRef): Option[TypeRef] = {
-    findParamMap(List(from), List(t)).map { paramMap =>
+    findParamMap(t).map { paramMap =>
       paramMap.foldLeft(to) { (t, paramWithArg) =>
         t(paramWithArg._1, paramWithArg._2)
       }
     }
   }
+
+  def findParamMap(t: TypeRef): Option[List[(String, TypeRef)]] =
+    findParamMap(List(from), List(t))
 
   def findParamMap(from: List[TypeRef], t: List[TypeRef]): Option[List[(String, TypeRef)]] =
     from.zip(t).foldLeft(Option(List[(String, TypeRef)]())) { (paramMapOpt, fromWithT) =>
@@ -168,6 +171,12 @@ case class ViewDef(from: TypeRef, to: TypeRef, definingEntityName: String = "", 
       val fromParams = fromParts.filter(_.isTypeParam)
       val droppedParams = fromParams.count(p => !toParts.exists(_.name == p.name))
       (fromParts.size - droppedParams).toDouble / fromParts.size
+    }
+  }
+
+  def compose(rhs: ViewDef): Option[ViewDef] = {
+    rhs(to).map { newTo =>
+      ViewDef(from, newTo)
     }
   }
 }
