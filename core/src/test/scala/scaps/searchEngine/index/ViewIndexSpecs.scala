@@ -71,7 +71,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   "the views index" should "retrieve subtypes of types at covariant positions" in {
-    val subtypesOfA = viewIndex.findAlternativesWithDistance(A(Covariant)).get
+    val subtypesOfA = viewIndex.findAlternatives(A(Covariant)).get
 
     subtypesOfA should (
       have length (4) and
@@ -82,7 +82,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve basetypes of types at contravariant positions" in {
-    val basetypesOfD = viewIndex.findAlternativesWithDistance(D(Contravariant)).get
+    val basetypesOfD = viewIndex.findAlternatives(D(Contravariant)).get
 
     basetypesOfD should (
       have length (2) and
@@ -91,7 +91,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve <unknown> as an alternative of types at invariant positions" in {
-    val alternatives = viewIndex.findAlternativesWithDistance(B(Invariant)).get
+    val alternatives = viewIndex.findAlternatives(B(Invariant)).get
 
     alternatives should (
       have length (1) and
@@ -99,7 +99,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve subtypes of parametric types" in {
-    val subtypesOfBox = viewIndex.findAlternativesWithDistance(Box(U(Covariant), Covariant)).get
+    val subtypesOfBox = viewIndex.findAlternatives(Box(U(Covariant), Covariant)).get
 
     subtypesOfBox should (
       have length (3) and
@@ -110,7 +110,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve subtypes of parametric types with concrete arguments" in {
-    val subtypesOfBoxOfB = viewIndex.findAlternativesWithDistance(Box(B(Covariant), Covariant)).get
+    val subtypesOfBoxOfB = viewIndex.findAlternatives(Box(B(Covariant), Covariant)).get
 
     subtypesOfBoxOfB should (
       have length (3) and
@@ -118,7 +118,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
       contain((InvarBox(B(Invariant), Covariant))) and
       contain((Nothing(Covariant))))
 
-    val subtypesOfBoxOfC = viewIndex.findAlternativesWithDistance(Box(C(Covariant), Covariant)).get
+    val subtypesOfBoxOfC = viewIndex.findAlternatives(Box(C(Covariant), Covariant)).get
 
     subtypesOfBoxOfC should (
       have length (4) and
@@ -129,7 +129,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve parametric basetypes" in {
-    val basetypesOfCBox = viewIndex.findAlternativesWithDistance(CBox(Contravariant)).get
+    val basetypesOfCBox = viewIndex.findAlternatives(CBox(Contravariant)).get
 
     basetypesOfCBox should (
       have length (1) and
@@ -137,7 +137,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve basetypes of parametric types" in {
-    val basetypesOfMyBox = viewIndex.findAlternativesWithDistance(MyBox(U(Contravariant), Contravariant)).get
+    val basetypesOfMyBox = viewIndex.findAlternatives(MyBox(U(Contravariant), Contravariant)).get
 
     basetypesOfMyBox should (
       have length (1) and
@@ -145,7 +145,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "retrieve basetypes of parametric types with concrete arguments" in {
-    val basetypesOfMyBoxOfC = viewIndex.findAlternativesWithDistance(MyBox(C(Contravariant), Contravariant)).get
+    val basetypesOfMyBoxOfC = viewIndex.findAlternatives(MyBox(C(Contravariant), Contravariant)).get
 
     basetypesOfMyBoxOfC should (
       have length (1) and
@@ -153,7 +153,7 @@ class ViewIndexSpecs extends FlatSpec with Matchers {
   }
 
   it should "substitute type args in nested types" in {
-    val baseTypesOfLoopOfA = viewIndex.findAlternativesWithDistance(Loop(A(Contravariant), Contravariant)).get
+    val baseTypesOfLoopOfA = viewIndex.findAlternatives(Loop(A(Contravariant), Contravariant)).get
 
     baseTypesOfLoopOfA should (
       have length (1) and

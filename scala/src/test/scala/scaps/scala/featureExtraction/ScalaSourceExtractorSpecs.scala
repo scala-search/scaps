@@ -696,4 +696,12 @@ class ScalaSourceExtractorSpecs extends FlatSpec with Matchers with ExtractionUt
       contain("p.Empty$:+p.Box[+_]:+p.Empty$") and
       contain("p.Empty$:-p.Empty$:-p.Box[-_]"))
   }
+
+  it should "extract correct Vector type def from inherited toVector method" in {
+    extractTypeDefs("""
+      package p
+
+      trait S[+T] extends Seq[T]
+      """)(("scala.collection.immutable.Vector", _.typeParameters should not be 'empty))
+  }
 }

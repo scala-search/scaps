@@ -129,7 +129,8 @@ trait EntityFactory extends StrictLogging {
         } yield {
           FileSource(pos.source.path, PosSource(pos.start, pos.end))
         })
-          .getOrElse(FileSource(sym.sourceFile.path, UnknownSource))
+          .orElse(Option(sym.sourceFile).map(sf => FileSource(sf.path, UnknownSource)))
+          .getOrElse(UnknownSource)
 
         ValueDef(qualifiedName(sym, false), typeParams, tpe, comment,
           flags = flags.result,
@@ -192,6 +193,7 @@ trait EntityFactory extends StrictLogging {
 
   private def typeParamsFromOwningTemplates(sym: Symbol): List[TypeParameter] = {
     sym.ownerChain.reverse.flatMap { owner =>
+      owner.info // ensures that type args are loaded (scalac 2.11.8)
       owner.tpe.typeArgs.map(arg => createTypeParamEntity(arg.typeSymbol))
     }
   }
