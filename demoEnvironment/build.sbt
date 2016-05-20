@@ -4,10 +4,10 @@ lazy val root = (project in file("."))
 	.settings(
 		name := "scaps-demo-project",
 		version := "1.0",
-		scalaVersion := "2.11.7",
+		scalaVersion := "2.11.8",
 		autoAPIMappings := true,
 		// scapsControlHost in Scaps := "localhost:9000",
-		libraryDependencies += "org.scala-lang" % "scala-library" % "2.11.6",
+		libraryDependencies += "org.scala-lang" % "scala-library" % scalaVersion.value,
 		libraryDependencies += "org.scala-refactoring" %% "org.scala-refactoring.library" % "0.6.2",
 		//libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.1.1"
 		//libraryDependencies += "org.spire-math" %% "spire" % "0.10.1"
