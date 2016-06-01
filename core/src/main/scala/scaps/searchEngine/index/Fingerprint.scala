@@ -6,6 +6,7 @@ package scaps.searchEngine.index
 
 import scaps.api.ValueDef
 import scaps.api.TypeRef
+import scaps.api.Invariant
 
 case class Fingerprint(termsWithIsOpt: List[(String, Boolean)]) extends AnyVal {
   override def toString =
@@ -20,8 +21,12 @@ case class Fingerprint(termsWithIsOpt: List[(String, Boolean)]) extends AnyVal {
 }
 
 object Fingerprint {
-  def apply(v: ValueDef): Fingerprint = {
-    Fingerprint(terms(v.tpe.normalize(v.typeParameters)).sortBy(_._1))
+  def apply(v: ValueDef, polarizedTypes: Boolean = true): Fingerprint = {
+    val tpe = v.tpe.normalize(v.typeParameters)
+    val polTpe =
+      if (polarizedTypes) tpe
+      else tpe.withVariance(Invariant)
+    Fingerprint(terms(polTpe).sortBy(_._1))
   }
 
   private val optionalTypes = List(
