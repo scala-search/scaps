@@ -71,6 +71,7 @@ case class QuerySettings(
     fractions: Boolean,
     penaltyWeight: Double,
     typeFrequencyWeight: Double,
+    distanceWeight: Double,
     docBoost: Double,
     fingerprintFrequencyCutoff: Double,
     explainScores: Boolean) {
@@ -81,6 +82,7 @@ case class QuerySettings(
   assertPositive(maxResults)
   assertPositive(penaltyWeight)
   assertPositive(typeFrequencyWeight)
+  assertPositive(distanceWeight)
   assertPositive(docBoost)
   assertPositive(fingerprintFrequencyCutoff)
 }
@@ -94,6 +96,7 @@ object QuerySettings {
       conf.getBoolean(fractions),
       conf.getDouble(penaltyWeight),
       conf.getDouble(typeFrequencyWeight),
+      conf.getDouble(distanceWeight),
       conf.getDouble(docBoost),
       conf.getDouble(fingerprintFrequencyCutoff),
       conf.getBoolean("explain-scores"))
@@ -105,6 +108,8 @@ object QuerySettings {
   val penaltyWeight = "penalty-weight"
 
   val typeFrequencyWeight = "type-frequency-weight"
+
+  val distanceWeight = "distance-weight"
 
   val docBoost = "doc-boost"
 

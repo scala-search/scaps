@@ -35,7 +35,7 @@ object Evaluation extends App {
 
   // (instance name, number of configurations tested, configuration generator)
   val runs: List[(String, Int, Rng[Settings])] = List(
-    ("I0: Baseline", 1, randomize(
+    ("I0: Baseline", 20, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = false))
@@ -44,9 +44,10 @@ object Evaluation extends App {
           fractions = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
-        docBoost -> Rng.oneof(0.05d),
-        typeFrequencyWeight -> Rng.oneof(0d)))),
-    ("I1: Baseline + Polarized", 1, randomize(
+        docBoost -> Rng.choosedouble(0, 0.5),
+        typeFrequencyWeight -> Rng.oneof(0d),
+        distanceWeight -> Rng.oneof(0d)))),
+    ("I1: Baseline + Polarized", 20, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = true))
@@ -55,9 +56,10 @@ object Evaluation extends App {
           fractions = false)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.oneof(0d),
-        docBoost -> Rng.oneof(0.05d),
-        typeFrequencyWeight -> Rng.oneof(0d)))),
-    ("I2: Weighted", 20, randomize(
+        docBoost -> Rng.choosedouble(0, 0.5),
+        typeFrequencyWeight -> Rng.oneof(0d),
+        distanceWeight -> Rng.oneof(0d)))),
+    ("I2: Weighted", 100, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = false))
@@ -66,9 +68,10 @@ object Evaluation extends App {
           fractions = true)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.3),
-        docBoost -> Rng.oneof(0.05d),
-        typeFrequencyWeight -> Rng.oneof(math.E)))),
-    ("I3: Weighted + Polarized", 20, randomize(
+        docBoost -> Rng.choosedouble(0, 0.5),
+        typeFrequencyWeight -> Rng.oneof(math.E),
+        distanceWeight -> Rng.oneof(0d)))),
+    ("I3: Weighted + Polarized", 100, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = true))
@@ -77,9 +80,10 @@ object Evaluation extends App {
           fractions = true)),
       baseRngs ++ Map(
         penaltyWeight -> Rng.choosedouble(0, 0.3),
-        docBoost -> Rng.oneof(0.05d),
-        typeFrequencyWeight -> Rng.oneof(math.E)))),
-    ("I4: FEM", 20, randomize(
+        docBoost -> Rng.choosedouble(0, 0.5),
+        typeFrequencyWeight -> Rng.oneof(math.E),
+        distanceWeight -> Rng.oneof(0d)))),
+    ("I4: FEM", 200, randomize(
       baseSettings
         .modIndex(_.copy(
           polarizedTypes = true))
@@ -87,9 +91,10 @@ object Evaluation extends App {
           views = true,
           fractions = true)),
       baseRngs ++ Map(
-        penaltyWeight -> Rng.choosedouble(0, 0.1),
-        docBoost -> Rng.oneof(0.1d),
-        typeFrequencyWeight -> Rng.oneof(Math.E)))))
+        penaltyWeight -> Rng.choosedouble(0, 0.3),
+        docBoost -> Rng.choosedouble(0, 0.5),
+        typeFrequencyWeight -> Rng.oneof(Math.E),
+        distanceWeight -> Rng.choosedouble(0, 0.3)))))
 
   val (trainingQueries, testQueries) =
     new Random(seed).shuffle(evaluationSettings.queries).splitAt((evaluationSettings.queries.length * 0.5).toInt)
@@ -104,6 +109,7 @@ object Evaluation extends App {
     QuerySettings.fractions,
     QuerySettings.penaltyWeight,
     QuerySettings.typeFrequencyWeight,
+    QuerySettings.distanceWeight,
     QuerySettings.docBoost,
     QuerySettings.fingerprintFrequencyCutoff,
     "MAP",
@@ -140,6 +146,7 @@ object Evaluation extends App {
               settings.query.fractions,
               settings.query.penaltyWeight,
               settings.query.typeFrequencyWeight,
+              settings.query.distanceWeight,
               settings.query.docBoost,
               settings.query.fingerprintFrequencyCutoff,
               stats.meanAveragePrecision,
@@ -215,10 +222,12 @@ object Evaluation extends App {
     for {
       pw <- rngs(penaltyWeight)
       tf <- rngs(typeFrequencyWeight)
+      dw <- rngs(distanceWeight)
       db <- rngs(docBoost)
     } yield settings.copy(
       penaltyWeight = pw,
       typeFrequencyWeight = tf,
+      distanceWeight = dw,
       docBoost = db)
 
   lazy val format = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")

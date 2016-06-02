@@ -211,7 +211,7 @@ class QueryAnalyzerSpecs extends FlatSpec with Matchers with ExtractionUtils {
     val viewsIndex = new ViewIndex(new RAMDirectory)
     viewsIndex.addEntities(views)
 
-    new QueryAnalyzer(settings, findTypeDefsBySuffix, _ => 0d, viewsIndex.findViews(_, Set()).get)
+    new QueryAnalyzer(settings, findTypeDefsBySuffix, _ => 0d, viewsIndex.findAlternativesWithRetainedInfo(_, 0, Set()).get)
       .favorTypesMatching(Pattern.compile("""scala\..*"""))
       .favorTypesMatching(Pattern.compile("""(scala\.([^\.#]+))|java\.lang\.String"""))
   }

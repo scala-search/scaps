@@ -12,7 +12,7 @@ class ExpandedQuerySpecs extends FlatSpec with Matchers {
   import ExpandedQuery._
 
   def leaf(tpeName: String) =
-    Leaf(new TypeRef.PrimitiveType(tpeName)(Covariant), 1)
+    Leaf(new TypeRef.PrimitiveType(tpeName)(Covariant), 1, 0)
 
   val A = leaf("A")
   val B = leaf("B")

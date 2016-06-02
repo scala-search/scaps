@@ -12,20 +12,28 @@ import scaps.searchEngine.ApiTypeQuery
 import scaps.searchEngine.SemanticError
 
 object TypeFrequencies {
-  def apply(analyzeValue: ValueDef => SemanticError \/ ApiTypeQuery,
+  def apply(alternatives: TypeRef => Seq[TypeRef],
             values: Seq[ValueDef],
             maxSampleSize: Int): Map[(Variance, String), Float] = {
+    def subtrees(tpe: TypeRef): List[TypeRef] = {
+      tpe :: tpe.args.flatMap(subtrees)
+    }
+
+    def analyze(v: ValueDef): Seq[(Variance, String)] =
+      for {
+        tpe <- subtrees(v.tpe.normalize(v.typeParameters))
+        alt <- (tpe +: alternatives(tpe)).map { t => (t.variance, t.name) }
+      } yield alt
+
     def typesReferencedFromValue(value: ValueDef): Seq[(Variance, String)] = {
-      analyzeValue(value).map { analyzed =>
-        analyzed.allTypes
-          .flatMap {
-            case ApiTypeQuery.Type(Invariant, tpeName, _, _) =>
-              List((Invariant, tpeName))
-            case ApiTypeQuery.Type(v, tpeName, _, _) =>
-              List((Invariant, tpeName), (v, tpeName))
-          }
-          .distinct
-      }.getOrElse(Nil)
+      analyze(value)
+        .flatMap {
+          case t @ (Invariant, _) =>
+            List(t)
+          case t @ (v, tpeName) =>
+            List((Invariant, tpeName), t)
+        }
+        .distinct
     }
 
     val sampledValues = values
@@ -33,10 +41,13 @@ object TypeFrequencies {
 
     val maxFrequency = sampledValues.length
 
-    sampledValues
+    Map(sampledValues
+      .par
       .flatMap(typesReferencedFromValue)
       .groupBy(identity)
       .mapValues(_.length.toFloat / maxFrequency)
+      .seq
+      .toSeq: _*)
       .withDefaultValue(0)
   }
 }

@@ -32,19 +32,51 @@ class ViewIndex(val dir: Directory) extends Index[ViewDef] {
   def addEntities(entities: Seq[ViewDef]): Try[Unit] =
     withWriter { writer =>
       entities.foreach { e =>
-        val idTerm = new Term(fields.id, id(e))
-        val doc = toDocument(e)
-        writer.updateDocument(idTerm, doc)
+        if (e.from.name != "java.lang.Object") {
+          val idTerm = new Term(fields.id, id(e))
+          val doc = toDocument(e)
+          writer.updateDocument(idTerm, doc)
+        }
       }
     }
 
-  def findAlternatives(tpe: TypeRef, moduleIds: Set[String] = Set()): Try[Seq[TypeRef]] = Try {
-    findViews(tpe, moduleIds).get
-      .flatMap { view =>
-        view(tpe)
-      }
-      .distinct
+  def findAlternatives(tpe: TypeRef, transitiveSteps: Int, moduleIds: Set[String] = Set()): Try[Seq[TypeRef]] = Try {
+    findAlternativesWithRetainedInfo(tpe, transitiveSteps, moduleIds).get.map(_._1)
   }
+
+  def findAlternativesWithRetainedInfo(tpe: TypeRef, transitiveSteps: Int, moduleIds: Set[String]): Try[Seq[(TypeRef, Double)]] =
+    Try {
+      val testedKeys = collection.mutable.Set[String]()
+
+      def loop(from: TypeRef, retainedInfo: Double, transitiveSteps: Int): Seq[(TypeRef, Double)] = {
+        if (transitiveSteps < 0) {
+          Nil
+        } else {
+          val key = ViewDef.key(from)
+          if (testedKeys(key)) {
+            Nil
+          } else {
+            testedKeys += key
+            val query = new BooleanQuery()
+            query.add(new TermQuery(new Term(fields.from, key)), Occur.MUST);
+            query.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
+
+            search(query).get.map(_.entity).flatMap { view =>
+              view(from).toSeq.flatMap { to =>
+                val ri = retainedInfo * view.retainedInformation
+                (to, ri) +: loop(to, ri, transitiveSteps - 1)
+              }
+            }
+          }
+        }
+      }
+
+      val genericQuery = new BooleanQuery()
+      genericQuery.add(new TermQuery(new Term(fields.from, ViewDef.key(TypeRef("_", tpe.variance, Nil, true)))), Occur.MUST);
+      genericQuery.add(Index.moduleQuery(moduleIds, fields.moduleId), Occur.MUST)
+
+      (loop(tpe, 1, transitiveSteps) ++ search(genericQuery).get.map(_.entity).flatMap(view => view(tpe).map((_, 1d)))).distinct
+    }
 
   def findViews(tpe: TypeRef, moduleIds: Set[String]): Try[Seq[ViewDef]] =
     Try {

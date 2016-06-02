@@ -137,13 +137,7 @@ class TypeFrequenciesSpecs extends FlatSpec with IndexUtils {
     withViewIndex { viewIndex =>
       viewIndex.addEntities(views)
 
-      val analyzer = new QueryAnalyzer(
-        settings,
-        _ => Nil,
-        _ => 0d,
-        viewIndex.findViews(_, Set()).get)
-
-      (TypeFrequencies(analyzer.apply _, values, Int.MaxValue),
+      (TypeFrequencies((t: TypeRef) => viewIndex.findAlternatives(t, 3, Set()).getOrElse(Nil), values, Int.MaxValue),
         values.length)
     }
   }

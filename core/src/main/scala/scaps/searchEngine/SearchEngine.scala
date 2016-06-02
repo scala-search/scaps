@@ -107,7 +107,7 @@ class SearchEngine private[searchEngine] (
       val allModulesAnalyzer = analyzer(indexedModules().get.map(_.moduleId).toSet)
 
       val tfs = TypeFrequencies(
-        allModulesAnalyzer.apply,
+        Memo.immutableHashMapMemo((t: TypeRef) => viewIndex.findAlternatives(t, 3, Set()).getOrElse(Nil)),
         valueIndex.allEntities().get,
         settings.index.typeFrequenciesSampleSize)
 
@@ -166,7 +166,7 @@ class SearchEngine private[searchEngine] (
           settings,
           Memo.mutableHashMapMemo((findClassBySuffix _)),
           Memo.mutableHashMapMemo(typeIndex.termFrequency(_, moduleIds).get),
-          Memo.mutableHashMapMemo(viewIndex.findViews(_, moduleIds).get))
+          Memo.mutableHashMapMemo(viewIndex.findAlternativesWithRetainedInfo(_, 0, moduleIds).get))
           .favorTypesMatching(Pattern.compile("""scala\..*"""))
           .favorTypesMatching(Pattern.compile("""(scala\.([^\.#]+))|java\.lang\.String"""))
     }

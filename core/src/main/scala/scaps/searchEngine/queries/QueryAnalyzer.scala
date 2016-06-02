@@ -28,11 +28,11 @@ import scaps.api.FingerprintTerm
  * Instances require access to the class and view index which is injected via
  * `findTypeDefsBySuffix` and `findViews`
  */
-class QueryAnalyzer private[searchEngine] (
+class QueryAnalyzer(
     settings: Settings,
     findTypeDefsBySuffix: (String) => Seq[TypeDef],
     getTypeFrequency: FingerprintTerm => Double,
-    findViews: (TypeRef) => Seq[ViewDef]) {
+    findViews: (TypeRef) => Seq[(TypeRef, Double)]) {
 
   val resolver = new QueryResolver(findTypeDefsBySuffix)
   val expander = new QueryExpander(settings.query, getTypeFrequency, findViews)
